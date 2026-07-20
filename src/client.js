@@ -34,7 +34,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     generateHighQualityLink: false,
     defaultQueryTimeoutMs: 120000,
     keepAliveIntervalMs: 15000,
-    connectTimeoutMs: 120000,
+    connectTimeoutMs: 30000,
+    qrTimeout: 120000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
     emitOwnEvents: false,
@@ -55,6 +56,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       console.log('\n╔══════════════════════════════════════════════╗');
       console.log('║    Scan the QR with your WhatsApp           ║');
       console.log('║    Open → Linked Devices → Link a Device   ║');
+      console.log('║    If it fails, scan again — it will retry  ║');
       console.log('╚══════════════════════════════════════════════╝\n');
       QRCode.toString(qr, { type: 'terminal', small: false, width: 2 }, function(e, str) {
         if (e) {
@@ -64,7 +66,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         }
         var qrFile = path.join(__dirname, '..', 'storage', 'qr.png');
         QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function(err) {
-          if (!err) console.log('QR saved: ' + qrFile + ' (open on phone to scan)');
+          if (!err) console.log('QR ready. Scan from dashboard or open ' + qrFile + ' on phone');
         });
         console.log('\nDashboard: ' + (process.env.RENDER ? process.env.RENDER_EXTERNAL_URL || 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com' : 'http://localhost:' + (process.env.DASHBOARD_PORT || 3000)) + '/dashboard?pwd=' + (process.env.DASHBOARD_PASSWORD || 'admin'));
       });
@@ -78,8 +80,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         ? lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
         : true;
       if (shouldReconnect) {
-        const delay = config.antiBan.enabled ? randomBetween(3000, 8000) : 1000;
+        const delay = config.antiBan.enabled ? randomBetween(2000, 4000) : 1000;
         console.log(`Connection closed, reconnecting in ${delay}ms...`);
+        console.log('If you scanned the QR, the bot should connect on the next attempt.');
         setTimeout(() => startClient(messageHandler, statusHandler, onConnected), delay);
       } else {
         console.log('Logged out. Delete sessions folder and restart.');

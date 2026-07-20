@@ -82,6 +82,9 @@ td{padding:8px;border-bottom:1px solid #1a1a2e;color:#ccc}
         Open WhatsApp on phone → Linked Devices → Link a Device
       </div>
       <div id="qrExpiry" style="font-size:0.8rem;color:#666"></div>
+      <div style="font-size:0.8rem;color:#fbbf24;margin-top:8px">
+        If scan fails, just try again — the bot retries automatically
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:25px;text-align:center">
@@ -229,7 +232,7 @@ function requestPair() {
 }
 
 updateDashboard();
-setInterval(function(){ updateDashboard(); updateQR(); },5000);
+setInterval(function(){ updateDashboard(); updateQR(); },2000);
 </script>
 </body>
 </html>
