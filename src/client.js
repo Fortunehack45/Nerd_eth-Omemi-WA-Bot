@@ -1,11 +1,11 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
-const { getSafeBrowser, randomBetween, isDuplicateMessage } = require('./services/antiBanService');
+const { randomBetween, isDuplicateMessage } = require('./services/antiBanService');
 
 const SESSION_DIR = path.join(__dirname, '..', 'sessions');
 
@@ -18,15 +18,51 @@ let lastReconnectTime = 0;
 let networkStormDetected = false;
 let consecutiveErrors = 0;
 
+function getDashboardUrl() {
+  try {
+    const { getDashboardUrl: getUrl } = require('../server');
+    return getUrl();
+  } catch (e) {
+    var pwd = process.env.DASHBOARD_PASSWORD || 'admin';
+    var baseUrl = process.env.RENDER_EXTERNAL_URL || 'https://' + (process.env.RENDER_SERVICE_NAME || 'nerd-eth-omemi-wa-bot') + '.onrender.com';
+    return baseUrl + '/dashboard?pwd=' + pwd;
+  }
+}
+
+function clearSessionFolder() {
+  try {
+    if (fs.existsSync(SESSION_DIR)) {
+      const files = fs.readdirSync(SESSION_DIR);
+      for (const file of files) {
+        fs.unlinkSync(path.join(SESSION_DIR, file));
+      }
+      console.log('[CLIENT] Cleared corrupted session folder.');
+    }
+  } catch (e) {
+    console.error('[CLIENT] Failed to clear session folder:', e.message);
+  }
+}
+
 async function startClient(messageHandler, statusHandler, onConnected) {
+  // Clean up previous socket if existing
+  if (sock) {
+    try {
+      sock.ev.removeAllListeners();
+      sock.ws?.close();
+      sock.end(undefined);
+    } catch (e) {}
+    sock = null;
+  }
+
   if (!fs.existsSync(SESSION_DIR)) {
     fs.mkdirSync(SESSION_DIR, { recursive: true });
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-  const { version } = await fetchLatestBaileysVersion();
+  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
 
-  const browser = config.antiBan.enabled ? getSafeBrowser() : ['WhatsAppBot', 'Chrome', '1.0.0'];
+  // Standard Baileys browser string for maximum stability on WhatsApp servers
+  const browser = Browsers.ubuntu('Chrome');
 
   sock = makeWASocket({
     version,
@@ -38,102 +74,83 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     generateHighQualityLink: false,
     defaultQueryTimeoutMs: 120000,
     keepAliveIntervalMs: 15000,
-    connectTimeoutMs: 30000,
-    qrTimeout: 120000,
+    connectTimeoutMs: 60000,
+    qrTimeout: 180000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
-    emitOwnEvents: true,  // Allow admin to send commands to themselves
+    emitOwnEvents: true,
     retryRequestOnFail: true,
     printQRInTerminal: false,
   });
 
   startTime = Date.now();
 
-  sock.ev.on('creds.update', function(creds) {
-    saveCreds();
-  });
+  sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
       lastQR = qr;
-      console.log('\n╔══════════════════════════════════════════════╗');
-      console.log('║    Scan the QR with your WhatsApp           ║');
-      console.log('║    Open → Linked Devices → Link a Device   ║');
-      console.log('║    If it fails, scan again — it will retry  ║');
-      console.log('╚══════════════════════════════════════════════╝\n');
-      QRCode.toString(qr, { type: 'terminal', small: false, width: 2 }, function(e, str) {
-        if (e) {
-          console.log('QR: ' + qr);
-        } else {
-          console.log(str);
-        }
+      const dashUrl = getDashboardUrl();
+      console.log('\n╔════════════════════════════════════════════════════════════════╗');
+      console.log('║  📲 SCAN QR CODE TO CONNECT WHATSAPP                          ║');
+      console.log('║  Open Dashboard: ' + dashUrl.padEnd(43) + ' ║');
+      console.log('║  WhatsApp → Linked Devices → Link a Device                      ║');
+      console.log('╚════════════════════════════════════════════════════════════════╝\n');
+      QRCode.toString(qr, { type: 'terminal', small: true }, function(e, str) {
+        if (!e && str) console.log(str);
         var qrFile = path.join(__dirname, '..', 'storage', 'qr.png');
-        QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function(err) {
-          if (!err) console.log('QR ready. Scan from dashboard or open ' + qrFile + ' on phone');
-        });
-        console.log('\nDashboard: ' + (process.env.RENDER ? process.env.RENDER_EXTERNAL_URL || 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com' : 'http://localhost:' + (process.env.DASHBOARD_PORT || 3000)) + '/dashboard?pwd=' + (process.env.DASHBOARD_PASSWORD || 'admin'));
+        QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function() {});
       });
     }
-    console.log('[DEBUG] connection.update:', JSON.stringify({ connection: connection, hasQR: !!qr, hasError: !!lastDisconnect?.error }));
+
     if (lastDisconnect?.error) {
-      console.error('[DEBUG] Disconnect error:', lastDisconnect.error?.message || lastDisconnect.error?.toString());
+      const statusCode = (lastDisconnect.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
+      console.error('[CLIENT] Connection update disconnect:', lastDisconnect.error?.message || lastDisconnect.error, 'StatusCode:', statusCode);
+
+      // Handle 401 Unauthorized / Logged Out -> clear session for fresh QR code
+      if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
+        console.log('[CLIENT] Session logged out or invalid credentials. Resetting session...');
+        clearSessionFolder();
+      }
     }
+
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error instanceof Boom)
-        ? lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
-        : true;
-      
+      const statusCode = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+
       if (shouldReconnect) {
         consecutiveErrors++;
         const now = Date.now();
         const timeSinceLastReconnect = now - lastReconnectTime;
-        
-        if (lastDisconnect?.error) {
-          const errorCode = lastDisconnect.error?.code || 'unknown';
-          console.error('[DEBUG] Disconnect error:', lastDisconnect.error?.message || lastDisconnect.error?.toString());
-          console.error('[DEBUG] Error code:', errorCode);
+
+        if (timeSinceLastReconnect < 30000) {
+          networkStormDetected = true;
         }
-        
-        if (timeSinceLastReconnect < 60000) {
-          if (lastDisconnect?.error?.code === 515 || lastDisconnect?.error?.message?.includes('WebSocket')) {
-            console.log('[DEBUG] WebSocket storm detected - waiting longer before retry');
-            networkStormDetected = true;
-          }
-        }
-        
-        if (networkStormDetected) {
-          if (consecutiveErrors === 1) {
-            const delay = config.antiBan.enabled ? randomBetween(30000, 60000) : 60000;
-            console.log(`[DEBUG] Recovery delay (1st error): reconnecting in ${delay}ms...`);
-            console.log('[DEBUG] This may indicate a temporary Render/Cloudflare issue.');
-          } else if (consecutiveErrors === 2) {
-            const delay = config.antiBan.enabled ? randomBetween(120000, 180000) : 180000;
-            console.log(`[DEBUG] Recovery delay (2nd error): reconnecting in ${delay}ms...`);
-          } else {
-            const delay = config.antiBan.enabled ? randomBetween(300000, 600000) : 600000;
-            console.log(`[DEBUG] Recovery delay (error #${consecutiveErrors}): reconnecting in ${delay}ms...`);
-          }
-        } else {
-          const baseDelay = config.antiBan.enabled ? randomBetween(2000, 4000) : 1000;
-          const adaptiveDelay = baseDelay * Math.min(consecutiveErrors, 10);
-          console.log(`Connection closed, reconnecting in ${adaptiveDelay}ms... (errors: ${consecutiveErrors})`);
-          console.log('If you scanned the QR, the bot should connect on the next attempt.');
-        }
-        
+
+        const delay = networkStormDetected
+          ? Math.min(5000 * Math.min(consecutiveErrors, 6), 30000)
+          : Math.min(2000 * Math.min(consecutiveErrors, 5), 10000);
+
+        console.log(`[CLIENT] Connection closed, reconnecting in ${Math.round(delay/1000)}s... (attempt #${consecutiveErrors})`);
         lastReconnectTime = now;
-        const retryDelay = networkStormDetected && consecutiveErrors <= 3
-          ? (consecutiveErrors === 1 ? 60000 : consecutiveErrors === 2 ? 180000 : 600000)
-          : (config.antiBan.enabled ? randomBetween(2000, 4000) * Math.min(consecutiveErrors, 10) : 1000 * Math.min(consecutiveErrors, 10));
-        
-        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), retryDelay);
+
+        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), delay);
       } else {
-        console.log('Logged out. Delete sessions folder and restart.');
+        console.log('[CLIENT] Logged out or unrecoverable error. Restarting fresh auth session...');
+        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), 3000);
       }
     }
+
     if (connection === 'open') {
-      console.log('WhatsApp connected successfully!');
-      console.log(`Logged in as: ${sock.user?.name || sock.user?.id || 'Unknown'}`);
+      consecutiveErrors = 0;
+      networkStormDetected = false;
+      console.log('\n====================================================');
+      console.log('✅ WHATSAPP CONNECTED SUCCESSFULLY!');
+      console.log(`👤 Logged in as: ${sock.user?.name || sock.user?.id || 'Unknown'}`);
+      console.log(`🌐 Dashboard: ${getDashboardUrl()}`);
+      console.log('====================================================\n');
+
       if (config.antiBan.alwaysOnline) {
         startPresenceKeepAlive();
       }
@@ -145,13 +162,11 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
   sock.ev.on('messages.upsert', async (msg) => {
     if (!msg.messages || msg.messages.length === 0) return;
-    console.log('[MSG] Received ' + msg.messages.length + ' message(s)');
     for (const m of msg.messages) {
       if (!m.message) continue;
       var remoteJid = m.key?.remoteJid || '';
       var isFromMe = m.key?.fromMe;
       var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
-      console.log('[MSG] From: ' + remoteJid + ' | FromMe: ' + isFromMe + ' | HasText: ' + !!msgText);
 
       // Status updates
       if (remoteJid === 'status@broadcast') {
@@ -165,7 +180,6 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       if (isFromMe) {
         var prefix = config.prefix || '!';
         if (msgText && msgText.startsWith(prefix)) {
-          // Only process if this is from the bot's own number (admin self-command)
           await messageHandler(sock, m);
         }
         continue;
@@ -215,7 +229,7 @@ function getLastQR() {
 async function requestPairingCode(phoneNumber) {
   if (!sock) throw new Error('Client not initialized');
   const code = await sock.requestPairingCode(phoneNumber);
-  console.log('Pairing code requested for:', phoneNumber, 'Code:', code);
+  console.log('[CLIENT] Pairing code requested for:', phoneNumber, 'Code:', code);
   return code;
 }
 

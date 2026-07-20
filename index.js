@@ -5,7 +5,7 @@ const { handleStatus } = require('./src/handlers/statusHandler');
 const { initAI } = require('./src/services/aiService');
 const { startScheduler } = require('./src/services/schedulerService');
 const { startOnboarding } = require('./src/services/onboardingService');
-const { startServer, setConnected, setDisconnected, logMessage, logCommand } = require('./server');
+const { startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl } = require('./server');
 const config = require('./config');
 
 console.log(`
@@ -30,7 +30,7 @@ console.log('Access Control: ' + (config.access.enabled ? '✅ Active' : '❌ Di
 console.log('View-Once Saver: ' + (config.viewOnce.enabled ? '✅ Notify: ' + config.viewOnce.notifyAdmin : '❌ Disabled'));
 console.log('Scheduler: ✅ Active');
 console.log('Admin Self-Commands: ✅ Active (send commands to yourself)');
-console.log('Dashboard: ✅ Port ' + (process.env.DASHBOARD_PORT || 3000));
+console.log('Admin Dashboard: 👉 ' + getDashboardUrl());
 
 function providerName() {
   const aiSvc = require('./src/services/aiService');

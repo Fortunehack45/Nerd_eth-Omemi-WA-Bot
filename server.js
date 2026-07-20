@@ -180,14 +180,28 @@ app.get('/api/owner-check', auth, function(req, res) {
   });
 });
 
-app.get('/api/health', function(req, res) {
-  res.json({ status: botStatus.connected ? 'online' : 'offline', time: Date.now() });
-});
+function getDashboardUrl() {
+  var pwd = process.env.DASHBOARD_PASSWORD || 'admin';
+  var baseUrl = process.env.RENDER_EXTERNAL_URL;
+  if (!baseUrl && process.env.RENDER_SERVICE_NAME) {
+    baseUrl = 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com';
+  }
+  if (!baseUrl) {
+    var port = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+    baseUrl = 'http://localhost:' + port;
+  }
+  return baseUrl + '/dashboard?pwd=' + pwd;
+}
 
 function startServer() {
   app.listen(PORT, '0.0.0.0', function() {
-    console.log('Dashboard: http://0.0.0.0:' + PORT + '/dashboard?pwd=' + DASHBOARD_PASSWORD);
+    var dashUrl = getDashboardUrl();
+    console.log('\n================================================════');
+    console.log('🌐 ADMIN DASHBOARD URL (OPEN TO SCAN QR / PAIR CODE):');
+    console.log('👉 ' + dashUrl);
+    console.log('====================================================\n');
   });
 }
 
-module.exports = { startServer, setConnected, setDisconnected, logMessage, logCommand, botStatus };
+module.exports = { startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl, botStatus };
+
