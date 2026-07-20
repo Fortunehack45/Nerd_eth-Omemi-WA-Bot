@@ -11,6 +11,8 @@
     "@whiskeysockets/baileys": "^6.7.13",
     "axios": "^1.7.9",
     "cheerio": "^1.2.0",
+    "adm-zip": "^0.5.16",
+    "@hapi/boom": "^10.0.1",
     "docx": "^9.7.1",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
