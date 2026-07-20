@@ -134,6 +134,20 @@ app.post('/api/pair', auth, function(req, res) {
   });
 });
 
+app.post('/api/test', auth, function(req, res) {
+  var target = req.body.to || (config.admins && config.admins[0]);
+  if (!target) return res.status(400).json({ error: 'No target number. Set "to" in body or OWNER_NUMBER in env' });
+  var client = require('./src/client');
+  var sock = client.getClient();
+  if (!sock) return res.status(400).json({ error: 'Bot not initialized' });
+  var jid = target.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+  sock.sendMessage(jid, { text: '✅ Bot test message at ' + new Date().toLocaleString() }).then(function() {
+    res.json({ success: true, sent: true, to: jid });
+  }).catch(function(err) {
+    res.status(500).json({ error: err.message || 'Send failed' });
+  });
+});
+
 app.get('/api/health', function(req, res) {
   res.json({ status: botStatus.connected ? 'online' : 'offline', time: Date.now() });
 });

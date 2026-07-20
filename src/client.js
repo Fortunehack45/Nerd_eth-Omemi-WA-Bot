@@ -100,7 +100,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
   sock.ev.on('messages.upsert', async (msg) => {
     if (!msg.messages || msg.messages.length === 0) return;
+    console.log('[MSG] Received ' + msg.messages.length + ' message(s)');
     for (const m of msg.messages) {
+      console.log('[MSG] From: ' + (m.key?.remoteJid || 'unknown') + ' | FromMe: ' + m.key?.fromMe + ' | HasText: ' + !!(m.message?.conversation || m.message?.extendedTextMessage?.text));
       if (!m.message || m.key?.fromMe) continue;
       if (m.key?.remoteJid === 'status@broadcast') {
         if (config.status.autoView || config.status.autoLike) {
