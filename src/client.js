@@ -1,10 +1,9 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const qrcodeTerminal = require('qrcode-terminal');
 const QRCode = require('qrcode');
-const path = require('path');
-const fs = require('fs');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
+const path = require('path');
+const fs = require('fs');
 const config = require('../config');
 const { getSafeBrowser, randomBetween, isDuplicateMessage } = require('./services/antiBanService');
 
@@ -13,6 +12,7 @@ const SESSION_DIR = path.join(__dirname, '..', 'sessions');
 let sock = null;
 let startTime = null;
 let presenceInterval = null;
+let lastQR = null;
 
 async function startClient(messageHandler, statusHandler, onConnected) {
   if (!fs.existsSync(SESSION_DIR)) {
@@ -56,21 +56,23 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      console.log('\n============================================');
-      console.log('  Scan the QR code with your WhatsApp');
-      console.log('  Open WhatsApp → Linked Devices → Link a Device');
-      console.log('============================================\n');
-      qrcodeTerminal.generate(qr, { small: false });
-      console.log('\n============================================');
-      console.log('  QR text (use at https://qrcode.monster if scan fails):');
-      console.log('  ' + qr);
-      try {
-        var qrPath = path.join(__dirname, '..', 'storage', 'qr.png');
-        QRCode.toFile(qrPath, qr, { type: 'png', width: 400, margin: 2 }, function(err) {
-          if (!err) console.log('  QR image saved: ' + qrPath);
+      lastQR = qr;
+      console.log('\n╔══════════════════════════════════════════════╗');
+      console.log('║    Scan the QR with your WhatsApp           ║');
+      console.log('║    Open → Linked Devices → Link a Device   ║');
+      console.log('╚══════════════════════════════════════════════╝\n');
+      QRCode.toString(qr, { type: 'terminal', small: false, width: 2 }, function(e, str) {
+        if (e) {
+          console.log('QR: ' + qr);
+        } else {
+          console.log(str);
+        }
+        var qrFile = path.join(__dirname, '..', 'storage', 'qr.png');
+        QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function(err) {
+          if (!err) console.log('QR saved: ' + qrFile + ' (open on phone to scan)');
         });
-      } catch (e) {}
-      console.log('============================================\n');
+        console.log('\nDashboard: http://localhost:' + (process.env.DASHBOARD_PORT || 3000) + '/dashboard?pwd=' + (process.env.DASHBOARD_PASSWORD || 'admin'));
+      });
     }
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error instanceof Boom)
@@ -143,4 +145,8 @@ function getUptime() {
   return Math.floor((Date.now() - startTime) / 1000);
 }
 
-module.exports = { startClient, getClient, getUptime };
+function getLastQR() {
+  return lastQR;
+}
+
+module.exports = { startClient, getClient, getUptime, getLastQR };

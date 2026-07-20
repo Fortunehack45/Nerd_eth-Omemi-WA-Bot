@@ -104,6 +104,23 @@ app.get('/api/logs', auth, function(req, res) {
   res.json({ logs: logs, recentMessages: recentMessages.slice(0, 20), commands: commandLog.slice(0, 20) });
 });
 
+app.get('/api/qr', auth, function(req, res) {
+  var client = require('./src/client');
+  var qr = client.getLastQR();
+  if (!qr) return res.json({ qr: null, message: 'No QR available. Bot may already be connected.' });
+  var qrFile = path.join(__dirname, 'storage', 'qr.png');
+  if (fs.existsSync(qrFile)) {
+    return res.sendFile(qrFile);
+  }
+  res.json({ qr: qr, message: 'QR image not found. Use /api/qrdata for raw text.' });
+});
+
+app.get('/api/qrdata', auth, function(req, res) {
+  var client = require('./src/client');
+  var qr = client.getLastQR();
+  res.json({ qr: qr || null });
+});
+
 app.get('/api/health', function(req, res) {
   res.json({ status: botStatus.connected ? 'online' : 'offline', time: Date.now() });
 });
