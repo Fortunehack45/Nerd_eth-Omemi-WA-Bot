@@ -7,7 +7,7 @@ module.exports = {
 
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: process.env.AI_MODEL || 'gpt-4',
+    model: process.env.AI_MODEL || 'gpt-4o-mini',
     temperature: parseFloat(process.env.AI_TEMPERATURE) || 0.7,
     maxTokens: parseInt(process.env.AI_MAX_TOKENS) || 2000,
   },
