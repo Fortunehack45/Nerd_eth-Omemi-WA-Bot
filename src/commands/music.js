@@ -167,52 +167,75 @@ async function cmdLyrics(sock, sender, args, flags) {
 async function cmdPlay(sock, sender, args, flags) {
   var query = args.join(' ');
   if (!query) {
-    return sock.sendMessage(sender, { text: '*Usage:* `!music play <query | url>`\n\nDownload and play a track as audio.\n\n*Flags:*\n  `--quality`, `-q`    Preferred quality: 128, 192, 320' });
+    return sock.sendMessage(sender, { text: '*Usage:* `!music play <query | url>`\n\nDownload and send a track as audio.\n\n*Flags:*\n  `--quality`, `-q`    Preferred quality: high, medium, low (default: high)\n\n*Supported:*\n  • YouTube search or URL\n  • Spotify track URL (https://open.spotify.com/track/...)' });
   }
 
-  await sock.sendMessage(sender, { text: '🔍 Searching for "' + query.substring(0, 50) + '..."' });
+  // Handle Spotify links separately
+  if (query.includes('spotify.com/track/')) {
+    await sock.sendMessage(sender, { text: '🎵 Downloading Spotify track... (searching YouTube match)' });
+    var { downloadSpotifyAudio } = require('../services/downloadService');
+    var spotifyResult = await downloadSpotifyAudio(query);
+    if (spotifyResult.error) {
+      return sock.sendMessage(sender, { text: '❌ Spotify download failed: ' + spotifyResult.error });
+    }
+    var fs = require('fs');
+    if (spotifyResult.filePath && fs.existsSync(spotifyResult.filePath)) {
+      var buf = fs.readFileSync(spotifyResult.filePath);
+      await sock.sendMessage(sender, {
+        audio: buf, mimetype: 'audio/mpeg', fileName: (spotifyResult.title || 'track').substring(0, 80) + '.mp3', ptt: false,
+      });
+      try { fs.unlinkSync(spotifyResult.filePath); } catch (e) {}
+    }
+    return;
+  }
+
+  await sock.sendMessage(sender, { text: '🔍 Searching for "' + query.substring(0, 50) + '"...' });
   var results = await searchMusic(query, 1);
   if (results.error) return sock.sendMessage(sender, { text: 'Error: ' + results.error });
   if (!results.length) return sock.sendMessage(sender, { text: 'No tracks found for "' + query + '".' });
 
   var track = results[0];
-  await sock.sendMessage(sender, { text: '🎵 Downloading: ' + track.title + '\n👤 ' + track.author + ' | ⏱ ' + track.durationStr + '\n_This may take up to 30 seconds..._' });
+  await sock.sendMessage(sender, { text: '🎵 Downloading: *' + track.title + '*\n👤 ' + track.author + ' | ⏱ ' + track.durationStr + '\n_This may take up to 60 seconds..._' });
 
   try {
-    const ytdl = require('ytdl-core');
-    const fs = require('fs');
-    const path = require('path');
-    var tempDir = path.join(__dirname, '..', '..', 'storage', 'temp');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    var fileName = 'music_' + Date.now() + '.mp3';
-    var filePath = path.join(tempDir, fileName);
+    var ytdl;
+    try { ytdl = require('@distube/ytdl-core'); } catch (e) { ytdl = require('ytdl-core'); }
+    var fs2 = require('fs');
+    var path2 = require('path');
+    var tempDir = path2.join(__dirname, '..', '..', 'storage', 'temp');
+    if (!fs2.existsSync(tempDir)) fs2.mkdirSync(tempDir, { recursive: true });
+    var fileName = 'music_' + Date.now() + '.mp4';
+    var filePath = path2.join(tempDir, fileName);
 
-    var stream = ytdl(track.url, { filter: 'audioonly', quality: 'lowestaudio' });
-    var writer = fs.createWriteStream(filePath);
+    var stream = ytdl(track.url, { filter: 'audioonly', quality: 'highestaudio' });
+    var writer = fs2.createWriteStream(filePath);
 
     await new Promise(function(resolve, reject) {
       stream.pipe(writer);
       writer.on('finish', resolve);
       writer.on('error', reject);
-      setTimeout(function() { reject(new Error('Download timeout')); }, 60000);
+      stream.on('error', reject);
+      setTimeout(function() { reject(new Error('Download timeout after 2 min')); }, 120000);
     });
 
-    var stat = fs.statSync(filePath);
-    if (stat.size > 0 && stat.size < 50 * 1024 * 1024) {
-      var buffer = fs.readFileSync(filePath);
+    var stat = fs2.statSync(filePath);
+    if (stat.size > 100 && stat.size < 60 * 1024 * 1024) {
+      var buffer = fs2.readFileSync(filePath);
       await sock.sendMessage(sender, {
         audio: buffer,
-        mimetype: 'audio/mpeg',
-        fileName: track.title.substring(0, 80) + '.mp3',
+        mimetype: 'audio/mp4',
+        fileName: track.title.substring(0, 80) + '.m4a',
         ptt: false,
       });
+    } else if (stat.size >= 60 * 1024 * 1024) {
+      await sock.sendMessage(sender, { text: '⚠️ File too large (' + (stat.size / 1024 / 1024).toFixed(1) + 'MB).\nDirect link: ' + track.url });
     } else {
-      await sock.sendMessage(sender, { text: 'File too large (' + (stat.size / 1024 / 1024).toFixed(1) + 'MB).\nDirect link: ' + track.url });
+      await sock.sendMessage(sender, { text: '❌ Download seems to have failed. Try: ' + track.url });
     }
 
-    try { fs.unlinkSync(filePath); } catch (e) {}
+    try { fs2.unlinkSync(filePath); } catch (e) {}
   } catch (err) {
-    await sock.sendMessage(sender, { text: 'Download failed: ' + err.message + '\nDirect link: ' + track.url });
+    await sock.sendMessage(sender, { text: '❌ Download failed: ' + err.message + '\nDirect link: ' + track.url });
   }
 }
 

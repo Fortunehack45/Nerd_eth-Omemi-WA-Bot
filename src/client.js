@@ -42,7 +42,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     qrTimeout: 120000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
-    emitOwnEvents: false,
+    emitOwnEvents: true,  // Allow admin to send commands to themselves
     retryRequestOnFail: true,
     printQRInTerminal: false,
   });
@@ -147,14 +147,30 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     if (!msg.messages || msg.messages.length === 0) return;
     console.log('[MSG] Received ' + msg.messages.length + ' message(s)');
     for (const m of msg.messages) {
-      console.log('[MSG] From: ' + (m.key?.remoteJid || 'unknown') + ' | FromMe: ' + m.key?.fromMe + ' | HasText: ' + !!(m.message?.conversation || m.message?.extendedTextMessage?.text));
-      if (!m.message || m.key?.fromMe) continue;
-      if (m.key?.remoteJid === 'status@broadcast') {
+      if (!m.message) continue;
+      var remoteJid = m.key?.remoteJid || '';
+      var isFromMe = m.key?.fromMe;
+      var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
+      console.log('[MSG] From: ' + remoteJid + ' | FromMe: ' + isFromMe + ' | HasText: ' + !!msgText);
+
+      // Status updates
+      if (remoteJid === 'status@broadcast') {
         if (config.status.autoView || config.status.autoLike) {
           await statusHandler(sock, m);
         }
         continue;
       }
+
+      // Admin self-commands: allow owner to send commands to themselves
+      if (isFromMe) {
+        var prefix = config.prefix || '!';
+        if (msgText && msgText.startsWith(prefix)) {
+          // Only process if this is from the bot's own number (admin self-command)
+          await messageHandler(sock, m);
+        }
+        continue;
+      }
+
       if (config.antiBan.enabled && isDuplicateMessage(m.key?.id)) continue;
       if (config.antiBan.enabled && config.antiBan.safeMode) {
         await new Promise(r => setTimeout(r, randomBetween(200, 800)));

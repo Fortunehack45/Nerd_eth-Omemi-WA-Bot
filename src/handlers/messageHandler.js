@@ -109,6 +109,7 @@ async function handleMessage(sock, msg) {
     if (handled) return;
   }
 
+  // After command check — skip further processing for own messages
   if (msg.key?.fromMe) return;
 
   if (config.antiBan.enabled && config.antiBan.safeMode) {

@@ -87,6 +87,26 @@ async function handleCommand(sock, msg, text) {
   }
 
   try {
+    // Check if admin-only command
+    if (cmd.adminOnly) {
+      var { isAdmin } = require('../services/accessControl');
+      var callerJid = senderId || sender;
+      if (!isAdmin(callerJid) && !isAdmin(sender)) {
+        await sock.sendMessage(sender, { text: '🔒 This command is for admins only.' });
+        return true;
+      }
+    }
+
+    // Check restricted features
+    if (cmd.restricted && cmd.restrictedFeature) {
+      var { canUse, isAdmin: isAdminCheck } = require('../services/accessControl');
+      var callerJid2 = senderId || sender;
+      if (!isAdminCheck(callerJid2) && !isAdminCheck(sender) && !canUse(callerJid2, cmd.restrictedFeature)) {
+        await sock.sendMessage(sender, { text: '🔒 You don\'t have access to this feature.\n\nContact the admin to get access using: `!access add <your number>`' });
+        return true;
+      }
+    }
+
     if (config.antiBan.enabled && config.antiBan.humanTyping && !cmd.noTyping) {
       await simulateTyping(sock, sender, args || 'command');
     }

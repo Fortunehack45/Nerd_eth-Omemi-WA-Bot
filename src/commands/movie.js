@@ -1,4 +1,4 @@
-const { searchMovie, getMovieInfo, getTrendingMovies, getSimilarMovies, getUpcomingMovies, getTopRated } = require('../services/mediaService');
+const { searchMovie, getMovieInfo, getTrendingMovies, getSimilarMovies, getUpcomingMovies, getTopRated, getMovieDownload } = require('../services/mediaService');
 const { parseFlags, paginate } = require('../utils/helpers');
 
 const HELP = [
@@ -17,6 +17,7 @@ const HELP = [
   '  `similar`      Find movies similar to a title',
   '  `upcoming`     Upcoming movie releases',
   '  `recommend`    Personalized movie recommendations',
+  '  `download`     Download a movie (torrent/magnet links via YTS)',
   '',
   '*Global Flags:*',
   '  `--help`, `-h`   Show help for any subcommand',
@@ -319,6 +320,53 @@ async function cmdRecommend(sock, sender, args, flags) {
   }
 }
 
+async function cmdDownload(sock, sender, args, flags) {
+  var query = args.join(' ');
+  if (!query) {
+    return sock.sendMessage(sender, {
+      text: usg('!movie download <title | IMDb ID>',
+        'Get direct download links for a movie via YTS (HD quality torrents).\n\n*Supported formats:* 1080p, 720p, 2160p (4K), 3D\n\n*Examples:*\n  `!movie download Inception`\n  `!movie download tt1375666`\n  `!movie download The Dark Knight`',
+        ''),
+    });
+  }
+
+  await sock.sendMessage(sender, { text: '🎬 Searching for download links for "' + query.substring(0, 50) + '"...' });
+  var result = await getMovieDownload(query);
+
+  if (result.error && !result.found) {
+    return sock.sendMessage(sender, { text: '❌ ' + result.error });
+  }
+
+  var text = '*🎬 ' + result.title + ' (' + (result.year || '?') + ')*\n\n';
+  if (result.rating) text += '⭐ *Rating:* ' + result.rating + '/10\n';
+  if (result.runtime) text += '⏱ *Runtime:* ' + result.runtime + ' min\n';
+  if (result.genres && result.genres.length) text += '🎭 *Genre:* ' + result.genres.join(', ') + '\n';
+  if (result.imdbCode) text += '🆔 *IMDb:* ' + result.imdbCode + '\n';
+  if (result.summary) text += '\n*Plot:*\n' + result.summary + (result.summary.length >= 300 ? '...' : '') + '\n';
+
+  if (result.error) {
+    text += '\n⚠️ ' + result.error;
+    text += '\n\n🔗 *Browse on YTS:* ' + (result.ytsUrl || 'https://yts.mx');
+    return sock.sendMessage(sender, { text: text.substring(0, 4000) });
+  }
+
+  text += '\n*📥 Download Options:*\n';
+  result.torrents.forEach(function(t, i) {
+    text += '\n*' + (i + 1) + '.* ' + t.quality + ' — ' + t.size + '\n';
+    text += '   💾 Torrent: ' + t.torrentUrl + '\n';
+    text += '   🧲 Magnet: `' + t.magnetUrl.substring(0, 100) + '...`\n';
+    text += '   📊 Seeds: ' + t.seeds + ' | Peers: ' + t.peers + '\n';
+  });
+
+  text += '\n🔗 *Full page:* ' + result.ytsUrl;
+  text += '\n\n_💡 Use a torrent client like qBittorrent to download. Magnet links can be copied and pasted._';
+
+  var pages = paginate(text, 3800);
+  for (var page of pages) {
+    await sock.sendMessage(sender, { text: page });
+  }
+}
+
 module.exports = {
   name: 'movie',
   alias: ['film', 'movies', 'films', 'cinema'],
@@ -405,6 +453,12 @@ module.exports = {
       case 'suggest':
       case 'suggestions':
         await cmdRecommend(sock, sender, parsedArgs.slice(1), flags);
+        break;
+      case 'download':
+      case 'dl':
+      case 'torrent':
+      case 'get':
+        await cmdDownload(sock, sender, parsedArgs.slice(1), flags);
         break;
       default:
         await sock.sendMessage(sender, { text: 'Unknown subcommand: `' + sub + '`. Use `!movie --help` to see all available subcommands.' });

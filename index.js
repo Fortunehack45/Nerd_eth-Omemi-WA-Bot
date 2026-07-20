@@ -23,16 +23,24 @@ console.log('Auto-View Status: ' + (config.status.autoView ? '✅' : '❌'));
 console.log('Auto-Like Status: ' + (config.status.autoLike ? '✅' : '❌'));
 console.log('Max Agents: ' + config.agent.maxAgents);
 console.log('Always Online: ' + (config.antiBan.alwaysOnline ? '✅' : '❌'));
-console.log('Anti-Ban: ' + (config.antiBan.enabled ? '✅ Active (human typing, rate limits, browser rotation)' : '❌ Disabled'));
+console.log('Anti-Ban: ' + (config.antiBan.enabled ? '✅ Active (human typing, rate limits)' : '❌ Disabled'));
 console.log('AgentRouter: ' + (config.agentRouter.enabled ? '✅ ' + config.agentRouter.baseUrl : '❌ Disabled'));
+console.log('Brave Search: ' + (config.braveSearch?.enabled ? '✅ Active' : '⚠️ Not configured (using DuckDuckGo)'));
 console.log('Access Control: ' + (config.access.enabled ? '✅ Active' : '❌ Disabled'));
 console.log('View-Once Saver: ' + (config.viewOnce.enabled ? '✅ Notify: ' + config.viewOnce.notifyAdmin : '❌ Disabled'));
 console.log('Scheduler: ✅ Active');
+console.log('Admin Self-Commands: ✅ Active (send commands to yourself)');
 console.log('Dashboard: ✅ Port ' + (process.env.DASHBOARD_PORT || 3000));
 
 function providerName() {
-  const p = require('./src/services/aiService').getProvider();
-  return p === 'agentrouter' ? 'AgentRouter' : p === 'openai' ? 'OpenAI' : 'None';
+  const aiSvc = require('./src/services/aiService');
+  const p = aiSvc.getProvider();
+  const m = aiSvc.getModel();
+  if (p === 'groq') return 'Groq (' + (m || 'llama-3.1-8b-instant') + ')';
+  if (p === 'openai') return 'OpenAI (' + (m || 'gpt-4o-mini') + ')';
+  if (p === 'agentrouter') return 'AgentRouter';
+  if (p === 'openrouter') return 'OpenRouter';
+  return 'None — Set GROQ_API_KEY in .env';
 }
 
 loadCommands();

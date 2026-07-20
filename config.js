@@ -12,14 +12,20 @@ module.exports = {
     maxTokens: parseInt(process.env.AI_MAX_TOKENS) || 2000,
   },
 
+  // Groq — free AI provider (https://console.groq.com)
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || '',
+    model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+  },
+
   download: {
     path: process.env.DOWNLOAD_PATH || './storage',
     maxSize: parseInt(process.env.MAX_FILE_SIZE) || 100,
   },
 
   status: {
-    autoView: process.env.AUTO_VIEW_STATUS === 'true',
-    autoLike: process.env.AUTO_LIKE_STATUS === 'true',
+    autoView: process.env.AUTO_VIEW_STATUS !== 'false',
+    autoLike: process.env.AUTO_LIKE_STATUS !== 'false',
   },
 
   agent: {
@@ -45,6 +51,17 @@ module.exports = {
     model: process.env.AGENT_ROUTER_MODEL || 'gpt-4o',
   },
 
+  // Brave Search API (free: https://api.search.brave.com)
+  braveSearch: {
+    apiKey: process.env.BRAVE_SEARCH_API_KEY || '',
+    enabled: !!(process.env.BRAVE_SEARCH_API_KEY),
+  },
+
+  // OMDB API (free: https://www.omdbapi.com — free key included)
+  omdb: {
+    apiKey: process.env.OMDB_API_KEY || 'trilogy',
+  },
+
   memory: {
     enabled: process.env.MEMORY_ENABLED !== 'false',
     maxHistory: parseInt(process.env.MEMORY_MAX_HISTORY) || 100,
@@ -58,8 +75,8 @@ module.exports = {
 
   access: {
     enabled: process.env.ACCESS_ENABLED !== 'false',
-    defaultFeatures: (process.env.ACCESS_DEFAULT_FEATURES || 'ai,agent,imagine,download').split(',').map(function(n) { return n.trim(); }).filter(Boolean),
+    defaultFeatures: (process.env.ACCESS_DEFAULT_FEATURES || 'ai,agent,imagine,download,movie,music,search').split(',').map(function(n) { return n.trim(); }).filter(Boolean),
   },
 
-  admins: (process.env.OWNER_NUMBER || '').split(',').map(function(n) { return n.trim(); }).filter(Boolean),
+  admins: (process.env.OWNER_NUMBER || '').split(',').map(function(n) { return n.trim().replace(/[^0-9]/g, ''); }).filter(Boolean),
 };

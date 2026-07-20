@@ -1,79 +1,133 @@
-const OpenAI = require('openai');
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
 const config = require('../../config');
 
-let openai = null;
+// Groq SDK (free tier AI)
+let Groq = null;
+try { Groq = require('groq-sdk'); } catch (e) {}
+
+// OpenAI SDK
+let OpenAI = null;
+try { OpenAI = require('openai'); } catch (e) {}
+
+let aiClient = null;
 let provider = 'none';
+let currentModel = null;
+
+// Runtime key overrides (admin can change via !setkey)
+let runtimeKeys = {};
 
 function initAI() {
-  if (config.agentRouter.enabled && config.agentRouter.apiKey) {
-    openai = new OpenAI({
-      apiKey: config.agentRouter.apiKey,
-      baseURL: config.agentRouter.baseUrl,
-    });
-    provider = 'agentrouter';
-    console.log(`AI Provider: AgentRouter (${config.agentRouter.baseUrl})`);
+  // 1. AgentRouter (if explicitly enabled)
+  if (config.agentRouter.enabled && config.agentRouter.apiKey && config.agentRouter.apiKey !== 'ar-your-agentrouter-key') {
+    if (OpenAI) {
+      aiClient = new OpenAI({ apiKey: config.agentRouter.apiKey, baseURL: config.agentRouter.baseUrl });
+      provider = 'agentrouter';
+      currentModel = config.agentRouter.model || 'gpt-4o';
+      console.log('AI Provider: AgentRouter (' + config.agentRouter.baseUrl + ')');
+      return true;
+    }
+  }
+
+  // 2. Groq (free, fast — default if key set)
+  var groqKey = runtimeKeys.groq || config.groq?.apiKey || process.env.GROQ_API_KEY;
+  if (groqKey && groqKey !== 'gsk-demo-key' && Groq) {
+    aiClient = new Groq({ apiKey: groqKey });
+    provider = 'groq';
+    currentModel = config.groq?.model || 'llama-3.1-8b-instant';
+    console.log('AI Provider: Groq (' + currentModel + ')');
     return true;
   }
 
-  if (config.openai.apiKey && config.openai.apiKey !== 'sk-your-openai-api-key') {
-    openai = new OpenAI({ apiKey: config.openai.apiKey });
+  // 3. OpenAI
+  var openaiKey = runtimeKeys.openai || config.openai?.apiKey;
+  if (openaiKey && openaiKey !== 'sk-your-openai-api-key' && OpenAI) {
+    aiClient = new OpenAI({ apiKey: openaiKey });
     provider = 'openai';
-    console.log('AI Provider: OpenAI');
+    currentModel = config.openai?.model || 'gpt-4o-mini';
+    console.log('AI Provider: OpenAI (' + currentModel + ')');
     return true;
   }
 
-  console.warn('No AI API key configured. Set OPENAI_API_KEY or AGENT_ROUTER_API_KEY in .env');
+  // 4. OpenRouter (free tier)
+  var openrouterKey = runtimeKeys.openrouter || process.env.OPENROUTER_API_KEY;
+  if (openrouterKey && openrouterKey !== 'or-demo' && OpenAI) {
+    aiClient = new OpenAI({
+      apiKey: openrouterKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: { 'X-Title': 'Nerd-eth WhatsApp Bot' }
+    });
+    provider = 'openrouter';
+    currentModel = 'meta-llama/llama-3.1-8b-instruct:free';
+    console.log('AI Provider: OpenRouter (free tier)');
+    return true;
+  }
+
+  console.warn('[AI] No AI key configured. Set GROQ_API_KEY in .env for free AI.');
+  provider = 'none';
   return false;
 }
 
-function getProvider() {
-  return provider;
+function getProvider() { return provider; }
+function getModel() { return currentModel; }
+
+function setRuntimeKey(providerName, key) {
+  runtimeKeys[providerName.toLowerCase()] = key;
+  // Reinitialize with new key
+  aiClient = null;
+  provider = 'none';
+  return initAI();
 }
 
-function switchProvider(newProvider) {
-  if (newProvider === 'agentrouter' && config.agentRouter.apiKey) {
-    openai = new OpenAI({
-      apiKey: config.agentRouter.apiKey,
-      baseURL: config.agentRouter.baseUrl,
-    });
-    provider = 'agentrouter';
-    return true;
+async function chatComplete(messages, modelOverride) {
+  if (!aiClient) {
+    return { text: '⚠️ AI is not configured. Ask the admin to set an API key using !setkey groq <key>\n\nGet a free Groq key at: https://console.groq.com', success: false };
   }
-  if (newProvider === 'openai' && config.openai.apiKey && config.openai.apiKey !== 'sk-your-openai-api-key') {
-    openai = new OpenAI({ apiKey: config.openai.apiKey });
-    provider = 'openai';
-    return true;
-  }
-  return false;
-}
 
-async function chatComplete(messages, modelOverride = null) {
-  if (!openai) return { text: 'AI is not configured. Set OPENAI_API_KEY or AGENT_ROUTER_API_KEY in .env' };
+  var model = modelOverride || currentModel;
+
   try {
-    const model = modelOverride || (provider === 'agentrouter' ? config.agentRouter.model : config.openai.model);
-    const completion = await openai.chat.completions.create({
-      model,
-      temperature: config.openai.temperature,
-      max_tokens: config.openai.maxTokens,
-      messages,
-    });
-    return { text: completion.choices[0]?.message?.content || 'No response', success: true };
+    if (provider === 'groq') {
+      // Groq native SDK
+      var completion = await aiClient.chat.completions.create({
+        messages: messages,
+        model: model,
+        temperature: config.openai?.temperature || 0.7,
+        max_tokens: config.openai?.maxTokens || 2048,
+      });
+      return { text: completion.choices[0]?.message?.content || 'No response', success: true };
+    } else {
+      // OpenAI-compatible (OpenAI, AgentRouter, OpenRouter)
+      var completion2 = await aiClient.chat.completions.create({
+        model: model,
+        temperature: config.openai?.temperature || 0.7,
+        max_tokens: config.openai?.maxTokens || 2000,
+        messages: messages,
+      });
+      return { text: completion2.choices[0]?.message?.content || 'No response', success: true };
+    }
   } catch (err) {
-    return { text: `AI Error: ${err.message}`, success: false };
+    var msg = err.message || 'Unknown AI error';
+    // Friendly error messages
+    if (msg.includes('401') || msg.includes('invalid_api_key')) {
+      return { text: '❌ AI key is invalid or expired. Admin can update it with: !setkey groq <new-key>', success: false };
+    }
+    if (msg.includes('429') || msg.includes('rate_limit')) {
+      return { text: '⏳ AI is rate limited. Please wait a moment and try again.', success: false };
+    }
+    return { text: '❌ AI Error: ' + msg, success: false };
   }
 }
 
 async function generateImage(prompt) {
-  if (provider === 'agentrouter') {
-    return { url: null, error: 'Image generation not available via AgentRouter. Use OpenAI directly.', success: false };
+  if (provider === 'groq') {
+    return { url: null, error: 'Image generation not supported with Groq. Admin needs to set an OpenAI key: !setkey openai sk-...', success: false };
   }
-  if (!openai) return { url: null, error: 'AI is not configured.' };
+  if (!aiClient) return { url: null, error: 'AI is not configured.', success: false };
   try {
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt,
-      n: 1,
-      size: '1024x1024',
+    var response = await aiClient.images.generate({
+      model: 'dall-e-3', prompt: prompt, n: 1, size: '1024x1024',
     });
     return { url: response.data[0]?.url, error: null, success: true };
   } catch (err) {
@@ -81,16 +135,24 @@ async function generateImage(prompt) {
   }
 }
 
-async function listAgentRouterModels() {
-  if (provider !== 'agentrouter') {
-    return { success: false, models: [], error: 'Not using AgentRouter provider.' };
-  }
+async function listModels() {
+  if (!aiClient) return { success: false, models: [], error: 'AI not configured.' };
   try {
-    const response = await openai.models.list();
-    return { success: true, models: response.data };
+    if (provider === 'groq') {
+      var models = await aiClient.models.list();
+      return { success: true, models: models.data || [], provider: 'groq' };
+    }
+    var models2 = await aiClient.models.list();
+    return { success: true, models: models2.data || [], provider: provider };
   } catch (err) {
     return { success: false, models: [], error: err.message };
   }
 }
 
-module.exports = { initAI, chatComplete, generateImage, getProvider, switchProvider, listAgentRouterModels };
+// Test AI connectivity
+async function testConnection() {
+  var result = await chatComplete([{ role: 'user', content: 'Reply with only: OK' }]);
+  return result;
+}
+
+module.exports = { initAI, chatComplete, generateImage, getProvider, getModel, setRuntimeKey, listModels, testConnection };
