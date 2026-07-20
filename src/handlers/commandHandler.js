@@ -55,7 +55,9 @@ function loadCommands() {
 async function handleCommand(sock, msg, text) {
   var sender = msg.key.remoteJid;
   var isGroup = sender.endsWith('@g.us');
-  var senderId = msg.key.participant || sender;
+  var isFromMe = !!msg.key.fromMe;
+  var botJid = sock.user?.id || sock.user?.jid || '';
+  var senderId = isFromMe ? botJid : (msg.key.participant || sender);
   var pushName = msg.pushName || 'User';
 
   var extracted = extractCommand(text);
@@ -65,7 +67,7 @@ async function handleCommand(sock, msg, text) {
   var cmd = getCommand(command);
   if (!cmd) return null;
 
-  if (config.antiBan.enabled) {
+  if (config.antiBan.enabled && !isFromMe) {
     var cooldownKey = 'cmd_' + cmd.name + '_' + senderId;
     var now = Date.now();
     if (commandCooldowns.has(cooldownKey)) {
@@ -90,8 +92,7 @@ async function handleCommand(sock, msg, text) {
     // Check if admin-only command
     if (cmd.adminOnly) {
       var { isAdmin } = require('../services/accessControl');
-      var callerJid = senderId || sender;
-      if (!isAdmin(callerJid) && !isAdmin(sender)) {
+      if (!isFromMe && !isAdmin(senderId, isFromMe) && !isAdmin(sender, isFromMe)) {
         await sock.sendMessage(sender, { text: '🔒 This command is for admins only.' });
         return true;
       }
@@ -100,8 +101,7 @@ async function handleCommand(sock, msg, text) {
     // Check restricted features
     if (cmd.restricted && cmd.restrictedFeature) {
       var { canUse, isAdmin: isAdminCheck } = require('../services/accessControl');
-      var callerJid2 = senderId || sender;
-      if (!isAdminCheck(callerJid2) && !isAdminCheck(sender) && !canUse(callerJid2, cmd.restrictedFeature)) {
+      if (!isFromMe && !isAdminCheck(senderId, isFromMe) && !isAdminCheck(sender, isFromMe) && !canUse(senderId, cmd.restrictedFeature)) {
         await sock.sendMessage(sender, { text: '🔒 You don\'t have access to this feature.\n\nContact the admin to get access using: `!access add <your number>`' });
         return true;
       }

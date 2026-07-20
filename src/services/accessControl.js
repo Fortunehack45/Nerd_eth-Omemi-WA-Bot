@@ -12,7 +12,8 @@ function saveDb(db) {
   saveJson(ACCESS_FILE, db);
 }
 
-function isAdmin(jid) {
+function isAdmin(jid, isFromMe) {
+  if (isFromMe === true) return true;
   if (!jid) return false;
   var sender = parseJid(jid);
   if (!sender) return false;
