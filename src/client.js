@@ -26,10 +26,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   sock = makeWASocket({
     version,
     auth: state,
-
     logger: pino({ level: 'silent' }),
     browser,
-    syncFullHistory: true,
+    syncFullHistory: false,
     markOnlineOnConnect: true,
     generateHighQualityLink: true,
     defaultQueryTimeoutMs: 60000,
@@ -38,6 +37,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
     emitOwnEvents: false,
+    retryRequestOnFail: true,
   });
 
   startTime = Date.now();

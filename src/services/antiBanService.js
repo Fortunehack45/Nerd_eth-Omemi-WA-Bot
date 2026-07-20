@@ -65,12 +65,23 @@ function shouldProcessJid(jid) {
 
 function getSafeBrowser() {
   const browsers = [
-    ['Chrome', 'Linux', '120.0.6099.144'],
-    ['Chrome', 'Windows', '120.0.6099.110'],
-    ['Chrome', 'Macintosh', '120.0.6099.109'],
-    ['Firefox', 'Linux', '121.0'],
-    ['Edge', 'Windows', '120.0.2210.91'],
-    ['Safari', 'Macintosh', '17.1'],
+    ['Chrome', 'Windows', '130.0.6723.91'],
+    ['Chrome', 'Windows', '131.0.6778.86'],
+    ['Chrome', 'Windows', '132.0.6834.110'],
+    ['Chrome', 'Macintosh', '131.0.6778.86'],
+    ['Chrome', 'Macintosh', '132.0.6834.110'],
+    ['Chrome', 'Linux', '130.0.6723.91'],
+    ['Firefox', 'Windows', '135.0'],
+    ['Firefox', 'Macintosh', '135.0'],
+    ['Firefox', 'Linux', '134.0'],
+    ['Edge', 'Windows', '132.0.2957.127'],
+    ['Edge', 'Windows', '133.0.3065.69'],
+    ['Safari', 'Macintosh', '18.3'],
+    ['Safari', 'Macintosh', '18.2'],
+    ['Chrome', 'Android', '132.0.6834.79'],
+    ['Chrome', 'Android', '131.0.6778.135'],
+    ['Samsung', 'Android', '26.0'],
+    ['Opera', 'Windows', '114.0.5282.0'],
   ];
   return browsers[randomBetween(0, browsers.length - 1)];
 }
