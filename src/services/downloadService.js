@@ -19,7 +19,7 @@ function detectPlatform(url) {
 async function downloadYouTube(url) {
   try {
     var info = await ytdl.getInfo(url, { quality: 'lowestaudio' });
-    var format = ytdl.chooseFormat(info.formats, { quality: 'lowestaudio' });
+    var format = ytdl.chooseFormat(info.formats, { filter: 'audioonly', quality: 'lowest' });
     if (!format) format = info.formats.filter(function(f) { return f.hasAudio; })[0];
     if (!format) return { error: 'No playable format found.' };
     var title = info.videoDetails.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
@@ -67,38 +67,129 @@ async function getYouTubeAudio(url) {
 
 async function scrapeTikTok(url) {
   try {
-    var resp = await axios.get('https://www.tiktok.com/oembed?url=' + encodeURIComponent(url), { timeout: 10000 });
+    var resp = await axios.get('https://www.tikwm.com/api/?url=' + encodeURIComponent(url), { timeout: 15000 });
     var data = resp.data;
+    if (data && data.code === 0 && data.data) {
+      var d = data.data;
+      return {
+        platform: 'tiktok',
+        title: d.title || d.desc || 'TikTok Video',
+        author: d.author?.unique_id || d.author?.nickname || 'Unknown',
+        thumbnail: d.cover || d.origin_cover || null,
+        url: d.play || d.wmplay || d.hdplay || url,
+        downloadUrl: d.play || d.hdplay || d.wmplay || null,
+        music: d.music || null,
+        duration: d.duration || null,
+        size: d.size || null,
+        note: null,
+      };
+    }
+    var fallback = await axios.get('https://www.tiktok.com/oembed?url=' + encodeURIComponent(url), { timeout: 10000 });
+    var fb = fallback.data;
     return {
       platform: 'tiktok',
-      title: data.title || 'TikTok Video',
-      author: data.author_name || data.author_unique_id || 'Unknown',
-      thumbnail: data.thumbnail_url || null,
-      url: data.author_url || url,
-      html: data.html || null,
+      title: fb.title || 'TikTok Video',
+      author: fb.author_name || 'Unknown',
+      thumbnail: fb.thumbnail_url || null,
+      url: url,
       downloadUrl: null,
-      note: 'Direct download not available. Use a TikTok downloader website.',
+      note: 'Direct download not available via API.',
     };
   } catch (err) {
-    return { error: 'TikTok info failed: ' + err.message + '. Try a TikTok downloader website.' };
+    return { error: 'TikTok download failed: ' + err.message };
+  }
+}
+
+async function downloadTikTokVideo(url) {
+  try {
+    var info = await scrapeTikTok(url);
+    if (info.error) return info;
+    if (!info.downloadUrl) return { error: 'No download URL found for this TikTok video.' };
+    var fileName = 'tiktok_' + Date.now() + '.mp4';
+    var tempDir = path.join(config.download.path, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    var filePath = path.join(tempDir, fileName);
+    var resp = await axios({ method: 'get', url: info.downloadUrl, responseType: 'stream', timeout: 60000 });
+    var writer = fs.createWriteStream(filePath);
+    await new Promise(function(resolve, reject) {
+      resp.data.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+    var stat = fs.statSync(filePath);
+    return { success: true, filePath: filePath, title: info.title, size: stat.size, author: info.author, thumbnail: info.thumbnail };
+  } catch (err) {
+    return { error: 'TikTok download failed: ' + err.message };
   }
 }
 
 async function scrapeInstagram(url) {
   try {
-    var resp = await axios.get('https://api.instagram.com/oembed?url=' + encodeURIComponent(url), { timeout: 10000 });
+    var resp = await axios.get('https://instasave.io/api?url=' + encodeURIComponent(url), {
+      timeout: 15000,
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    });
     var data = resp.data;
+    if (data && data.media && data.media.length > 0) {
+      var first = data.media[0];
+      return {
+        platform: 'instagram',
+        title: data.title || 'Instagram Post',
+        author: data.author || first.author || 'Unknown',
+        thumbnail: first.thumbnail || data.thumbnail || null,
+        url: first.url || url,
+        downloadUrl: first.url || null,
+        type: first.type || 'image',
+        note: null,
+      };
+    }
+    var fallbackResp = await axios.get('https://api.instagram.com/oembed?url=' + encodeURIComponent(url), { timeout: 10000 });
+    var fb = fallbackResp.data;
     return {
       platform: 'instagram',
-      title: data.title || 'Instagram Post',
-      author: data.author_name || 'Unknown',
-      thumbnail: data.thumbnail_url || null,
+      title: fb.title || 'Instagram Post',
+      author: fb.author_name || 'Unknown',
+      thumbnail: fb.thumbnail_url || null,
       url: url,
       downloadUrl: null,
-      note: 'Direct download not available. Send the link to a story/IG downloader service.',
+      note: 'Direct download not available via API.',
     };
   } catch (err) {
-    return { error: 'Instagram info failed: ' + err.message };
+    var fbResp = await axios.get('https://api.instagram.com/oembed?url=' + encodeURIComponent(url), { timeout: 10000 });
+    var fb = fbResp.data;
+    return {
+      platform: 'instagram',
+      title: fb.title || 'Instagram Post',
+      author: fb.author_name || 'Unknown',
+      thumbnail: fb.thumbnail_url || null,
+      url: url,
+      downloadUrl: null,
+      note: 'Direct download not available via API.',
+    };
+  }
+}
+
+async function downloadInstagramMedia(url) {
+  try {
+    var info = await scrapeInstagram(url);
+    if (info.error) return info;
+    if (!info.downloadUrl) return { error: 'No download URL found for this Instagram post.' };
+    var ext = info.type === 'video' ? '.mp4' : '.jpg';
+    var fileName = 'instagram_' + Date.now() + ext;
+    var tempDir = path.join(config.download.path, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    var filePath = path.join(tempDir, fileName);
+    var resp = await axios({ method: 'get', url: info.downloadUrl, responseType: 'stream', timeout: 60000 });
+    var writer = fs.createWriteStream(filePath);
+    await new Promise(function(resolve, reject) {
+      resp.data.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+    var stat = fs.statSync(filePath);
+    return { success: true, filePath: filePath, title: info.title, size: stat.size, author: info.author, type: info.type };
+  } catch (err) {
+    return { error: 'Instagram download failed: ' + err.message };
   }
 }
 
@@ -142,12 +233,58 @@ async function processLink(url) {
   }
 }
 
+async function getYouTubeVideo(url) {
+  try {
+    var info = await ytdl.getInfo(url);
+    var format = ytdl.chooseFormat(info.formats, { quality: '18' });
+    if (!format) format = info.formats.filter(function(f) { return f.hasVideo && f.hasAudio; })[0];
+    if (!format) format = info.formats.filter(function(f) { return f.hasVideo; })[0];
+    if (!format) return { error: 'No playable video format found.' };
+    var title = info.videoDetails.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
+    var filePath = path.join(config.download.path, 'temp', 'yt_' + Date.now() + '.mp4');
+    var tempDir = path.join(config.download.path, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    var stream = ytdl(url, { quality: format.itag });
+    var writer = fs.createWriteStream(filePath);
+    await new Promise(function(resolve, reject) {
+      stream.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+      setTimeout(function() { reject(new Error('Download timeout')); }, 120000);
+    });
+    var stat = fs.statSync(filePath);
+    return { success: true, filePath: filePath, title: title, size: stat.size };
+  } catch (err) {
+    return { error: 'YouTube video download failed: ' + err.message };
+  }
+}
+
+async function downloadMedia(url) {
+  var platform = detectPlatform(url);
+  switch (platform) {
+    case 'youtube':
+      return await getYouTubeVideo(url);
+    case 'tiktok':
+      return await downloadTikTokVideo(url);
+    case 'instagram':
+      return await downloadInstagramMedia(url);
+    case 'direct':
+      return { platform: 'direct', title: url.split('/').pop() || 'file', url: url, downloadUrl: url, note: 'Direct file link.' };
+    default:
+      return { error: 'No download available for this platform.' };
+  }
+}
+
 module.exports = {
   detectPlatform,
   downloadYouTube,
   getYouTubeAudio,
+  getYouTubeVideo,
   scrapeTikTok,
+  downloadTikTokVideo,
   scrapeInstagram,
+  downloadInstagramMedia,
   scrapeSpotify,
   processLink,
+  downloadMedia,
 };

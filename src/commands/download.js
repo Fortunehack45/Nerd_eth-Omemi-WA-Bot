@@ -1,16 +1,46 @@
-const { processLink, detectPlatform, getYouTubeAudio } = require('../services/downloadService');
+const { processLink, detectPlatform, getYouTubeAudio, downloadMedia } = require('../services/downloadService');
 const { parseFlags, formatBytes } = require('../utils/helpers');
 const config = require('../../config');
+const fs = require('fs');
 
-var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Instagram, and Spotify links.\n\n*Usage:* `!download <link> [flags]`\n\nJust send a link and the bot will fetch the details.\n\n*Flags:*\n  `--audio`, `-a`    Download as audio only (YouTube)\n  `--info`, `-i`     Show link info without downloading\n\n*Supported:*\n  ▸ YouTube (videos & shorts)\n  ▸ TikTok (videos)\n  ▸ Instagram (posts & reels)\n  ▸ Spotify (tracks)\n\n*Examples:*\n  `!download https://youtu.be/...`\n  `!download https://youtu.be/... --audio`\n  `!download https://vm.tiktok.com/...`\n  `!download https://instagram.com/p/... --info`\n  `!download https://open.spotify.com/track/...`';
+var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Instagram, and Spotify. The bot downloads the file and sends it directly.\n\n*Usage:* `!download <link> [flags]`\n\n*Flags:*\n  `--audio`, `-a`    Download as audio only (YouTube)\n  `--info`, `-i`     Show link info without downloading\n\n*Supported:*\n  ▸ YouTube (videos & shorts)\n  ▸ TikTok (videos)\n  ▸ Instagram (posts & reels)\n  ▸ Spotify (tracks - info only)\n\n*Examples:*\n  `!download https://youtu.be/...`\n  `!download https://youtu.be/... --audio`\n  `!download https://vm.tiktok.com/...`\n  `!download https://instagram.com/p/...`';
+
+async function sendFile(sock, sender, filePath, opts) {
+  try {
+    var buf = fs.readFileSync(filePath);
+    var ext = filePath.split('.').pop().toLowerCase();
+    var msgOpts = {};
+
+    if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext)) {
+      var mimes = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac' };
+      msgOpts.audio = buf;
+      msgOpts.mimetype = mimes[ext] || 'audio/mpeg';
+      msgOpts.fileName = opts.title + '.' + ext;
+    } else if (opts.type === 'video' || ['mp4', 'webm', 'mkv', 'mov'].includes(ext)) {
+      msgOpts.video = buf;
+      msgOpts.caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
+    } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      msgOpts.image = buf;
+      msgOpts.caption = opts.title ? '📸 *' + opts.title.substring(0, 100) + '*' : '📸 Image';
+    } else {
+      msgOpts.document = buf;
+      msgOpts.fileName = opts.title + '.' + ext;
+      msgOpts.mimetype = 'application/octet-stream';
+    }
+
+    await sock.sendMessage(sender, msgOpts);
+  } catch (err) {
+    await sock.sendMessage(sender, { text: 'Failed to send file: ' + err.message });
+  } finally {
+    try { fs.unlinkSync(filePath); } catch (e) {}
+  }
+}
 
 module.exports = {
   name: 'download',
   alias: ['dl', 'save', 'get'],
   description: 'Download media from YouTube, TikTok, Instagram, Spotify',
   usage: '!download <link> [--audio] [--info]',
-  restricted: true,
-  restrictedFeature: 'download',
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
 
@@ -31,9 +61,8 @@ module.exports = {
       return sock.sendMessage(sender, { text: 'Unsupported platform. Supported: YouTube, TikTok, Instagram, Spotify.' });
     }
 
-    await sock.sendMessage(sender, { text: '🔍 Processing ' + platform + ' link...' });
-
     if (flags.info || flags.i) {
+      await sock.sendMessage(sender, { text: '🔍 Fetching info for ' + platform + ' link...' });
       var info = await processLink(url);
       if (info.error) return sock.sendMessage(sender, { text: 'Error: ' + info.error });
       var t = '*📄 Media Info*\n\n';
@@ -47,53 +76,47 @@ module.exports = {
       return sock.sendMessage(sender, { text: t.substring(0, 4000) });
     }
 
-    var result = await processLink(url);
+    await sock.sendMessage(sender, { text: '⬇️ Downloading ' + platform + ' media... This may take a moment.' });
 
-    if (result.error) {
-      return sock.sendMessage(sender, { text: 'Error: ' + result.error });
+    if (platform === 'youtube' && (flags.audio || flags.a)) {
+      var audioResult = await getYouTubeAudio(url);
+      if (audioResult.error) return sock.sendMessage(sender, { text: 'Error: ' + audioResult.error });
+      if (audioResult.filePath && audioResult.size < (config.download.maxSize * 1024 * 1024)) {
+        await sendFile(sock, sender, audioResult.filePath, { title: audioResult.title, type: 'audio' });
+      } else {
+        var info = await processLink(url);
+        var link = info.downloadUrl || url;
+        await sock.sendMessage(sender, { text: 'File too large (' + formatBytes(audioResult.size) + ').\nDirect link: ' + link });
+        try { fs.unlinkSync(audioResult.filePath); } catch (e) {}
+      }
+      return;
     }
 
-    if (platform === 'youtube') {
-      if (flags.audio || flags.a) {
-        await sock.sendMessage(sender, { text: '🎵 Downloading audio... This may take a moment.' });
-        var audioResult = await getYouTubeAudio(url);
-        if (audioResult.error) return sock.sendMessage(sender, { text: 'Error: ' + audioResult.error });
-        if (audioResult.filePath && audioResult.size < (config.download.maxSize * 1024 * 1024)) {
-          var fileBuffer = require('fs').readFileSync(audioResult.filePath);
-          await sock.sendMessage(sender, {
-            audio: fileBuffer,
-            mimetype: 'audio/mpeg',
-            fileName: audioResult.title + '.mp3',
-          });
-          try { require('fs').unlinkSync(audioResult.filePath); } catch (e) {}
-        } else {
-          await sock.sendMessage(sender, { text: 'File too large or processing issue.\nDownload directly: ' + (result.downloadUrl || url) });
-        }
-      } else {
-        var text = '*📥 YouTube Download*\n\n';
-        text += '*Title:* ' + result.title + '\n';
-        text += '*Author:* ' + result.author + '\n';
-        if (result.duration) text += '*Duration:* ' + Math.floor(result.duration / 60) + ':' + String(result.duration % 60).padStart(2, '0') + '\n';
-        if (result.thumbnail) text += '\n📸 Thumbnail: ' + result.thumbnail + '\n';
-        text += '\n📹 Watch: ' + result.url + '\n';
-        if (result.downloadUrl) {
-          text += '\n📥 *Direct Download Link:*\n' + result.downloadUrl + '\n';
-          text += '\n_Tip: Use `--audio` to get the audio file._';
-        } else {
-          text += '\n⚠️ No direct link available. Try a YouTube downloader website.';
-        }
-        await sock.sendMessage(sender, { text: text.substring(0, 4000) });
-      }
-    } else if (platform === 'tiktok' || platform === 'instagram' || platform === 'spotify') {
-      var text = '*📥 ' + result.platform.charAt(0).toUpperCase() + result.platform.slice(1) + ' Info*\n\n';
-      text += '*Title:* ' + (result.title || 'Unknown') + '\n';
-      text += '*Author:* ' + (result.author || 'Unknown') + '\n';
-      if (result.thumbnail) text += '\n📸 Thumbnail: ' + result.thumbnail + '\n';
-      text += '\n🔗 Original: ' + url + '\n';
-      if (result.note) text += '\n*Note:* ' + result.note;
-      await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+    if (platform === 'spotify') {
+      var info = await processLink(url);
+      if (info.error) return sock.sendMessage(sender, { text: 'Error: ' + info.error });
+      var text = '*📥 Spotify Info*\n\n';
+      text += '*Title:* ' + (info.title || 'Unknown') + '\n';
+      text += '*Author:* ' + (info.author || 'Unknown') + '\n';
+      if (info.thumbnail) text += '\n📸 Thumbnail: ' + info.thumbnail + '\n';
+      text += '\n🔗 ' + url + '\n';
+      text += '\n*Note:* Spotify downloads require premium. Use `!music search` to find this song.';
+      return sock.sendMessage(sender, { text: text.substring(0, 4000) });
+    }
+
+    var dlResult = await downloadMedia(url);
+    if (dlResult.error) return sock.sendMessage(sender, { text: 'Error: ' + dlResult.error });
+
+    if (dlResult.filePath && dlResult.size < (config.download.maxSize * 1024 * 1024)) {
+      var type = platform === 'youtube' || platform === 'tiktok' ? 'video' : 'media';
+      await sendFile(sock, sender, dlResult.filePath, { title: dlResult.title, type: type });
+    } else if (dlResult.filePath) {
+      var info = await processLink(url);
+      var link = info.downloadUrl || url;
+      await sock.sendMessage(sender, { text: 'File too large (' + formatBytes(dlResult.size) + ').\nDirect link: ' + link });
+      try { fs.unlinkSync(dlResult.filePath); } catch (e) {}
     } else {
-      await sock.sendMessage(sender, { text: '*Platform:* ' + result.platform + '\n*URL:* ' + url + '\n\n⚠️ Automatic download not available for this platform.' });
+      await sock.sendMessage(sender, { text: 'Could not download. Try the original link:\n' + url });
     }
   },
 };
