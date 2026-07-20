@@ -27,7 +27,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   sock = makeWASocket({
     version,
     auth: state,
-    logger: pino({ level: 'silent' }),
+    logger: pino({ level: process.env.RENDER ? 'error' : 'silent' }),
     browser,
     syncFullHistory: false,
     markOnlineOnConnect: true,
@@ -71,8 +71,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function(err) {
           if (!err) console.log('QR saved: ' + qrFile + ' (open on phone to scan)');
         });
-        console.log('\nDashboard: http://localhost:' + (process.env.DASHBOARD_PORT || 3000) + '/dashboard?pwd=' + (process.env.DASHBOARD_PASSWORD || 'admin'));
+        console.log('\nDashboard: ' + (process.env.RENDER ? process.env.RENDER_EXTERNAL_URL || 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com' : 'http://localhost:' + (process.env.DASHBOARD_PORT || 3000)) + '/dashboard?pwd=' + (process.env.DASHBOARD_PASSWORD || 'admin'));
       });
+    }
+    console.log('[DEBUG] connection.update:', JSON.stringify({ connection: connection, hasQR: !!qr, hasError: !!lastDisconnect?.error }));
+    if (lastDisconnect?.error) {
+      console.error('[DEBUG] Disconnect error:', lastDisconnect.error?.message || lastDisconnect.error?.toString());
     }
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error instanceof Boom)
