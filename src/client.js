@@ -31,27 +31,23 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     browser,
     syncFullHistory: false,
     markOnlineOnConnect: true,
-    generateHighQualityLink: true,
-    defaultQueryTimeoutMs: 60000,
-    keepAliveIntervalMs: 25000,
+    generateHighQualityLink: false,
+    defaultQueryTimeoutMs: 120000,
+    keepAliveIntervalMs: 15000,
+    connectTimeoutMs: 120000,
     patchMessageBeforeSending: true,
     shouldSyncHistoryMessage: () => false,
-    fireInitQueries: true,
+    fireInitQueries: false,
     emitOwnEvents: false,
     retryRequestOnFail: true,
+    printQRInTerminal: false,
   });
 
   startTime = Date.now();
 
-  if (config.antiBan.enabled) {
-    sock.ev.on('creds.update', (creds) => {
-      if (creds?.registered && creds?.serverToken && creds?.clientToken) {
-        saveCreds();
-      }
-    });
-  } else {
-    sock.ev.on('creds.update', saveCreds);
-  }
+  sock.ev.on('creds.update', function(creds) {
+    saveCreds();
+  });
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
