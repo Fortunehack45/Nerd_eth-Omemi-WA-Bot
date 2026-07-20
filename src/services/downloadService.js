@@ -29,25 +29,43 @@ function ensureTempDir() {
   return tempDir;
 }
 
-// ─── YOUTUBE (HD Video & Audio with Cobalt.tools fallback) ─────────────────────
-
-async function getYouTubeInfo(url) {
-  if (!ytdl) return { error: 'YouTube downloader not available.' };
-  try {
-    var info = await ytdl.getInfo(url, {
-      requestOptions: { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
-    });
-    return info;
-  } catch (err) {
-    return { error: err.message };
-  }
+// Helper: Download stream or buffer to local file
+async function downloadFileFromUrl(fileUrl, outputPath, headers) {
+  var resp = await axios({
+    method: 'get',
+    url: fileUrl,
+    responseType: 'stream',
+    timeout: 120000,
+    headers: headers || { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+  });
+  var writer = fs.createWriteStream(outputPath);
+  await new Promise(function(resolve, reject) {
+    resp.data.pipe(writer);
+    writer.on('finish', resolve);
+    writer.on('error', reject);
+  });
+  return fs.statSync(outputPath);
 }
+
+// ─── YOUTUBE (Public API Fallback Chain) ──────────────────────────────────────
 
 async function getYouTubeAudio(url) {
   var tempDir = ensureTempDir();
-  var filePath = path.join(tempDir, 'yt_audio_' + Date.now() + '.mp4');
+  var filePath = path.join(tempDir, 'yt_audio_' + Date.now() + '.mp3');
 
-  // Method 1: @distube/ytdl-core
+  // Method 1: Vreden Public API (Fast & Reliable)
+  try {
+    var vResp = await axios.get('https://api.vreden.my.id/api/ytmp3?url=' + encodeURIComponent(url), { timeout: 20000 });
+    if (vResp.data && vResp.data.result && vResp.data.result.download && vResp.data.result.download.url) {
+      var item = vResp.data.result;
+      var stat = await downloadFileFromUrl(item.download.url, filePath);
+      if (stat.size > 5000) {
+        return { success: true, filePath: filePath, title: item.metadata?.title || 'YouTube Audio', size: stat.size, author: item.metadata?.author?.name || 'YouTube' };
+      }
+    }
+  } catch (e) {}
+
+  // Method 2: @distube/ytdl-core
   if (ytdl) {
     try {
       var info = await ytdl.getInfo(url);
@@ -59,16 +77,16 @@ async function getYouTubeAudio(url) {
         writer.on('finish', resolve);
         writer.on('error', reject);
         stream.on('error', reject);
-        setTimeout(function() { reject(new Error('Download timeout after 2 min')); }, 120000);
+        setTimeout(function() { reject(new Error('Timeout')); }, 120000);
       });
-      var stat = fs.statSync(filePath);
-      if (stat.size > 1000) {
-        return { success: true, filePath: filePath, title: title, size: stat.size, author: info.videoDetails.author?.name || 'YouTube' };
+      var stat2 = fs.statSync(filePath);
+      if (stat2.size > 5000) {
+        return { success: true, filePath: filePath, title: title, size: stat2.size, author: info.videoDetails.author?.name || 'YouTube' };
       }
-    } catch (err) {}
+    } catch (e) {}
   }
 
-  // Method 2: Cobalt API fallback
+  // Method 3: Cobalt Public API
   try {
     var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', {
       url: url, isAudioOnly: true, aFormat: 'mp3'
@@ -77,14 +95,9 @@ async function getYouTubeAudio(url) {
       timeout: 20000
     });
     if (cobaltResp.data && cobaltResp.data.url) {
-      var dlUrl = cobaltResp.data.url;
-      var filePath2 = path.join(tempDir, 'yt_audio_cobalt_' + Date.now() + '.mp3');
-      var dlResp = await axios({ method: 'get', url: dlUrl, responseType: 'stream', timeout: 90000 });
-      var writer2 = fs.createWriteStream(filePath2);
-      await new Promise(function(res, rej) { dlResp.data.pipe(writer2); writer2.on('finish', res); writer2.on('error', rej); });
-      var stat2 = fs.statSync(filePath2);
-      if (stat2.size > 1000) {
-        return { success: true, filePath: filePath2, title: 'YouTube Audio', size: stat2.size, author: 'YouTube' };
+      var stat3 = await downloadFileFromUrl(cobaltResp.data.url, filePath);
+      if (stat3.size > 5000) {
+        return { success: true, filePath: filePath, title: 'YouTube Audio', size: stat3.size, author: 'YouTube' };
       }
     }
   } catch (e) {}
@@ -96,24 +109,26 @@ async function getYouTubeVideo(url) {
   var tempDir = ensureTempDir();
   var filePath = path.join(tempDir, 'yt_' + Date.now() + '.mp4');
 
-  // Method 1: @distube/ytdl-core
+  // Method 1: Vreden Public API
+  try {
+    var vResp = await axios.get('https://api.vreden.my.id/api/ytmp4?url=' + encodeURIComponent(url), { timeout: 25000 });
+    if (vResp.data && vResp.data.result && vResp.data.result.download && vResp.data.result.download.url) {
+      var item = vResp.data.result;
+      var stat = await downloadFileFromUrl(item.download.url, filePath);
+      if (stat.size > 10000) {
+        return { success: true, filePath: filePath, title: item.metadata?.title || 'YouTube Video', size: stat.size, author: item.metadata?.author?.name || 'YouTube', quality: 'HD' };
+      }
+    }
+  } catch (e) {}
+
+  // Method 2: @distube/ytdl-core
   if (ytdl) {
     try {
       var info = await ytdl.getInfo(url);
       var title = info.videoDetails.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
       var formats = info.formats.filter(function(f) { return f.hasVideo && f.hasAudio; });
-      var hdOrder = [137, 248, 299, 136, 247, 298, 135, 246, 244, 134, 18, 22];
-      var format = null;
-      for (var i = 0; i < hdOrder.length; i++) {
-        var found = formats.find(function(f) { return f.itag === hdOrder[i]; });
-        if (found) { format = found; break; }
-      }
-      if (!format && formats.length > 0) {
-        formats.sort(function(a, b) { return (parseInt(b.height) || 0) - (parseInt(a.height) || 0); });
-        format = formats[0];
-      }
-      if (!format) format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
-
+      formats.sort(function(a, b) { return (parseInt(b.height) || 0) - (parseInt(a.height) || 0); });
+      var format = formats[0] || ytdl.chooseFormat(info.formats, { quality: 'highest' });
       if (format) {
         var stream = ytdl(url, { format: format });
         var writer = fs.createWriteStream(filePath);
@@ -122,36 +137,26 @@ async function getYouTubeVideo(url) {
           writer.on('finish', resolve);
           writer.on('error', reject);
           stream.on('error', reject);
-          setTimeout(function() { reject(new Error('Download timeout after 3 min')); }, 180000);
+          setTimeout(function() { reject(new Error('Timeout')); }, 150000);
         });
-        var stat = fs.statSync(filePath);
-        if (stat.size > 1000) {
-          return {
-            success: true, filePath: filePath, title: title, size: stat.size,
-            author: info.videoDetails.author?.name || 'YouTube',
-            quality: format.qualityLabel || (format.height ? format.height + 'p' : 'HD'),
-          };
+        var stat2 = fs.statSync(filePath);
+        if (stat2.size > 10000) {
+          return { success: true, filePath: filePath, title: title, size: stat2.size, author: info.videoDetails.author?.name || 'YouTube', quality: format.qualityLabel || 'HD' };
         }
       }
-    } catch (err) {}
+    } catch (e) {}
   }
 
-  // Method 2: Cobalt API fallback
+  // Method 3: Cobalt API
   try {
-    var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', {
-      url: url, vQuality: '1080'
-    }, {
+    var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', { url: url, vQuality: '720' }, {
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
       timeout: 20000
     });
     if (cobaltResp.data && cobaltResp.data.url) {
-      var dlUrl = cobaltResp.data.url;
-      var dlResp = await axios({ method: 'get', url: dlUrl, responseType: 'stream', timeout: 120000 });
-      var writer2 = fs.createWriteStream(filePath);
-      await new Promise(function(res, rej) { dlResp.data.pipe(writer2); writer2.on('finish', res); writer2.on('error', rej); });
-      var stat2 = fs.statSync(filePath);
-      if (stat2.size > 1000) {
-        return { success: true, filePath: filePath, title: 'YouTube Video', size: stat2.size, author: 'YouTube', quality: 'HD' };
+      var stat3 = await downloadFileFromUrl(cobaltResp.data.url, filePath);
+      if (stat3.size > 10000) {
+        return { success: true, filePath: filePath, title: 'YouTube Video', size: stat3.size, author: 'YouTube', quality: 'HD' };
       }
     }
   } catch (e) {}
@@ -159,134 +164,51 @@ async function getYouTubeVideo(url) {
   return { error: 'YouTube video download failed.' };
 }
 
-// ─── TIKTOK ──────────────────────────────────────────────────────────────────
-
-async function scrapeTikTok(url) {
-  // Method 1: tikwm API (HD)
-  try {
-    var resp = await axios.get('https://www.tikwm.com/api/', {
-      params: { url: url, hd: 1 },
-      timeout: 20000,
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
-    });
-    var data = resp.data;
-    if (data && data.code === 0 && data.data) {
-      var d = data.data;
-      return {
-        platform: 'tiktok',
-        title: d.title || d.desc || 'TikTok Video',
-        author: d.author?.unique_id || d.author?.nickname || 'Unknown',
-        thumbnail: d.cover || d.origin_cover || null,
-        url: d.hdplay || d.play || d.wmplay || url,
-        downloadUrl: d.hdplay || d.play || d.wmplay || null,
-        music: d.music || null, duration: d.duration || null, size: d.size || null,
-      };
-    }
-  } catch (e) {}
-
-  // Method 2: Cobalt API fallback
-  try {
-    var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', { url: url }, {
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-      timeout: 15000
-    });
-    if (cobaltResp.data && cobaltResp.data.url) {
-      return { platform: 'tiktok', title: 'TikTok Video', author: 'Unknown', downloadUrl: cobaltResp.data.url, url: url };
-    }
-  } catch (e) {}
-
-  return { platform: 'tiktok', title: 'TikTok Video', author: 'Unknown', url: url, downloadUrl: null };
-}
-
-async function downloadTikTokVideo(url) {
-  try {
-    var info = await scrapeTikTok(url);
-    if (!info.downloadUrl) return { error: 'No download URL found for this TikTok video.' };
-    var fileName = 'tiktok_' + Date.now() + '.mp4';
-    var tempDir = ensureTempDir();
-    var filePath = path.join(tempDir, fileName);
-    var resp = await axios({ method: 'get', url: info.downloadUrl, responseType: 'stream', timeout: 90000,
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.tiktok.com/' }
-    });
-    var writer = fs.createWriteStream(filePath);
-    await new Promise(function(resolve, reject) {
-      resp.data.pipe(writer);
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-    var stat = fs.statSync(filePath);
-    if (stat.size < 1000) return { error: 'Downloaded file is too small.' };
-    return { success: true, filePath: filePath, title: info.title, size: stat.size, author: info.author };
-  } catch (err) {
-    return { error: 'TikTok download failed: ' + err.message };
-  }
-}
-
-// ─── INSTAGRAM ───────────────────────────────────────────────────────────────
+// ─── INSTAGRAM (Public API Fallback Chain) ────────────────────────────────────
 
 async function scrapeInstagram(url) {
-  // Method 1: Cobalt API
+  // Method 1: Vreden Public IG API
+  try {
+    var vResp = await axios.get('https://api.vreden.my.id/api/igdl?url=' + encodeURIComponent(url), { timeout: 20000 });
+    if (vResp.data && vResp.data.result && vResp.data.result.length > 0) {
+      var item = vResp.data.result[0];
+      var dlUrl = item.url || item.downloadUrl || item;
+      return { platform: 'instagram', title: 'Instagram Post', author: 'Instagram', downloadUrl: dlUrl, type: 'video' };
+    }
+  } catch (e) {}
+
+  // Method 2: Cobalt API
   try {
     var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', { url: url }, {
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
       timeout: 15000
     });
     if (cobaltResp.data && cobaltResp.data.url) {
-      return {
-        platform: 'instagram', title: 'Instagram Media', author: 'Instagram',
-        url: cobaltResp.data.url, downloadUrl: cobaltResp.data.url, type: 'video'
-      };
+      return { platform: 'instagram', title: 'Instagram Post', author: 'Instagram', downloadUrl: cobaltResp.data.url, type: 'video' };
     }
   } catch (e) {}
 
-  // Method 2: saveig.app
-  try {
-    var resp = await axios.get('https://api.saveig.app/api?url=' + encodeURIComponent(url), {
-      timeout: 15000,
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
-    });
-    var data = resp.data;
-    if (data && data.data && data.data.length > 0) {
-      var item = data.data[0];
-      return {
-        platform: 'instagram', title: 'Instagram Post', author: 'Instagram',
-        thumbnail: item.thumbnail || null, url: item.url, downloadUrl: item.url, type: item.type || 'video'
-      };
-    }
-  } catch (e) {}
-
-  // Method 3: ddinstagram proxy
+  // Method 3: DDInstagram proxy
   try {
     var ddUrl = url.replace('instagram.com', 'ddinstagram.com');
     var resp4 = await axios.get(ddUrl, { timeout: 12000, headers: { 'User-Agent': 'Mozilla/5.0' }, maxRedirects: 5 });
     var $ = require('cheerio').load(resp4.data);
     var videoSrc = $('video source').attr('src') || $('video').attr('src');
     if (videoSrc) {
-      return { platform: 'instagram', title: 'Instagram Video', author: 'Instagram', url: videoSrc, downloadUrl: videoSrc, type: 'video' };
+      return { platform: 'instagram', title: 'Instagram Video', author: 'Instagram', downloadUrl: videoSrc, type: 'video' };
     }
   } catch (e) {}
 
-  return { platform: 'instagram', title: 'Instagram Post', author: 'Instagram', url: url, downloadUrl: null };
+  return { platform: 'instagram', title: 'Instagram Post', author: 'Instagram', downloadUrl: null };
 }
 
 async function downloadInstagramMedia(url) {
   try {
     var info = await scrapeInstagram(url);
-    if (!info.downloadUrl) return { error: 'No download URL found. Make sure the Instagram post/reel is public.' };
-    var ext = (info.type === 'video' || !info.type) ? '.mp4' : '.jpg';
-    var fileName = 'instagram_' + Date.now() + ext;
+    if (!info.downloadUrl) return { error: 'No download URL found. Ensure the Instagram post/reel is public.' };
     var tempDir = ensureTempDir();
-    var filePath = path.join(tempDir, fileName);
-    var resp = await axios({ method: 'get', url: info.downloadUrl, responseType: 'stream', timeout: 90000,
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    var writer = fs.createWriteStream(filePath);
-    await new Promise(function(resolve, reject) {
-      resp.data.pipe(writer);
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
-    var stat = fs.statSync(filePath);
+    var filePath = path.join(tempDir, 'instagram_' + Date.now() + '.mp4');
+    var stat = await downloadFileFromUrl(info.downloadUrl, filePath);
     if (stat.size < 1000) return { error: 'Downloaded file is too small.' };
     return { success: true, filePath: filePath, title: info.title, size: stat.size, author: info.author };
   } catch (err) {
@@ -294,7 +216,7 @@ async function downloadInstagramMedia(url) {
   }
 }
 
-// ─── SPOTIFY (4-API Fallback Chain) ───────────────────────────────────────────
+// ─── SPOTIFY (Public API Fallback Chain) ──────────────────────────────────────
 
 async function downloadSpotifyAudio(url) {
   var match = url.match(/\/track\/([a-zA-Z0-9]+)/);
@@ -303,7 +225,7 @@ async function downloadSpotifyAudio(url) {
   var tempDir = ensureTempDir();
   var filePath = path.join(tempDir, 'spotify_' + Date.now() + '.mp3');
 
-  // Get track metadata from Spotify oEmbed API
+  // Metadata
   var trackTitle = 'Spotify Track';
   var artistName = 'Unknown Artist';
   try {
@@ -314,43 +236,34 @@ async function downloadSpotifyAudio(url) {
     }
   } catch (e) {}
 
-  // Provider 1: spotifydown.com API
+  // Method 1: Vreden Public Spotify API
+  try {
+    var vResp = await axios.get('https://api.vreden.my.id/api/spotify?url=' + encodeURIComponent(url), { timeout: 20000 });
+    if (vResp.data && vResp.data.result && vResp.data.result.music) {
+      var stat = await downloadFileFromUrl(vResp.data.result.music, filePath);
+      if (stat.size > 10000) {
+        return { success: true, filePath: filePath, title: trackTitle, size: stat.size, author: artistName };
+      }
+    }
+  } catch (e) {}
+
+  // Method 2: SpotifyDown API
   try {
     var resp1 = await axios.get('https://api.spotifydown.com/download/' + trackId, {
       timeout: 20000,
       headers: { 'Referer': 'https://spotifydown.com/', 'User-Agent': 'Mozilla/5.0' }
     });
     if (resp1.data && resp1.data.link) {
-      var dlResp1 = await axios({ method: 'get', url: resp1.data.link, responseType: 'stream', timeout: 90000 });
-      var writer1 = fs.createWriteStream(filePath);
-      await new Promise(function(res, rej) { dlResp1.data.pipe(writer1); writer1.on('finish', res); writer1.on('error', rej); });
-      var stat1 = fs.statSync(filePath);
-      if (stat1.size > 10000) {
-        return { success: true, filePath: filePath, title: trackTitle, size: stat1.size, author: artistName };
-      }
-    }
-  } catch (e) {}
-
-  // Provider 2: Cobalt API
-  try {
-    var cobaltResp = await axios.post('https://api.cobalt.tools/api/json', { url: url }, {
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-      timeout: 20000
-    });
-    if (cobaltResp.data && cobaltResp.data.url) {
-      var dlResp2 = await axios({ method: 'get', url: cobaltResp.data.url, responseType: 'stream', timeout: 90000 });
-      var writer2 = fs.createWriteStream(filePath);
-      await new Promise(function(res, rej) { dlResp2.data.pipe(writer2); writer2.on('finish', res); writer2.on('error', rej); });
-      var stat2 = fs.statSync(filePath);
+      var stat2 = await downloadFileFromUrl(resp1.data.link, filePath);
       if (stat2.size > 10000) {
         return { success: true, filePath: filePath, title: trackTitle, size: stat2.size, author: artistName };
       }
     }
   } catch (e) {}
 
-  // Provider 3: YouTube Music Search Match Fallback (100% Reliability)
+  // Method 3: YouTube Search Match (100% Reliable Fallback)
   try {
-    var searchQuery = artistName + ' - ' + trackTitle + ' audio';
+    var searchQuery = artistName + ' - ' + trackTitle + ' official audio';
     var ytSearch = require('yt-search');
     var ytRes = await ytSearch({ query: searchQuery, pageStart: 1, pageEnd: 2 });
     var video = ytRes.videos && ytRes.videos[0];
@@ -362,10 +275,42 @@ async function downloadSpotifyAudio(url) {
     }
   } catch (e) {}
 
-  return { error: 'Spotify download failed. All music download servers are currently unavailable.' };
+  return { error: 'Spotify download failed. All servers currently busy.' };
 }
 
-// ─── GENERIC DOWNLOAD ROUTER ──────────────────────────────────────────────────
+// ─── TIKTOK ──────────────────────────────────────────────────────────────────
+
+async function scrapeTikTok(url) {
+  try {
+    var resp = await axios.get('https://www.tikwm.com/api/', {
+      params: { url: url, hd: 1 },
+      timeout: 20000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    if (resp.data && resp.data.code === 0 && resp.data.data) {
+      var d = resp.data.data;
+      return { platform: 'tiktok', title: d.title || 'TikTok Video', author: d.author?.nickname || 'TikTok', downloadUrl: d.hdplay || d.play || d.wmplay };
+    }
+  } catch (e) {}
+
+  return { platform: 'tiktok', title: 'TikTok Video', author: 'TikTok', downloadUrl: null };
+}
+
+async function downloadTikTokVideo(url) {
+  try {
+    var info = await scrapeTikTok(url);
+    if (!info.downloadUrl) return { error: 'No download URL found for this TikTok.' };
+    var tempDir = ensureTempDir();
+    var filePath = path.join(tempDir, 'tiktok_' + Date.now() + '.mp4');
+    var stat = await downloadFileFromUrl(info.downloadUrl, filePath);
+    if (stat.size < 1000) return { error: 'TikTok download failed.' };
+    return { success: true, filePath: filePath, title: info.title, size: stat.size, author: info.author };
+  } catch (err) {
+    return { error: 'TikTok download failed: ' + err.message };
+  }
+}
+
+// ─── ROUTER ──────────────────────────────────────────────────────────────────
 
 async function processLink(url) {
   var platform = detectPlatform(url);
