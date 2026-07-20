@@ -105,8 +105,8 @@ async function handleMessage(sock, msg) {
 
   if (isCommand(messageText)) {
     var cmdText = messageText.slice(config.prefix.length).trim();
-    var handled = await handleCommand(sock, msg, cmdText);
-    if (handled) return;
+    await handleCommand(sock, msg, cmdText);
+    return;
   }
 
   // After command check — skip further processing for own messages

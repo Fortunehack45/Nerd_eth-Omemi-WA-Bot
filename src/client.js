@@ -103,6 +103,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   });
 
   if (!global.msgStore) global.msgStore = new Map();
+  if (!global.processedMsgIds) global.processedMsgIds = new Set();
 
   startTime = Date.now();
 
@@ -186,8 +187,13 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     for (const m of msg.messages) {
       if (!m.message) continue;
       if (m.key?.id && global.msgStore) {
+        if (global.processedMsgIds.has(m.key.id)) continue;
+        global.processedMsgIds.add(m.key.id);
+        if (global.processedMsgIds.size > 3000) {
+          const arr = Array.from(global.processedMsgIds);
+          for (let i = 0; i < 1500; i++) global.processedMsgIds.delete(arr[i]);
+        }
         global.msgStore.set(m.key.id, m.message);
-        if (global.msgStore.size > 3000) global.msgStore.clear();
       }
       var remoteJid = m.key?.remoteJid || '';
       var isFromMe = m.key?.fromMe;
