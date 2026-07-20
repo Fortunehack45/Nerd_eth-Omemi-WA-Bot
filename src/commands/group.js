@@ -6,26 +6,27 @@ const HELP = `*👥 Group Management Commands* (Admin Only)
 
 Commands for group admins and bot owner.
 
-*Subcommands / Commands:*
-  \`!group purge\` or \`!purge\`       Mass remove members from group
-  \`!group promote <user>\`        Promote member to admin
-  \`!group demote <user>\`         Demote admin to member
-  \`!group adminme\` or \`!adminme\` Promote yourself to admin (if bot is admin)
-  \`!group info\` or \`!groupinfo\`   Show detailed group information
-  \`!group tagall\` or \`!tagall\`    Tag every member in the group
-  \`!group link\`                  Get group invite link
+*Commands:*
+  \`!nuke\` or \`!group purge\`         Mass remove ALL members from group
+  \`!adminme\` or \`!group adminme\`   Promote yourself to Group Admin
+  \`!promote @user\`                  Promote a member to Group Admin
+  \`!demote @user\`                   Demote an admin to member
+  \`!tagall <message>\`              Tag every member in the group
+  \`!groupinfo\`                      Show detailed group information
+  \`!link\`                           Get group invite link
 
 *Examples:*
-  \`!group purge --confirm\`
-  \`!group promote @user\`
-  \`!group demote 2348012345678\`
-  \`!group tagall Attention everyone!\``;
+  \`!nuke --confirm\`
+  \`!adminme\`
+  \`!promote @user\`
+  \`!demote 2348012345678\`
+  \`!tagall Attention everyone!\``;
 
 module.exports = {
   name: 'group',
-  alias: ['g', 'grp', 'nuke', 'purge', 'kickall', 'removeall', 'promote', 'demote', 'adminme', 'tagall', 'everyone', 'groupinfo', 'ginfo'],
+  alias: ['g', 'grp', 'nuke', 'purge', 'kickall', 'removeall', 'promote', 'demote', 'adminme', 'tagall', 'everyone', 'groupinfo', 'ginfo', 'link'],
   description: 'Group administration & mass management commands',
-  usage: '!nuke | !group purge | !group promote @user',
+  usage: '!nuke | !adminme | !promote @user | !tagall',
   groupOnly: true,
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
@@ -54,56 +55,72 @@ module.exports = {
     }
 
     var participants = groupMetadata.participants || [];
-    var botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
-    var botParticipant = participants.find(p => p.id.split(':')[0] === botJid?.split('@')[0]);
+    var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
+    var callerNum = parseJid(senderId || '');
+
+    var botParticipant = participants.find(p => parseJid(p.id) === botNum);
     var isBotAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
 
-    // ── 1. PURGE / NUKE / MASS KICK ALL ──────────────────────────────────────
+    // ── 1. NUKE / PURGE / MASS KICK ALL ──────────────────────────────────────
     if (['nuke', 'purge', 'kickall', 'removeall', 'clean'].includes(sub)) {
       if (!isBotAdmin) {
-        return sock.sendMessage(sender, { text: '❌ The bot must be a **Group Admin** to perform mass kick / purge.' });
+        return sock.sendMessage(sender, { text: '❌ The bot must be a **Group Admin** first to perform mass kick / nuke. Please promote the bot to Group Admin and try again.' });
       }
 
-      var confirm = subArgs.includes('--confirm') || subArgs.includes('-y');
+      var confirm = subArgs.includes('--confirm') || subArgs.includes('-y') || subArgs.includes('confirm');
       if (!confirm) {
         return sock.sendMessage(sender, {
-          text: '⚠️ *WARNING: MASS KICK NUKE*\n\nThis command will remove **ALL members** from this group!\n\nTo confirm, type:\n`!nuke --confirm` or `!group purge --confirm`',
+          text: '⚠️ *WARNING: MASS KICK NUKE*\n\nThis command will remove **ALL members** from *' + groupMetadata.subject + '*!\n\nTo execute, type:\n`!nuke --confirm` or `!group purge --confirm`',
         });
       }
 
-      await sock.sendMessage(sender, { text: '🚨 *PURGE STARTED* — Removing all members from ' + groupMetadata.subject + '...' });
+      await sock.sendMessage(sender, { text: '🚨 *MASS NUKE STARTED* — Removing all members from *' + groupMetadata.subject + '*...' });
 
       var targets = participants.filter(p => {
         var pNum = parseJid(p.id);
-        var botNum = parseJid(botJid || '');
-        var callerNum = parseJid(senderId || '');
         // Exclude bot and caller/owner
         return pNum !== botNum && pNum !== callerNum && !isAdmin(p.id);
-      });
+      }).map(p => p.id);
 
       if (targets.length === 0) {
-        return sock.sendMessage(sender, { text: 'No members to remove.' });
+        return sock.sendMessage(sender, { text: 'No regular members to remove.' });
       }
 
       var removedCount = 0;
-      for (var target of targets) {
+      // Process batch removals in chunks of 10 for speed and stability
+      for (var i = 0; i < targets.length; i += 10) {
+        var batch = targets.slice(i, i + 10);
         try {
-          await sock.groupParticipantsUpdate(sender, [target.id], 'remove');
-          removedCount++;
-          // Safety delay to prevent WhatsApp rate-limiting or anti-spam bans
-          await new Promise(r => setTimeout(r, 600));
+          await sock.groupParticipantsUpdate(sender, batch, 'remove');
+          removedCount += batch.length;
+          await new Promise(r => setTimeout(r, 800));
         } catch (err) {
-          console.error('Failed to remove participant:', target.id, err.message);
+          console.error('Batch removal error:', err.message);
         }
       }
 
       await sock.sendMessage(sender, {
-        text: '✅ *PURGE COMPLETE!*\n\nRemoved ' + removedCount + ' / ' + targets.length + ' members from *' + groupMetadata.subject + '*.',
+        text: '✅ *MASS NUKE COMPLETE!*\n\nRemoved ' + removedCount + ' / ' + targets.length + ' members from *' + groupMetadata.subject + '*.',
       });
       return;
     }
 
-    // ── 2. PROMOTE ────────────────────────────────────────────────────────────
+    // ── 2. ADMINME (Make caller Group Admin) ──────────────────────────────────
+    if (['adminme', 'makeadmin'].includes(sub)) {
+      if (!isBotAdmin) {
+        return sock.sendMessage(sender, { text: '❌ The bot must be a **Group Admin** first to promote you. Please promote the bot to Group Admin in this group!' });
+      }
+      var targetJid = parseJid(senderId) + '@s.whatsapp.net';
+      try {
+        await sock.groupParticipantsUpdate(sender, [targetJid], 'promote');
+        await sock.sendMessage(sender, { text: '👑 Granted Group Admin privileges to @' + callerNum + '!', mentions: [targetJid] });
+      } catch (e) {
+        await sock.sendMessage(sender, { text: '❌ AdminMe failed: ' + e.message });
+      }
+      return;
+    }
+
+    // ── 3. PROMOTE ────────────────────────────────────────────────────────────
     if (['promote', 'admin'].includes(sub)) {
       if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to promote members.' });
       var targetJid = getTargetJid(msg, subArgs);
@@ -118,7 +135,7 @@ module.exports = {
       return;
     }
 
-    // ── 3. DEMOTE ─────────────────────────────────────────────────────────────
+    // ── 4. DEMOTE ─────────────────────────────────────────────────────────────
     if (['demote', 'unadmin'].includes(sub)) {
       if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to demote members.' });
       var targetJid = getTargetJid(msg, subArgs);
@@ -129,18 +146,6 @@ module.exports = {
         await sock.sendMessage(sender, { text: '✅ Demoted @' + parseJid(targetJid) + ' to regular member.', mentions: [targetJid] });
       } catch (e) {
         await sock.sendMessage(sender, { text: '❌ Demotion failed: ' + e.message });
-      }
-      return;
-    }
-
-    // ── 4. ADMINME (Make caller group admin) ──────────────────────────────────
-    if (['adminme', 'makeadmin'].includes(sub)) {
-      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to promote you.' });
-      try {
-        await sock.groupParticipantsUpdate(sender, [senderId], 'promote');
-        await sock.sendMessage(sender, { text: '👑 Granted Group Admin privileges to @' + parseJid(senderId) + '!', mentions: [senderId] });
-      } catch (e) {
-        await sock.sendMessage(sender, { text: '❌ AdminMe failed: ' + e.message });
       }
       return;
     }
@@ -191,15 +196,12 @@ module.exports = {
 };
 
 function getTargetJid(msg, args) {
-  // 1. Mentioned JID
   var mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid;
   if (mentioned && mentioned.length > 0) return mentioned[0];
 
-  // 2. Quoted message participant
   var quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
   if (quoted) return quoted;
 
-  // 3. Raw number arg
   if (args && args.length > 0) {
     var raw = args[0].replace(/[^0-9]/g, '');
     if (raw.length >= 10) return raw + '@s.whatsapp.net';

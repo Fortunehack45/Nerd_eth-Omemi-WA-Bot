@@ -84,7 +84,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     browser,
     syncFullHistory: false,
     markOnlineOnConnect: true,
-    generateHighQualityLink: false,
+    generateHighQualityLink: true,
     defaultQueryTimeoutMs: 120000,
     keepAliveIntervalMs: 15000,
     connectTimeoutMs: 60000,
@@ -94,7 +94,15 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     emitOwnEvents: true,
     retryRequestOnFail: true,
     printQRInTerminal: false,
+    getMessage: async (key) => {
+      if (global.msgStore && global.msgStore.has(key.id)) {
+        return global.msgStore.get(key.id);
+      }
+      return { conversation: 'Message' };
+    },
   });
+
+  if (!global.msgStore) global.msgStore = new Map();
 
   startTime = Date.now();
 
@@ -177,6 +185,10 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     if (!msg.messages || msg.messages.length === 0) return;
     for (const m of msg.messages) {
       if (!m.message) continue;
+      if (m.key?.id && global.msgStore) {
+        global.msgStore.set(m.key.id, m.message);
+        if (global.msgStore.size > 3000) global.msgStore.clear();
+      }
       var remoteJid = m.key?.remoteJid || '';
       var isFromMe = m.key?.fromMe;
       var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';

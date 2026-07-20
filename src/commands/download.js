@@ -9,28 +9,30 @@ async function sendFile(sock, sender, filePath, opts) {
   try {
     var buf = fs.readFileSync(filePath);
     var ext = filePath.split('.').pop().toLowerCase();
-    var msgOpts = {};
 
-    if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'opus'].includes(ext)) {
-      var mimes = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', opus: 'audio/ogg', mp4: 'audio/mp4' };
-      msgOpts.audio = buf;
-      msgOpts.mimetype = mimes[ext] || 'audio/mpeg';
-      msgOpts.fileName = (opts.title || 'audio').substring(0, 80) + '.' + ext;
-      msgOpts.ptt = false;
-    } else if (['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
-      msgOpts.video = buf;
-      msgOpts.caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
-      if (opts.quality) msgOpts.caption += '\n📺 Quality: ' + opts.quality;
-    } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-      msgOpts.image = buf;
-      msgOpts.caption = opts.title ? '📸 *' + opts.title.substring(0, 100) + '*' : '📸 Image';
-    } else {
-      msgOpts.document = buf;
-      msgOpts.fileName = (opts.title || 'file').substring(0, 80) + '.' + ext;
-      msgOpts.mimetype = 'application/octet-stream';
+    try {
+      if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'opus'].includes(ext)) {
+        var mimes = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', opus: 'audio/ogg', mp4: 'audio/mp4' };
+        await sock.sendMessage(sender, { audio: buf, mimetype: mimes[ext] || 'audio/mpeg', ptt: false });
+        return;
+      } else if (['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
+        var caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
+        if (opts.quality) caption += '\n📺 Quality: ' + opts.quality;
+        await sock.sendMessage(sender, { video: buf, caption: caption });
+        return;
+      }
+    } catch (e1) {
+      console.warn('[DOWNLOAD] Primary media send failed, falling back to document mode:', e1.message);
     }
 
-    await sock.sendMessage(sender, msgOpts);
+    // Fallback: Send as document
+    var docName = (opts.title || 'media').replace(/[<>:"/\\|?*]/g, '_').substring(0, 60) + '.' + ext;
+    await sock.sendMessage(sender, {
+      document: buf,
+      mimetype: 'application/octet-stream',
+      fileName: docName,
+      caption: '📄 ' + (opts.title || 'Downloaded Media')
+    });
   } catch (err) {
     await sock.sendMessage(sender, { text: '❌ Failed to send file: ' + err.message });
   } finally {
