@@ -121,6 +121,19 @@ app.get('/api/qrdata', auth, function(req, res) {
   res.json({ qr: qr || null });
 });
 
+app.post('/api/pair', auth, function(req, res) {
+  var phone = req.body.phone;
+  if (!phone) return res.status(400).json({ error: 'Phone number required' });
+  var cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.length < 10) return res.status(400).json({ error: 'Invalid phone number (min 10 digits)' });
+  var client = require('./src/client');
+  client.requestPairingCode(cleaned).then(function(code) {
+    res.json({ success: true, code: code, phone: cleaned });
+  }).catch(function(err) {
+    res.status(500).json({ error: err.message || 'Pairing failed' });
+  });
+});
+
 app.get('/api/health', function(req, res) {
   res.json({ status: botStatus.connected ? 'online' : 'offline', time: Date.now() });
 });

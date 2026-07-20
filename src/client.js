@@ -153,4 +153,11 @@ function getLastQR() {
   return lastQR;
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR };
+async function requestPairingCode(phoneNumber) {
+  if (!sock) throw new Error('Client not initialized');
+  const code = await sock.requestPairingCode(phoneNumber);
+  console.log('Pairing code requested for:', phoneNumber, 'Code:', code);
+  return code;
+}
+
+module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode };

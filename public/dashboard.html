@@ -84,6 +84,20 @@ td{padding:8px;border-bottom:1px solid #1a1a2e;color:#ccc}
       <div id="qrExpiry" style="font-size:0.8rem;color:#666"></div>
     </div>
 
+    <div class="card" style="margin-bottom:25px;text-align:center">
+      <h3 style="text-align:left">Pairing Code — Alternative to QR</h3>
+      <p style="color:#888;margin:10px 0;font-size:0.85rem">Enter your phone number (international format, e.g. 2348012345678)</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <input id="pairPhone" type="text" placeholder="2348012345678" style="padding:10px 14px;border-radius:8px;border:1px solid #2a2a4a;background:#0f0f1a;color:#e0e0e0;font-size:1rem;width:280px;outline:none">
+        <button onclick="requestPair()" style="padding:10px 24px;border-radius:8px;border:none;background:#25D366;color:#fff;font-size:1rem;cursor:pointer;font-weight:600">Request Code</button>
+      </div>
+      <div id="pairResult" style="margin-top:15px;font-size:1.2rem;font-weight:700;color:#25D366;display:none"></div>
+      <div id="pairError" style="margin-top:15px;color:#f87171;display:none"></div>
+      <div style="font-size:0.85rem;color:#888;margin-top:10px">
+        In WhatsApp → Linked Devices → Link a Device → <strong>Link using phone number</strong>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:25px">
       <h3>Users</h3>
       <div style="margin-top:10px;overflow-x:auto">
@@ -181,6 +195,37 @@ function updateDashboard(){
       tbody.innerHTML='<tr><td colspan="6" style="color:#888;text-align:center;padding:20px">No users yet</td></tr>';
     }
   }).catch(function(){});
+}
+
+function requestPair() {
+  var phone = document.getElementById('pairPhone').value.trim();
+  var btn = document.querySelector('#pairSection button');
+  var result = document.getElementById('pairResult');
+  var error = document.getElementById('pairError');
+  result.style.display = 'none';
+  error.style.display = 'none';
+  if (!phone) { error.textContent = 'Enter your phone number'; error.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Requesting...';
+  fetch('/api/pair?pwd=' + pwd, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phone })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.error) {
+      error.textContent = data.error;
+      error.style.display = 'block';
+    } else {
+      result.textContent = 'Code: ' + data.code + ' (enter in WhatsApp)';
+      result.style.display = 'block';
+    }
+  }).catch(function(e) {
+    error.textContent = 'Request failed: ' + e.message;
+    error.style.display = 'block';
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Request Code';
+  });
 }
 
 updateDashboard();
