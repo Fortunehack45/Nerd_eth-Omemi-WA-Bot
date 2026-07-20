@@ -129,6 +129,16 @@ app.get('/api/qrdata', auth, async function(req, res) {
   }
 });
 
+app.post('/api/reset-session', auth, function(req, res) {
+  try {
+    var client = require('./src/client');
+    client.resetSession();
+    res.json({ success: true, message: 'Session reset! Stale credentials cleared.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Reset failed' });
+  }
+});
+
 app.post('/api/pair', auth, function(req, res) {
   var phone = req.body.phone;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });

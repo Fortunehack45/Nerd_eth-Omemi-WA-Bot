@@ -80,7 +80,10 @@ td{padding:8px;border-bottom:1px solid #1a1a2e;color:#ccc}
       </div>
       <div id="qrExpiry" style="font-size:0.8rem;color:#888"></div>
       <div style="font-size:0.85rem;color:#fbbf24;margin-top:8px">
-        💡 If scan fails or QR expires, it will refresh automatically
+        💡 If scan fails or QR expires, click below to generate a fresh QR code
+      </div>
+      <div style="margin-top:15px">
+        <button onclick="doResetSession()" style="padding:8px 18px;border-radius:6px;border:1px solid #f87171;background:transparent;color:#f87171;font-size:0.85rem;cursor:pointer">🔄 Reset Session & Refresh QR</button>
       </div>
     </div>
 
@@ -229,6 +232,17 @@ function requestPair() {
     btn.disabled = false;
     btn.textContent = 'Request Code';
   });
+}
+
+function doResetSession() {
+  if (!confirm('Clear session and restart WhatsApp connection?')) return;
+  fetch('/api/reset-session?pwd=' + pwd, { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      alert(data.message || 'Session reset!');
+      setTimeout(updateDashboard, 1500);
+    })
+    .catch(function(e) { alert('Reset failed: ' + e.message); });
 }
 
 updateDashboard();

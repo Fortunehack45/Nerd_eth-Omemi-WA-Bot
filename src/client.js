@@ -43,6 +43,19 @@ function clearSessionFolder() {
   }
 }
 
+function resetSession() {
+  lastQR = null;
+  clearSessionFolder();
+  if (sock) {
+    try {
+      sock.ev.removeAllListeners();
+      sock.ws?.close();
+      sock.end(undefined);
+    } catch (e) {}
+    sock = null;
+  }
+}
+
 async function startClient(messageHandler, statusHandler, onConnected) {
   // Clean up previous socket if existing
   if (sock) {
@@ -61,8 +74,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
 
-  // Standard Baileys browser string for maximum stability on WhatsApp servers
-  const browser = Browsers.ubuntu('Chrome');
+  // Standard Baileys macOS Desktop browser string for maximum stability on cloud hosts
+  const browser = Browsers.macOS('Desktop');
 
   sock = makeWASocket({
     version,
@@ -233,4 +246,4 @@ async function requestPairingCode(phoneNumber) {
   return code;
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode };
+module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession };
