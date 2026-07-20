@@ -110,6 +110,17 @@ async function handleProactive(sock, sender, text, pushName) {
   await sock.sendPresenceUpdate('composing', sender);
   var delay = 500 + Math.floor(Math.random() * 1000);
   await new Promise(function(r) { setTimeout(r, delay); });
+
+  if (['greeting', 'help', 'whoami'].includes(intent)) {
+    try {
+      await sock.sendMessage(sender, {
+        image: { url: 'https://iili.io/Cwvlxwv.png' },
+        caption: response
+      });
+      return true;
+    } catch (e) {}
+  }
+
   await sock.sendMessage(sender, { text: response });
   return true;
 }
