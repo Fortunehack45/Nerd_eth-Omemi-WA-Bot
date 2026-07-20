@@ -196,10 +196,19 @@ async function handleMessage(sock, msg) {
 
       var result = await chatComplete(messages);
 
-      if (config.antiBan.enabled && config.antiBan.randomDelays) {
-        await randomDelay(300, 1200);
+      var isGreeting = messageText.trim().match(/^(hi|hello|hey|welcome|start|menu|greetings|hola|good morning|good evening|who are you)/i);
+      if (isGreeting) {
+        try {
+          await sock.sendMessage(sender, {
+            image: { url: 'https://iili.io/Cwvlxwv.png' },
+            caption: result.text
+          });
+        } catch (e) {
+          await sock.sendMessage(sender, { text: result.text });
+        }
+      } else {
+        await sock.sendMessage(sender, { text: result.text });
       }
-      await sock.sendMessage(sender, { text: result.text });
       logMessage(config.botName, result.text, 'response');
 
       if (config.memory.enabled && isPrivate) {

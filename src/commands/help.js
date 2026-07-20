@@ -65,8 +65,15 @@ module.exports = {
       });
     }
 
-    text += '*━━━━━━━━━━━━━━━━━━━━━*\n';
-    text += '_Use `!help <command>` for detailed help on a specific command._';
-    await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+    text += '_Type `!help <command>` for detailed info on any command._';
+
+    try {
+      await sock.sendMessage(sender, {
+        image: { url: 'https://iili.io/Cwvlxwv.png' },
+        caption: text.substring(0, 4000)
+      });
+    } catch (e) {
+      await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+    }
   },
 };
