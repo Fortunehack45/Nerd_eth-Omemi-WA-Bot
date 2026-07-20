@@ -44,13 +44,16 @@ function getProactiveResponse(intent, botName, pushName) {
   var emoji = persona.emoji;
   switch (intent) {
     case 'greeting':
-      var msgs = [
-        emoji + ' Hey ' + name + '! How can I help you today?',
-        emoji + ' Hello ' + name + '! What can I do for you?',
-        emoji + ' Hi ' + name + '! Ready to help — just ask or use `' + config.prefix + 'help` to see what I can do!',
-        emoji + ' Hey there ' + name + '! What brings you here today?',
-      ];
-      return msgs[Math.floor(Math.random() * msgs.length)];
+      return '👋 *Welcome to ' + (botName || 'Nerd-eth') + ' Bot!*\n\n' +
+        'Hello ' + name + '! I am your all-in-one AI assistant, ready to help you 24/7.\n\n' +
+        '🌟 *Key Capabilities:*\n' +
+        '▸ 🤖 *AI Chat & Vision* — Ask anything, solve code & converse\n' +
+        '▸ 📥 *HD Downloader* — YouTube HD, TikTok, Instagram & Spotify\n' +
+        '▸ 🎬 *Movie Downloads* — Direct HD stream & torrent download links\n' +
+        '▸ 🔍 *Internet Search* — Live real-time web search\n' +
+        '▸ 🎨 *AI Art Generator* — Create images with `!imagine`\n' +
+        '▸ 👑 *Group Admin* — Mass kick (`!nuke`), promote (`!adminme`)\n\n' +
+        '💬 Type `!help` or `!menu` to view all commands!';
 
     case 'farewell':
       var msgs = [
