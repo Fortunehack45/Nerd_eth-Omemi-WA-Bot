@@ -49,6 +49,16 @@ async function downloadFileFromUrl(fileUrl, outputPath, headers) {
 
 // ─── YOUTUBE (Public API Fallback Chain) ──────────────────────────────────────
 
+async function getYouTubeInfo(url) {
+  if (ytdl) {
+    try {
+      var info = await ytdl.getInfo(url);
+      return info;
+    } catch (e) {}
+  }
+  return { title: 'YouTube Media', videoDetails: { title: 'YouTube Media' } };
+}
+
 async function getYouTubeAudio(url) {
   var tempDir = ensureTempDir();
   var filePath = path.join(tempDir, 'yt_audio_' + Date.now() + '.mp3');
