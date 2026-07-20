@@ -45,21 +45,21 @@ async function downloadYouTube(url) {
 
 async function getYouTubeAudio(url) {
   try {
-    var stream = ytdl(url, { filter: 'audioonly', quality: 'lowestaudio' });
     var info = await ytdl.getInfo(url);
     var title = info.videoDetails.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
-    var filePath = path.join(config.download.path, title + '.mp3');
-    if (!fs.existsSync(config.download.path)) fs.mkdirSync(config.download.path, { recursive: true });
+    var tempDir = path.join(config.download.path, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    var filePath = path.join(tempDir, 'yt_audio_' + Date.now() + '.mp4');
+    var stream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
     var writer = fs.createWriteStream(filePath);
-    return new Promise(function(resolve, reject) {
+    await new Promise(function(resolve, reject) {
       stream.pipe(writer);
-      writer.on('finish', function() {
-        resolve({ success: true, filePath: filePath, title: title, size: fs.statSync(filePath).size });
-      });
-      writer.on('error', function(err) {
-        resolve({ error: 'Write error: ' + err.message });
-      });
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+      setTimeout(function() { reject(new Error('Download timeout')); }, 120000);
     });
+    var stat = fs.statSync(filePath);
+    return { success: true, filePath: filePath, title: title, size: stat.size, author: info.videoDetails.author.name };
   } catch (err) {
     return { error: 'Download error: ' + err.message };
   }
@@ -76,8 +76,8 @@ async function scrapeTikTok(url) {
         title: d.title || d.desc || 'TikTok Video',
         author: d.author?.unique_id || d.author?.nickname || 'Unknown',
         thumbnail: d.cover || d.origin_cover || null,
-        url: d.play || d.wmplay || d.hdplay || url,
-        downloadUrl: d.play || d.hdplay || d.wmplay || null,
+        url: d.hdplay || d.play || d.wmplay || url,
+        downloadUrl: d.hdplay || d.play || d.wmplay || null,
         music: d.music || null,
         duration: d.duration || null,
         size: d.size || null,
@@ -205,10 +205,40 @@ async function scrapeSpotify(url) {
       thumbnail: data.thumbnail_url || null,
       url: url,
       type: isTrack ? 'track' : 'other',
-      note: 'Spotify downloads require premium. Use !music search to find the song.',
+      note: null,
     };
   } catch (err) {
     return { error: 'Spotify info failed: ' + err.message };
+  }
+}
+
+async function downloadSpotifyAudio(url) {
+  try {
+    var match = url.match(/\/track\/([a-zA-Z0-9]+)/);
+    if (!match) return { error: 'Not a valid Spotify track URL.' };
+    var trackId = match[1];
+    var resp = await axios.get('https://api.spotifydown.com/download/' + trackId, {
+      timeout: 20000,
+      headers: { 'Referer': 'https://spotifydown.com/', 'Origin': 'https://spotifydown.com/' },
+    });
+    var data = resp.data;
+    if (!data || !data.link) return { error: 'Spotify download failed: no link returned.' };
+    var title = (data.title || data.metadata?.title || 'Spotify Track').replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
+    var fileName = 'spotify_' + Date.now() + '.mp3';
+    var tempDir = path.join(config.download.path, 'temp');
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    var filePath = path.join(tempDir, fileName);
+    var dlResp = await axios({ method: 'get', url: data.link, responseType: 'stream', timeout: 120000 });
+    var writer = fs.createWriteStream(filePath);
+    await new Promise(function(resolve, reject) {
+      dlResp.data.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+    var stat = fs.statSync(filePath);
+    return { success: true, filePath: filePath, title: title, size: stat.size, author: data.artists || data.metadata?.artists || 'Unknown' };
+  } catch (err) {
+    return { error: 'Spotify download failed: ' + err.message };
   }
 }
 
@@ -236,9 +266,16 @@ async function processLink(url) {
 async function getYouTubeVideo(url) {
   try {
     var info = await ytdl.getInfo(url);
-    var format = ytdl.chooseFormat(info.formats, { quality: '18' });
-    if (!format) format = info.formats.filter(function(f) { return f.hasVideo && f.hasAudio; })[0];
-    if (!format) format = info.formats.filter(function(f) { return f.hasVideo; })[0];
+    var hdFormats = info.formats.filter(function(f) { return f.hasVideo && f.hasAudio; });
+    var format = hdFormats[0];
+    if (format) {
+      var hdItags = [37, 22, 18];
+      for (var i = 0; i < hdItags.length; i++) {
+        var found = hdFormats.find(function(f) { return f.itag === hdItags[i]; });
+        if (found) { format = found; break; }
+      }
+    }
+    if (!format) format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
     if (!format) return { error: 'No playable video format found.' };
     var title = info.videoDetails.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
     var filePath = path.join(config.download.path, 'temp', 'yt_' + Date.now() + '.mp4');
@@ -275,6 +312,20 @@ async function downloadMedia(url) {
   }
 }
 
+async function downloadAudio(url) {
+  var platform = detectPlatform(url);
+  switch (platform) {
+    case 'youtube':
+      return await getYouTubeAudio(url);
+    case 'spotify':
+      return await downloadSpotifyAudio(url);
+    case 'tiktok':
+      return await downloadTikTokVideo(url);
+    default:
+      return { error: 'Audio download not available for ' + platform + '.' };
+  }
+}
+
 module.exports = {
   detectPlatform,
   downloadYouTube,
@@ -285,6 +336,8 @@ module.exports = {
   scrapeInstagram,
   downloadInstagramMedia,
   scrapeSpotify,
+  downloadSpotifyAudio,
   processLink,
   downloadMedia,
+  downloadAudio,
 };
