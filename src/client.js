@@ -1,9 +1,10 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
-const { Boom } = require('@hapi/boom');
-const pino = require('pino');
+const qrcodeTerminal = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const { Boom } = require('@hapi/boom');
+const pino = require('pino');
 const config = require('../config');
 const { getSafeBrowser, randomBetween, isDuplicateMessage } = require('./services/antiBanService');
 
@@ -55,9 +56,21 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      console.log('\nScan the QR code below with your WhatsApp:\n');
-      qrcode.generate(qr, { small: true });
-      console.log('');
+      console.log('\n============================================');
+      console.log('  Scan the QR code with your WhatsApp');
+      console.log('  Open WhatsApp → Linked Devices → Link a Device');
+      console.log('============================================\n');
+      qrcodeTerminal.generate(qr, { small: false });
+      console.log('\n============================================');
+      console.log('  QR text (use at https://qrcode.monster if scan fails):');
+      console.log('  ' + qr);
+      try {
+        var qrPath = path.join(__dirname, '..', 'storage', 'qr.png');
+        QRCode.toFile(qrPath, qr, { type: 'png', width: 400, margin: 2 }, function(err) {
+          if (!err) console.log('  QR image saved: ' + qrPath);
+        });
+      } catch (e) {}
+      console.log('============================================\n');
     }
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error instanceof Boom)
