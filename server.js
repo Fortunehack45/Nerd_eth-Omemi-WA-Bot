@@ -116,10 +116,17 @@ app.get('/api/qr', auth, function(req, res) {
   res.json({ qr: qr, message: 'QR image not found. Use /api/qrdata for raw text.' });
 });
 
-app.get('/api/qrdata', auth, function(req, res) {
+app.get('/api/qrdata', auth, async function(req, res) {
   var client = require('./src/client');
   var qr = client.getLastQR();
-  res.json({ qr: qr || null });
+  if (!qr) return res.json({ qr: null, dataUrl: null });
+  try {
+    var QRCode = require('qrcode');
+    var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320 });
+    res.json({ qr: qr, dataUrl: dataUrl });
+  } catch (e) {
+    res.json({ qr: qr, dataUrl: null, error: e.message });
+  }
 });
 
 app.post('/api/pair', auth, function(req, res) {
