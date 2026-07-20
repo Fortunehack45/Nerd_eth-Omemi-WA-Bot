@@ -35,7 +35,6 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     defaultQueryTimeoutMs: 120000,
     keepAliveIntervalMs: 15000,
     connectTimeoutMs: 120000,
-    patchMessageBeforeSending: true,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
     emitOwnEvents: false,
