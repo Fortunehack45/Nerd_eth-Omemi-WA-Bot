@@ -122,7 +122,7 @@ app.get('/api/qrdata', auth, async function(req, res) {
   if (!qr) return res.json({ qr: null, dataUrl: null });
   try {
     var QRCode = require('qrcode');
-    var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320 });
+    var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'H' });
     res.json({ qr: qr, dataUrl: dataUrl });
   } catch (e) {
     res.json({ qr: qr, dataUrl: null, error: e.message });
