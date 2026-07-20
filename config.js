@@ -4,6 +4,7 @@ module.exports = {
   botName: process.env.BOT_NAME || 'Nerd-eth',
   ownerNumber: process.env.OWNER_NUMBER || '',
   prefix: process.env.PREFIX || '!',
+  dashboardPassword: process.env.DASHBOARD_PASSWORD || 'Omemi',
 
   openai: {
     apiKey: process.env.OPENAI_API_KEY,

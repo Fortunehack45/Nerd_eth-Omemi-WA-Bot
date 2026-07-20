@@ -64,9 +64,11 @@ function initAI() {
     return true;
   }
 
-  console.warn('[AI] No AI key configured. Set GROQ_API_KEY in .env for free AI.');
-  provider = 'none';
-  return false;
+  // 5. Free Public AI (Unlimited, zero API keys required)
+  provider = 'public-free';
+  currentModel = 'pollinations-ai';
+  console.log('AI Provider: Public Free AI (zero setup required)');
+  return true;
 }
 
 function getProvider() { return provider; }
@@ -81,8 +83,21 @@ function setRuntimeKey(providerName, key) {
 }
 
 async function chatComplete(messages, modelOverride) {
-  if (!aiClient) {
-    return { text: '⚠️ AI is not configured. Ask the admin to set an API key using !setkey groq <key>\n\nGet a free Groq key at: https://console.groq.com', success: false };
+  // Public Free AI Fallback (No key needed)
+  if (provider === 'public-free' || !aiClient) {
+    try {
+      var userMsg = messages[messages.length - 1]?.content || 'Hello';
+      var sysMsg = messages.find(m => m.role === 'system')?.content || '';
+      var payload = {
+        messages: [{ role: 'system', content: sysMsg || 'You are a helpful AI assistant.' }, { role: 'user', content: userMsg }],
+        model: 'openai'
+      };
+      var pResp = await axios.post('https://text.pollinations.ai/', payload, { timeout: 20000 });
+      if (pResp.data && typeof pResp.data === 'string' && pResp.data.trim().length > 0) {
+        return { text: pResp.data.trim(), success: true };
+      }
+    } catch (e) {}
+    return { text: '⚠️ AI is in free mode. To unlock faster responses, set a free Groq key via !setkey groq <key> or in the Dashboard.', success: false };
   }
 
   var model = modelOverride || currentModel;

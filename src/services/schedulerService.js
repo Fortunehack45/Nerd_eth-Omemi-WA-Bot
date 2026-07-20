@@ -52,6 +52,17 @@ function calculateNextRun(type, tc) {
       if (next <= now) next.setDate(next.getDate() + 1);
       break;
     }
+    case 'once':
+    case 'timer': {
+      if (tc.delayMs) {
+        next = new Date(now.getTime() + tc.delayMs);
+      } else if (tc.time) {
+        var parts = tc.time.split(':');
+        next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+        if (next <= now) next.setDate(next.getDate() + 1);
+      }
+      break;
+    }
     case 'weekly': {
       var targetDay = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf((tc.day || 'mon').toLowerCase());
       if (targetDay === -1) targetDay = 1;
@@ -143,9 +154,13 @@ async function executeSchedule(schedule) {
     var schedules = getSchedules();
     var idx = schedules.findIndex(function(s) { return s.id === schedule.id; });
     if (idx !== -1) {
-      schedules[idx].lastRun = Date.now();
-      schedules[idx].runCount = (schedules[idx].runCount || 0) + 1;
-      schedules[idx].nextRun = calculateNextRun(schedules[idx].type, schedules[idx].timeConfig);
+      if (schedules[idx].type === 'once' || schedules[idx].type === 'timer') {
+        schedules.splice(idx, 1);
+      } else {
+        schedules[idx].lastRun = Date.now();
+        schedules[idx].runCount = (schedules[idx].runCount || 0) + 1;
+        schedules[idx].nextRun = calculateNextRun(schedules[idx].type, schedules[idx].timeConfig);
+      }
       saveSchedules(schedules);
     }
   } catch (err) {

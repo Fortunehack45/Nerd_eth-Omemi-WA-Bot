@@ -343,9 +343,58 @@ function requestPairCodeAction() {
   });
 }
 
+function loadKeysStatus() {
+  fetchAPI('/keys').then(function(d) {
+    var statusBox = document.getElementById('keyStatusRes');
+    if (statusBox) {
+      statusBox.innerHTML = '⚡ <strong>Active AI Provider:</strong> ' + (d.provider || 'none') + ' (' + (d.model || 'N/A') + ')<br>' +
+        '• Groq Key: ' + (d.groqSet ? '✅ Active' : '❌ Not Set') + '<br>' +
+        '• OpenAI Key: ' + (d.openaiSet ? '✅ Active' : '❌ Not Set') + '<br>' +
+        '• Brave Search Key: ' + (d.braveSet ? '✅ Active' : '⚠️ Not Set (using DuckDuckGo)');
+    }
+  }).catch(function(){});
+}
+
+function saveKeysAction() {
+  var groq = document.getElementById('keyGroq').value.trim();
+  var openai = document.getElementById('keyOpenAI').value.trim();
+  var brave = document.getElementById('keyBrave').value.trim();
+
+  if (!groq && !openai && !brave) return alert('Please enter at least one key to save.');
+
+  fetchAPI('/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ groq: groq, openai: openai, brave: brave })
+  }).then(function(d) {
+    if (d.success) {
+      alert('✅ API Keys successfully updated! Active Provider: ' + d.provider + ' (' + d.model + ')');
+      document.getElementById('keyGroq').value = '';
+      document.getElementById('keyOpenAI').value = '';
+      document.getElementById('keyBrave').value = '';
+      loadKeysStatus();
+    } else {
+      alert('Error updating API keys');
+    }
+  }).catch(function(e) { alert('Failed: ' + e.message); });
+}
+
+function testAiAction() {
+  var resBox = document.getElementById('keyStatusRes');
+  if (resBox) resBox.innerHTML = '🧪 Testing AI connection... Please wait.';
+  fetchAPI('/test-ai', { method: 'POST' }).then(function(d) {
+    if (d.success) {
+      resBox.innerHTML = '✅ <strong>AI Test Successful!</strong><br>Provider: ' + d.provider + ' (' + d.model + ')<br>AI Response: "' + d.response + '"';
+    } else {
+      resBox.innerHTML = '❌ <strong>AI Test Failed:</strong> ' + (d.response || 'Unknown error');
+    }
+  }).catch(function(e) { if (resBox) resBox.innerHTML = '❌ Error: ' + e.message; });
+}
+
 if (pwd) {
   document.getElementById('loginModal').style.display = 'none';
   refreshAll();
+  loadKeysStatus();
   setInterval(refreshAll, 3000);
 } else {
   showLoginModal();

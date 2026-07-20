@@ -6,7 +6,7 @@ var config = require('./config');
 
 var app = express();
 var PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
-var DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
+var DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'Omemi';
 
 var botStatus = { connected: false, user: null, uptime: 0, startTime: Date.now() };
 var recentMessages = [];
@@ -139,6 +139,61 @@ app.post('/api/reset-session', auth, function(req, res) {
   }
 });
 
+app.get('/api/keys', auth, function(req, res) {
+  var aiSvc = require('./src/services/aiService');
+  res.json({
+    provider: aiSvc.getProvider(),
+    model: aiSvc.getModel(),
+    groqSet: !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 5),
+    openaiSet: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 5),
+    openrouterSet: !!(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.length > 5),
+    braveSet: !!(process.env.BRAVE_SEARCH_API_KEY && process.env.BRAVE_SEARCH_API_KEY.length > 5),
+  });
+});
+
+app.post('/api/keys', auth, function(req, res) {
+  var aiSvc = require('./src/services/aiService');
+  var groq = req.body.groq;
+  var openai = req.body.openai;
+  var openrouter = req.body.openrouter;
+  var brave = req.body.brave;
+  var updated = [];
+
+  var updateEnv = function(keyName, val) {
+    try {
+      process.env[keyName] = val;
+      var envPath = path.join(__dirname, '.env');
+      if (fs.existsSync(envPath)) {
+        var content = fs.readFileSync(envPath, 'utf8');
+        var regex = new RegExp('^' + keyName + '=.*$', 'm');
+        if (regex.test(content)) {
+          content = content.replace(regex, keyName + '=' + val);
+        } else {
+          content += '\n' + keyName + '=' + val;
+        }
+        fs.writeFileSync(envPath, content, 'utf8');
+      }
+    } catch(e) {}
+  };
+
+  if (groq) { aiSvc.setRuntimeKey('groq', groq); updateEnv('GROQ_API_KEY', groq); updated.push('groq'); }
+  if (openai) { aiSvc.setRuntimeKey('openai', openai); updateEnv('OPENAI_API_KEY', openai); updated.push('openai'); }
+  if (openrouter) { aiSvc.setRuntimeKey('openrouter', openrouter); updateEnv('OPENROUTER_API_KEY', openrouter); updated.push('openrouter'); }
+  if (brave) { config.braveSearch.apiKey = brave; updateEnv('BRAVE_SEARCH_API_KEY', brave); updated.push('brave'); }
+
+  res.json({ success: true, updated: updated, provider: aiSvc.getProvider(), model: aiSvc.getModel() });
+});
+
+app.post('/api/test-ai', auth, async function(req, res) {
+  try {
+    var aiSvc = require('./src/services/aiService');
+    var result = await aiSvc.testConnection();
+    res.json({ success: result.success, response: result.text, provider: aiSvc.getProvider(), model: aiSvc.getModel() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/pair', auth, function(req, res) {
   var phone = req.body.phone;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });
@@ -191,7 +246,7 @@ app.get('/api/owner-check', auth, function(req, res) {
 });
 
 function getDashboardUrl() {
-  var pwd = process.env.DASHBOARD_PASSWORD || 'admin';
+  var pwd = process.env.DASHBOARD_PASSWORD || 'Omemi';
   var baseUrl = process.env.RENDER_EXTERNAL_URL;
   if (!baseUrl && process.env.RENDER_SERVICE_NAME) {
     baseUrl = 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com';
