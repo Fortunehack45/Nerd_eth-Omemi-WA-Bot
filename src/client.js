@@ -13,6 +13,10 @@ let sock = null;
 let startTime = null;
 let presenceInterval = null;
 let lastQR = null;
+let reconnectAttempts = 0;
+let lastReconnectTime = 0;
+let networkStormDetected = false;
+let consecutiveErrors = 0;
 
 async function startClient(messageHandler, statusHandler, onConnected) {
   if (!fs.existsSync(SESSION_DIR)) {
@@ -79,11 +83,50 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       const shouldReconnect = (lastDisconnect?.error instanceof Boom)
         ? lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
         : true;
+      
       if (shouldReconnect) {
-        const delay = config.antiBan.enabled ? randomBetween(2000, 4000) : 1000;
-        console.log(`Connection closed, reconnecting in ${delay}ms...`);
-        console.log('If you scanned the QR, the bot should connect on the next attempt.');
-        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), delay);
+        consecutiveErrors++;
+        const now = Date.now();
+        const timeSinceLastReconnect = now - lastReconnectTime;
+        
+        if (lastDisconnect?.error) {
+          const errorCode = lastDisconnect.error?.code || 'unknown';
+          console.error('[DEBUG] Disconnect error:', lastDisconnect.error?.message || lastDisconnect.error?.toString());
+          console.error('[DEBUG] Error code:', errorCode);
+        }
+        
+        if (timeSinceLastReconnect < 60000) {
+          if (lastDisconnect?.error?.code === 515 || lastDisconnect?.error?.message?.includes('WebSocket')) {
+            console.log('[DEBUG] WebSocket storm detected - waiting longer before retry');
+            networkStormDetected = true;
+          }
+        }
+        
+        if (networkStormDetected) {
+          if (consecutiveErrors === 1) {
+            const delay = config.antiBan.enabled ? randomBetween(30000, 60000) : 60000;
+            console.log(`[DEBUG] Recovery delay (1st error): reconnecting in ${delay}ms...`);
+            console.log('[DEBUG] This may indicate a temporary Render/Cloudflare issue.');
+          } else if (consecutiveErrors === 2) {
+            const delay = config.antiBan.enabled ? randomBetween(120000, 180000) : 180000;
+            console.log(`[DEBUG] Recovery delay (2nd error): reconnecting in ${delay}ms...`);
+          } else {
+            const delay = config.antiBan.enabled ? randomBetween(300000, 600000) : 600000;
+            console.log(`[DEBUG] Recovery delay (error #${consecutiveErrors}): reconnecting in ${delay}ms...`);
+          }
+        } else {
+          const baseDelay = config.antiBan.enabled ? randomBetween(2000, 4000) : 1000;
+          const adaptiveDelay = baseDelay * Math.min(consecutiveErrors, 10);
+          console.log(`Connection closed, reconnecting in ${adaptiveDelay}ms... (errors: ${consecutiveErrors})`);
+          console.log('If you scanned the QR, the bot should connect on the next attempt.');
+        }
+        
+        lastReconnectTime = now;
+        const retryDelay = networkStormDetected && consecutiveErrors <= 3
+          ? (consecutiveErrors === 1 ? 60000 : consecutiveErrors === 2 ? 180000 : 600000)
+          : (config.antiBan.enabled ? randomBetween(2000, 4000) * Math.min(consecutiveErrors, 10) : 1000 * Math.min(consecutiveErrors, 10));
+        
+        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), retryDelay);
       } else {
         console.log('Logged out. Delete sessions folder and restart.');
       }
