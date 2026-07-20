@@ -339,102 +339,107 @@ function deletePlaylist(name) {
   return { success: true };
 }
 
-// ─── Movie Direct Download via YTS API ───────────────────────────────────────
+// ─── Movie Direct Download via YTS API + Direct Stream Links ───────────────────
 async function getMovieDownload(query) {
   try {
-    // First get IMDB ID if not provided
-    var searchQuery = query;
+    var searchQuery = query.trim();
     var imdbId = null;
-    var movieTitle = query;
+    var movieTitle = searchQuery;
     var movieYear = null;
+    var omdbDetails = null;
 
-    if (!query.match(/^tt\d+$/)) {
-      // Search OMDB for the movie to get IMDB ID
+    if (!searchQuery.match(/^tt\d+$/)) {
       var omdbKey = process.env.OMDB_API_KEY || 'trilogy';
       try {
-        var { data: omdbData } = await axios.get('https://www.omdbapi.com/?apikey=' + omdbKey + '&t=' + encodeURIComponent(query) + '&type=movie', { timeout: 8000 });
+        var { data: omdbData } = await axios.get('https://www.omdbapi.com/?apikey=' + omdbKey + '&t=' + encodeURIComponent(searchQuery) + '&type=movie', { timeout: 8000 });
         if (omdbData.Response === 'True') {
           imdbId = omdbData.imdbID;
           movieTitle = omdbData.Title;
           movieYear = omdbData.Year;
+          omdbDetails = omdbData;
         }
       } catch (e) {}
     } else {
-      imdbId = query;
+      imdbId = searchQuery;
     }
 
-    // Search YTS API (free, public, no API key needed)
-    var ytsUrl = imdbId
-      ? 'https://yts.mx/api/v2/movie_details.json?imdb_id=' + imdbId + '&with_images=true&with_cast=true'
-      : 'https://yts.mx/api/v2/list_movies.json?query_term=' + encodeURIComponent(query) + '&limit=5&with_rt_ratings=true';
-
-    var { data: ytsData } = await axios.get(ytsUrl, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    // Query YTS API mirrors
+    var ytsMirrors = [
+      'https://yts.mx/api/v2/',
+      'https://yts.lt/api/v2/',
+      'https://yts.am/api/v2/',
+    ];
 
     var movie = null;
     var torrents = [];
 
-    if (imdbId && ytsData?.data?.movie) {
-      movie = ytsData.data.movie;
-      torrents = movie.torrents || [];
-    } else if (ytsData?.data?.movies && ytsData.data.movies.length > 0) {
-      movie = ytsData.data.movies[0];
-      torrents = movie.torrents || [];
+    for (var i = 0; i < ytsMirrors.length; i++) {
+      try {
+        var base = ytsMirrors[i];
+        var endpoint = imdbId
+          ? base + 'movie_details.json?imdb_id=' + imdbId + '&with_images=true'
+          : base + 'list_movies.json?query_term=' + encodeURIComponent(movieTitle) + '&limit=5';
+
+        var { data: res } = await axios.get(endpoint, {
+          timeout: 10000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+
+        if (imdbId && res?.data?.movie) {
+          movie = res.data.movie;
+          torrents = movie.torrents || [];
+          if (torrents.length > 0) break;
+        } else if (res?.data?.movies && res.data.movies.length > 0) {
+          movie = res.data.movies[0];
+          torrents = movie.torrents || [];
+          if (torrents.length > 0) break;
+        }
+      } catch (e) {}
     }
 
-    if (!movie || torrents.length === 0) {
-      // Try alternate YTS search
-      var { data: ytsData2 } = await axios.get('https://yts.mx/api/v2/list_movies.json?query_term=' + encodeURIComponent(movieTitle || query) + '&limit=5', {
-        timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      if (ytsData2?.data?.movies && ytsData2.data.movies.length > 0) {
-        movie = ytsData2.data.movies[0];
-        torrents = movie.torrents || [];
-      }
+    // Web Watch / Direct Stream Links
+    var watchLinks = [];
+    var code = imdbId || movie?.imdb_code;
+    if (code) {
+      watchLinks.push({ provider: 'VidSrc HD Stream', url: 'https://vidsrc.me/embed/movie?imdb=' + code });
+      watchLinks.push({ provider: '2Embed HD Player', url: 'https://www.2embed.cc/embed/' + code });
+      watchLinks.push({ provider: 'AutoEmbed Direct', url: 'https://player.autoembed.cc/embed/movie/' + code });
     }
 
-    if (!movie) {
-      return { error: 'Movie not found on YTS. Try a different title or search for it on https://yts.mx' };
+    if (!movie && !omdbDetails) {
+      return { error: 'Movie "' + query + '" not found. Please check spelling or use IMDb ID (e.g. tt1375666).' };
     }
 
-    if (torrents.length === 0) {
+    var title = movie?.title || omdbDetails?.Title || movieTitle;
+    var year = movie?.year || omdbDetails?.Year || movieYear;
+    var rating = movie?.rating || omdbDetails?.imdbRating || '?';
+    var summary = movie?.summary || omdbDetails?.Plot || '';
+
+    var sortedTorrents = torrents.map(function(t) {
       return {
-        found: true, title: movie.title, year: movie.year,
-        error: 'No torrents available yet for this movie. Check: https://yts.mx/movies/' + (movie.slug || '')
+        quality: t.quality,
+        size: t.size,
+        type: t.type || 'bluray',
+        seeds: t.seeds || 0,
+        peers: t.peers || 0,
+        magnetUrl: 'magnet:?xt=urn:btih:' + t.hash + '&dn=' + encodeURIComponent(title + ' (' + year + ')') + '&tr=udp://open.demonii.com:1337/announce&tr=udp://tracker.openbittorrent.com:80',
+        torrentUrl: t.url,
       };
-    }
-
-    // Sort torrents: prefer 1080p or 720p
-    var sorted = torrents.slice().sort(function(a, b) {
-      var qOrder = { '2160p': 4, '1080p': 3, '720p': 2, '480p': 1, '3D': 0 };
-      return (qOrder[b.quality] || 0) - (qOrder[a.quality] || 0);
     });
 
     return {
       found: true,
-      title: movie.title,
-      year: movie.year,
-      rating: movie.rating,
-      runtime: movie.runtime,
-      genres: movie.genres,
-      summary: movie.summary ? movie.summary.substring(0, 300) : '',
-      coverImage: movie.large_cover_image || movie.medium_cover_image || null,
-      ytsUrl: movie.url || ('https://yts.mx/movies/' + (movie.slug || '')),
-      imdbCode: movie.imdb_code || imdbId,
-      torrents: sorted.map(function(t) {
-        return {
-          quality: t.quality,
-          type: t.type || 'bluray',
-          size: t.size,
-          seeds: t.seeds,
-          peers: t.peers,
-          magnetUrl: 'magnet:?xt=urn:btih:' + t.hash + '&dn=' + encodeURIComponent(movie.title + ' ' + movie.year) + '&tr=udp://open.demonii.com:1337/announce',
-          torrentUrl: t.url,
-          hash: t.hash,
-        };
-      }),
+      title: title,
+      year: year,
+      rating: rating,
+      summary: summary.substring(0, 300),
+      imdbId: code,
+      ytsUrl: movie?.url || ('https://yts.mx/movies/' + (movie?.slug || '')),
+      torrents: sortedTorrents,
+      watchLinks: watchLinks,
     };
   } catch (err) {
-    return { error: 'Movie download lookup failed: ' + err.message };
+    return { error: 'Movie search failed: ' + err.message };
   }
 }
 

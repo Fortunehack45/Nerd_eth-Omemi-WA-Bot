@@ -10,7 +10,9 @@ function extractCommand(text) {
 }
 
 function parseJid(jid) {
-  return jid?.replace(/[^0-9]/g, '') || '';
+  if (!jid || typeof jid !== 'string') return '';
+  var clean = jid.split('@')[0].split(':')[0];
+  return clean.replace(/[^0-9]/g, '');
 }
 
 function isOwner(jid, ownerNumbers) {

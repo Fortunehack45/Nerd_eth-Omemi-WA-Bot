@@ -13,8 +13,36 @@ function saveDb(db) {
 }
 
 function isAdmin(jid) {
-  const sender = parseJid(jid);
-  return config.admins.some(function(a) { return parseJid(a) === sender; });
+  if (!jid) return false;
+  var sender = parseJid(jid);
+  if (!sender) return false;
+
+  // 1. Connected Bot Account is always admin
+  try {
+    var { getClient } = require('../client');
+    var sock = getClient();
+    if (sock && sock.user) {
+      var botNum = parseJid(sock.user.id || sock.user.jid || '');
+      if (botNum && (botNum === sender || sender.endsWith(botNum) || botNum.endsWith(sender))) {
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Check config.admins list
+  if (config.admins && config.admins.length > 0) {
+    for (var i = 0; i < config.admins.length; i++) {
+      var adminNum = parseJid(config.admins[i]);
+      if (adminNum && (adminNum === sender || sender.endsWith(adminNum) || adminNum.endsWith(sender))) {
+        return true;
+      }
+    }
+  }
+
+  // 3. If no admin number configured, default to true for the first caller
+  if (!config.admins || config.admins.length === 0) return true;
+
+  return false;
 }
 
 function userKey(jid) {
