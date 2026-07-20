@@ -74,13 +74,130 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 .btn-secondary{padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:rgba(99,102,241,0.15);color:#fff;font-weight:600;cursor:pointer;transition:all 0.2s}
 .btn-secondary:hover{background:var(--accent)}
 
-@media(max-width:1024px){
-  .metrics-grid{grid-template-columns:repeat(2,1fr)}
-  .panel-grid{grid-template-columns:1fr}
+@media(max-width:768px){
+  body{flex-direction:column}
+  
+  /* Hide desktop sidebar on mobile */
+  .sidebar{display:none}
+
+  /* Bottom Mobile App Navigation Bar */
+  .mobile-bottom-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:72px;
+    background:rgba(13, 17, 39, 0.94);
+    backdrop-filter:blur(25px);
+    -webkit-backdrop-filter:blur(25px);
+    border-top:1px solid var(--border);
+    z-index:9999;
+    justify-content:space-around;
+    align-items:center;
+    padding:0 6px;
+    box-shadow:0 -10px 30px rgba(0,0,0,0.6);
+  }
+  .mobile-nav-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    color:#818cf8;
+    font-size:0.75rem;
+    font-weight:700;
+    cursor:pointer;
+    padding:8px 10px;
+    border-radius:14px;
+    transition:all 0.2s;
+    flex:1;
+    text-align:center;
+  }
+  .mobile-nav-item .nav-icon{font-size:1.3rem}
+  .mobile-nav-item.active{
+    color:#fff;
+    background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(168,85,247,0.25));
+    border:1px solid rgba(99,102,241,0.5);
+    box-shadow:0 4px 15px rgba(99,102,241,0.3);
+  }
+
+  /* Mobile App Content Container */
+  .main-content{
+    margin-left:0;
+    padding:16px;
+    max-width:100vw;
+    padding-bottom:95px;
+  }
+  
+  .top-bar{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .top-actions{
+    width:100%;
+    justify-content:space-between;
+  }
+
+  .metrics-grid{
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .metric-card{
+    padding:14px;
+    border-radius:14px;
+  }
+  .metric-value{
+    font-size:1.6rem;
+  }
+
+  .panel-grid{
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+  .card-box{
+    padding:18px;
+    border-radius:16px;
+  }
+
+  .btn-primary, .btn-secondary{
+    padding:14px;
+    font-size:0.95rem;
+  }
+}
+@media(min-width:769px){
+  .mobile-bottom-nav{display:none}
 }
 </style>
 </head>
 <body>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav class="mobile-bottom-nav">
+  <div class="mobile-nav-item active" onclick="showTab('dashboard')">
+    <span class="nav-icon">📊</span>
+    <span>Home</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showTab('keys')">
+    <span class="nav-icon">🔑</span>
+    <span>Keys</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showTab('connect')">
+    <span class="nav-icon">📱</span>
+    <span>Pair</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showTab('users')">
+    <span class="nav-icon">👥</span>
+    <span>Users</span>
+  </div>
+  <div class="mobile-nav-item" onclick="showTab('logs')">
+    <span class="nav-icon">📜</span>
+    <span>Logs</span>
+  </div>
+</nav>
 
 <!-- Login Overlay -->
 <div id="loginModal">
@@ -295,6 +412,9 @@ function showTab(name) {
     if (el) el.style.display = (t === name) ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-item').forEach(function(btn, idx) {
+    btn.classList.toggle('active', tabs[idx] === name);
+  });
+  document.querySelectorAll('.mobile-nav-item').forEach(function(btn, idx) {
     btn.classList.toggle('active', tabs[idx] === name);
   });
   if (name === 'keys') loadKeysStatus();
