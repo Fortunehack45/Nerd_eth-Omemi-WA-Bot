@@ -88,7 +88,7 @@ async function cmdSearch(sock, sender, args, flags) {
 
   const sortBy = flags.sort || flags.s || 'relevance';
   let sorted = results.slice();
-  if (sortBy === 'views') sorted.sort(function(a, b) { return b.rawViews - a.rawViews; });
+  if (sortBy === 'views') sorted.sort(function(a, b) { return b.views - a.views; });
   else if (sortBy === 'date') sorted.sort(function(a, b) { return (b.timestamp || '').localeCompare(a.timestamp || ''); });
 
   let text = '*🎵 Music Results for "' + query + '"*\n*(Sorted by: ' + sortBy + ')*\n\n';

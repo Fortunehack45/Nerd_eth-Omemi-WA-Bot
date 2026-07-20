@@ -55,7 +55,8 @@ module.exports = {
             msgOpts.caption = '🎬 *' + path.basename(filePath) + '*\n' + formatBytes(stat.size);
           } else if (['.mp3', '.wav', '.ogg', '.m4a', '.aac'].includes(ext)) {
             msgOpts.audio = buffer;
-            msgOpts.mimetype = 'audio/mpeg';
+            var mimes = {'.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg','.m4a':'audio/mp4','.aac':'audio/aac'};
+            msgOpts.mimetype = mimes[ext] || 'audio/mpeg';
           } else if (['.pdf', '.docx', '.doc', '.txt', '.md', '.json', '.zip', '.rar'].includes(ext)) {
             msgOpts.document = buffer;
             msgOpts.fileName = path.basename(filePath);

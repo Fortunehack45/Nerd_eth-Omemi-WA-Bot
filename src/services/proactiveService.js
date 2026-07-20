@@ -47,7 +47,7 @@ function getProactiveResponse(intent, botName, pushName) {
       var msgs = [
         emoji + ' Hey ' + name + '! How can I help you today?',
         emoji + ' Hello ' + name + '! What can I do for you?',
-        emoji + ' Hi ' + name + '! Ready to help — just ask or use `!' + config.prefix + 'help` to see what I can do!',
+        emoji + ' Hi ' + name + '! Ready to help — just ask or use `' + config.prefix + 'help` to see what I can do!',
         emoji + ' Hey there ' + name + '! What brings you here today?',
       ];
       return msgs[Math.floor(Math.random() * msgs.length)];
@@ -71,21 +71,21 @@ function getProactiveResponse(intent, botName, pushName) {
 
     case 'help':
       return 'Hey ' + name + '! 👋 I can do a lot of things!\n\n' +
-        '▸ *Chat with AI* — Just talk to me or use `!' + config.prefix + 'ai <question>`\n' +
-        '▸ *Search the web* — `!' + config.prefix + 'search <query>`\n' +
-        '▸ *Generate images* — `!' + config.prefix + 'imagine <description>`\n' +
-        '▸ *Music* — `!' + config.prefix + 'music search <song>`\n' +
-        '▸ *Movies* — `!' + config.prefix + 'movie search <film>`\n' +
-        '▸ *Download* — `!' + config.prefix + 'download <url>`\n' +
-        '▸ *Generate files* — `!' + config.prefix + 'generate pdf <content>`\n' +
-        '▸ *See all commands* — `!' + config.prefix + 'help`\n' +
+        '▸ *Chat with AI* — Just talk to me or use `' + config.prefix + 'ai <question>`\n' +
+        '▸ *Search the web* — `' + config.prefix + 'search <query>`\n' +
+        '▸ *Generate images* — `' + config.prefix + 'imagine <description>`\n' +
+        '▸ *Music* — `' + config.prefix + 'music search <song>`\n' +
+        '▸ *Movies* — `' + config.prefix + 'movie search <film>`\n' +
+        '▸ *Download* — `' + config.prefix + 'download <url>`\n' +
+        '▸ *Generate files* — `' + config.prefix + 'generate pdf <content>`\n' +
+        '▸ *See all commands* — `' + config.prefix + 'help`\n' +
         '\nJust send me a message and I\'ll respond! ' + emoji;
 
     case 'whoami':
       return 'I am *' + persona.name + '*! ' + emoji + ' Your personal WhatsApp assistant.\n\n' +
         'I ' + (persona.pronoun === 'she' ? 'identify' : 'am') + ' ' + persona.pronoun + '/' + persona.possessive + '.\n\n' +
         'I can chat, search the web, play music, get movie info, download media, generate files, and much more.\n' +
-        'Use `!' + config.prefix + 'help` to see everything I can do!\n' +
+        'Use `' + config.prefix + 'help` to see everything I can do!\n' +
         persona.footer;
 
     case 'ping':

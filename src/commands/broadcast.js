@@ -34,7 +34,10 @@ module.exports = {
     let failed = 0;
     const chats = {};
 
-    for (const chat of Object.values(sock.chats || {})) {
+    var chatsRaw = sock.chats;
+if (!chatsRaw) chatsRaw = {};
+var chatList = chatsRaw instanceof Map ? Array.from(chatsRaw.values()) : Object.values(chatsRaw);
+for (const chat of chatList) {
       const jid = chat.id || chat.jid;
       if (!jid || jid === 'status@broadcast') continue;
       chats[jid] = true;
