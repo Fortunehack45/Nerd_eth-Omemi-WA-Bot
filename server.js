@@ -33,6 +33,7 @@ function logCommand(cmd, user, status) {
 }
 
 app.use(express.json());
+app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
 function auth(req, res, next) {
