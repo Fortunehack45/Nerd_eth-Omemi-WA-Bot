@@ -149,6 +149,30 @@ app.post('/api/test', auth, function(req, res) {
   });
 });
 
+app.get('/api/reset-onboarding', auth, function(req, res) {
+  var onboarding = require('./src/services/onboardingService');
+  onboarding.resetOnboarding();
+  var client = require('./src/client');
+  var sock = client.getClient();
+  if (sock) {
+    onboarding.startOnboarding(sock).then(function(sent) {
+      res.json({ reset: true, welcomeSent: sent, admin: config.admins, botNumber: sock.user?.id });
+    });
+  } else {
+    res.json({ reset: true, welcomeSent: false, error: 'Bot not connected yet' });
+  }
+});
+
+app.get('/api/owner-check', auth, function(req, res) {
+  var client = require('./src/client');
+  var sock = client.getClient();
+  res.json({
+    ownerNumber: config.admins,
+    botNumber: sock?.user?.id || null,
+    sameNumber: sock?.user?.id && config.admins[0] ? sock.user.id.startsWith(config.admins[0]) : false,
+  });
+});
+
 app.get('/api/health', function(req, res) {
   res.json({ status: botStatus.connected ? 'online' : 'offline', time: Date.now() });
 });

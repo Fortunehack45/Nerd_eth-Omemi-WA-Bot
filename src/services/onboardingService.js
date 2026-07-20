@@ -14,6 +14,10 @@ function markOnboarded() {
   saveJson(ONBOARDING_FILE, { completed: true, completedAt: Date.now() });
 }
 
+function resetOnboarding() {
+  saveJson(ONBOARDING_FILE, { completed: false });
+}
+
 function getOnboardingStatus() {
   var data = loadJson(ONBOARDING_FILE, { completed: false });
   return data;
@@ -50,6 +54,11 @@ async function startOnboarding(sock) {
     return false;
   }
 
+  if (sock && sock.user && sock.user.id && adminJid === sock.user.id.split(':')[0]) {
+    console.log('Onboarding skipped: admin number is the same as bot number (cannot self-message)');
+    return false;
+  }
+
   var connected = await waitForConnection(sock, 60000);
   if (!connected) {
     console.error('Onboarding skipped: no connection within 60s');
@@ -83,4 +92,4 @@ async function startOnboarding(sock) {
   }
 }
 
-module.exports = { isOnboarded, markOnboarded, startOnboarding, getOnboardingStatus };
+module.exports = { isOnboarded, markOnboarded, resetOnboarding, startOnboarding, getOnboardingStatus };
