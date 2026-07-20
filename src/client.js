@@ -37,7 +37,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     connectTimeoutMs: 120000,
     patchMessageBeforeSending: true,
     shouldSyncHistoryMessage: () => false,
-    fireInitQueries: false,
+    fireInitQueries: true,
     emitOwnEvents: false,
     retryRequestOnFail: true,
     printQRInTerminal: false,
