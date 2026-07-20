@@ -1,7 +1,6 @@
 const { extractCommand, randomBetween } = require('../utils/helpers');
 const config = require('../../config');
 const { checkRateLimit, simulateTyping } = require('../services/antiBanService');
-const { isAdmin, canUse, isApproved } = require('../services/accessControl');
 const { logCommand } = require('../../server');
 const fs = require('fs');
 const path = require('path');
@@ -75,23 +74,6 @@ async function handleCommand(sock, msg, text) {
     }
     commandCooldowns.set(cooldownKey, now);
     if (!checkRateLimit('cmd_' + cmd.name, 20)) return true;
-  }
-
-  if (cmd.adminOnly) {
-    if (!isAdmin(senderId)) {
-      await sock.sendMessage(sender, { text: '⛔ This command is admin-only.' });
-      return true;
-    }
-  }
-
-  if (cmd.restricted && config.access.enabled) {
-    if (!isAdmin(senderId)) {
-      var feature = cmd.restrictedFeature || cmd.name;
-      if (!canUse(senderId, feature)) {
-        await sock.sendMessage(sender, { text: '⛔ You don\'t have access to "' + feature + '" features.\n\nContact the bot admin to request access.\n_Admin: Use `!access add ' + isNumber(senderId) + '` to grant access._' });
-        return true;
-      }
-    }
   }
 
   if (cmd.groupOnly && !isGroup) {
