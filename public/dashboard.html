@@ -17,6 +17,7 @@
   --text-muted:#818cf8;
 }
 body{background:var(--bg);color:#e0e7ff;min-height:100vh;display:flex;overflow-x:hidden}
+svg{display:inline-block;vertical-align:middle;flex-shrink:0}
 
 /* Login Modal */
 #loginModal{display:flex;position:fixed;inset:0;background:rgba(7,9,19,0.96);backdrop-filter:blur(20px);z-index:9999;align-items:center;justify-content:center;padding:20px}
@@ -25,7 +26,7 @@ body{background:var(--bg);color:#e0e7ff;min-height:100vh;display:flex;overflow-x
 .login-card p{color:#94a3b8;font-size:0.9rem;margin-bottom:28px}
 .input-field{width:100%;padding:14px 18px;border-radius:12px;border:1px solid var(--border);background:#0b0f24;color:#fff;font-size:1rem;margin-bottom:18px;outline:none;transition:all 0.2s}
 .input-field:focus{border-color:var(--accent);box-shadow:0 0 16px var(--accent-glow)}
-.btn-primary{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 8px 25px var(--accent-glow);transition:all 0.2s}
+.btn-primary{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;box-shadow:0 8px 25px var(--accent-glow);display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 35px var(--accent-glow)}
 
 /* Layout */
@@ -51,7 +52,7 @@ body{background:var(--bg);color:#e0e7ff;min-height:100vh;display:flex;overflow-x
 .metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
 .metric-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .metric-title{font-size:0.82rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px}
-.metric-icon{width:32px;height:32px;border-radius:10px;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;color:#a5b4fc}
+.metric-icon{width:34px;height:34px;border-radius:10px;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;color:#a5b4fc}
 .metric-value{font-size:2.2rem;font-weight:800;color:#fff}
 
 /* Content Sections */
@@ -71,16 +72,12 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 .form-group select, .form-group input{width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:#0b0f24;color:#fff;font-size:0.95rem;outline:none}
 .form-group select:focus, .form-group input:focus{border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow)}
 
-.btn-secondary{padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:rgba(99,102,241,0.15);color:#fff;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-secondary{padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:rgba(99,102,241,0.15);color:#fff;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all 0.2s}
 .btn-secondary:hover{background:var(--accent)}
 
 @media(max-width:768px){
   body{flex-direction:column}
-  
-  /* Hide desktop sidebar on mobile */
   .sidebar{display:none}
-
-  /* Bottom Mobile App Navigation Bar */
   .mobile-bottom-nav{
     display:flex;
     position:fixed;
@@ -114,63 +111,23 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     flex:1;
     text-align:center;
   }
-  .mobile-nav-item .nav-icon{font-size:1.3rem}
   .mobile-nav-item.active{
     color:#fff;
     background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(168,85,247,0.25));
     border:1px solid rgba(99,102,241,0.5);
     box-shadow:0 4px 15px rgba(99,102,241,0.3);
   }
-
-  /* Mobile App Content Container */
-  .main-content{
-    margin-left:0;
-    padding:16px;
-    max-width:100vw;
-    padding-bottom:95px;
-  }
-  
-  .top-bar{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:14px;
-    margin-bottom:20px;
-  }
-  .top-actions{
-    width:100%;
-    justify-content:space-between;
-  }
-
-  .metrics-grid{
-    grid-template-columns:repeat(2,1fr);
-    gap:10px;
-    margin-bottom:20px;
-  }
-  .metric-card{
-    padding:14px;
-    border-radius:14px;
-  }
-  .metric-value{
-    font-size:1.6rem;
-  }
-
-  .panel-grid{
-    grid-template-columns:1fr;
-    gap:16px;
-  }
-  .card-box{
-    padding:18px;
-    border-radius:16px;
-  }
-
-  .btn-primary, .btn-secondary{
-    padding:14px;
-    font-size:0.95rem;
-  }
+  .main-content{margin-left:0;padding:16px;max-width:100vw;padding-bottom:95px}
+  .top-bar{flex-direction:column;align-items:flex-start;gap:14px;margin-bottom:20px}
+  .top-actions{width:100%;justify-content:space-between}
+  .metrics-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+  .metric-card{padding:14px;border-radius:14px}
+  .metric-value{font-size:1.6rem}
+  .panel-grid{grid-template-columns:1fr;gap:16px}
+  .card-box{padding:18px;border-radius:16px}
+  .btn-primary, .btn-secondary{padding:14px;font-size:0.95rem}
 }
-@media(min-width:769px){
-  .mobile-bottom-nav{display:none}
-}
+@media(min-width:769px){.mobile-bottom-nav{display:none}}
 </style>
 </head>
 <body>
@@ -178,23 +135,23 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 <!-- Mobile Bottom Navigation Bar -->
 <nav class="mobile-bottom-nav">
   <div class="mobile-nav-item active" onclick="showTab('dashboard')">
-    <span class="nav-icon">📊</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     <span>Home</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('keys')">
-    <span class="nav-icon">🔑</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
     <span>Keys</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('connect')">
-    <span class="nav-icon">📱</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
     <span>Pair</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('users')">
-    <span class="nav-icon">👥</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>Users</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('logs')">
-    <span class="nav-icon">📜</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span>Logs</span>
   </div>
 </nav>
@@ -202,26 +159,45 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 <!-- Login Overlay -->
 <div id="loginModal">
   <div class="login-card">
-    <h2>👋 Welcome Back</h2>
+    <h2>Welcome Back</h2>
     <p>Sign in to access your Nerd-eth Bot Control Panel</p>
     <div id="loginErr" style="color:#f87171;font-size:0.85rem;margin-bottom:14px;display:none"></div>
     <input type="password" id="pwdInput" class="input-field" placeholder="Enter Admin Password (Default: Omemi)" onkeyup="if(event.key==='Enter')attemptLogin()">
-    <button onclick="attemptLogin()" class="btn-primary">Unlock DinePanel</button>
+    <button onclick="attemptLogin()" class="btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Unlock Panel
+    </button>
   </div>
 </div>
 
-<!-- Sidebar Navigation -->
+<!-- Desktop Sidebar Navigation -->
 <aside class="sidebar">
   <div class="brand">
-    <span>🤖 BotPanel</span>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16.01"/><line x1="16" y1="16" x2="16" y2="16.01"/></svg>
+    <span>BotPanel</span>
     <span class="brand-badge">PRO v2.5</span>
   </div>
   <ul class="nav-list">
-    <li class="nav-item active" onclick="showTab('dashboard')">📊 Dashboard</li>
-    <li class="nav-item" onclick="showTab('keys')">🔑 AI & API Keys</li>
-    <li class="nav-item" onclick="showTab('connect')">📱 QR & Link Phone</li>
-    <li class="nav-item" onclick="showTab('users')">👥 Users & Access</li>
-    <li class="nav-item" onclick="showTab('logs')">📜 Real-time Logs</li>
+    <li class="nav-item active" onclick="showTab('dashboard')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <span>Dashboard</span>
+    </li>
+    <li class="nav-item" onclick="showTab('keys')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <span>AI & API Keys</span>
+    </li>
+    <li class="nav-item" onclick="showTab('connect')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <span>QR & Link Phone</span>
+    </li>
+    <li class="nav-item" onclick="showTab('users')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Users & Access</span>
+    </li>
+    <li class="nav-item" onclick="showTab('logs')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>Real-time Logs</span>
+    </li>
   </ul>
 </aside>
 
@@ -230,12 +206,15 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- Top Bar -->
   <div class="top-bar">
     <div class="greeting">
-      <h1 id="topGreeting">👋 Hey, Admin.</h1>
+      <h1 id="topGreeting">Hey, Admin.</h1>
       <p id="topSub">Here is your WhatsApp bot analytics and control overview</p>
     </div>
     <div class="top-actions">
-      <span id="statusBadge" class="status-tag offline">🔴 Offline</span>
-      <button onclick="logout()" class="btn-secondary" style="background:#1e1b4b">🔒 Lock Panel</button>
+      <span id="statusBadge" class="status-tag offline">Offline</span>
+      <button onclick="logout()" class="btn-secondary" style="background:#1e1b4b">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Lock Panel
+      </button>
     </div>
   </div>
 
@@ -243,30 +222,56 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <div id="tab-dashboard">
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-header"><span class="metric-title">Uptime</span><div class="metric-icon">⏱</div></div>
+        <div class="metric-header">
+          <span class="metric-title">Uptime</span>
+          <div class="metric-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+        </div>
         <div class="metric-value" id="mUptime">0s</div>
       </div>
       <div class="metric-card">
-        <div class="metric-header"><span class="metric-title">Known Contacts</span><div class="metric-icon">👥</div></div>
+        <div class="metric-header">
+          <span class="metric-title">Known Contacts</span>
+          <div class="metric-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
         <div class="metric-value" id="mUsers">0</div>
       </div>
       <div class="metric-card">
-        <div class="metric-header"><span class="metric-title">Memory Facts</span><div class="metric-icon">🧠</div></div>
+        <div class="metric-header">
+          <span class="metric-title">Memory Facts</span>
+          <div class="metric-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg>
+          </div>
+        </div>
         <div class="metric-value" id="mFacts">0</div>
       </div>
       <div class="metric-card">
-        <div class="metric-header"><span class="metric-title">Commands Run</span><div class="metric-icon">⚡</div></div>
+        <div class="metric-header">
+          <span class="metric-title">Commands Run</span>
+          <div class="metric-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+        </div>
         <div class="metric-value" id="mCommands">0</div>
       </div>
     </div>
 
     <div class="panel-grid">
       <div class="card-box">
-        <h3>💬 Live Message Stream</h3>
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Live Message Stream
+        </h3>
         <div id="msgStream" style="max-height:360px;overflow-y:auto"></div>
       </div>
       <div class="card-box">
-        <h3>📜 Command History</h3>
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Command History
+        </h3>
         <div id="cmdStream" style="max-height:360px;overflow-y:auto"></div>
       </div>
     </div>
@@ -275,7 +280,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 2: AI & API KEYS -->
   <div id="tab-keys" style="display:none">
     <div class="card-box" style="margin-bottom:24px">
-      <h3>🔑 AI Provider & Public API Key Manager</h3>
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        AI Provider & Public API Key Manager
+      </h3>
       <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px">Pre-configured endpoints for Groq, OpenAI, and OpenRouter. Changes save to runtime and .env without crashing.</p>
 
       <div class="form-group">
@@ -299,8 +307,14 @@ tr:hover td{background:rgba(99,102,241,0.08)}
       </div>
 
       <div style="display:flex;gap:12px;margin-top:24px">
-        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 28px">💾 Save API Keys</button>
-        <button onclick="testAiAction()" class="btn-secondary" style="background:#4c1d95">🧪 Test AI Connection</button>
+        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 28px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save API Keys
+        </button>
+        <button onclick="testAiAction()" class="btn-secondary" style="background:#4c1d95">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/></svg>
+          Test AI Connection
+        </button>
       </div>
 
       <div id="keyStatusRes" style="margin-top:20px;padding:16px;background:#0b0f24;border-radius:12px;border:1px solid var(--border);font-size:0.9rem"></div>
@@ -310,7 +324,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 3: CONNECT -->
   <div id="tab-connect" style="display:none">
     <div class="card-box" style="text-align:center;margin-bottom:24px">
-      <h3>📲 WhatsApp Linking — QR Code</h3>
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        WhatsApp Linking — QR Code
+      </h3>
       <p style="color:#94a3b8;margin:10px 0">Open WhatsApp → Linked Devices → Link a Device</p>
       
       <div id="qrWrapper" style="margin:20px 0">
@@ -319,11 +336,17 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         </div>
       </div>
 
-      <button onclick="resetSessionAction()" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">🔄 Reset Session & Refresh QR</button>
+      <button onclick="resetSessionAction()" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Reset Session & Refresh QR
+      </button>
     </div>
 
     <div class="card-box">
-      <h3>📱 Alternative: Pairing Code</h3>
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Alternative: Pairing Code
+      </h3>
       <p style="color:#94a3b8;margin:8px 0 16px 0">Enter phone number with country code (e.g. 2348012345678)</p>
       <div style="display:flex;gap:12px;max-width:480px">
         <input type="text" id="pairPhoneNum" class="input-field" placeholder="2348012345678" style="margin:0">
@@ -336,7 +359,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 4: USERS -->
   <div id="tab-users" style="display:none">
     <div class="card-box">
-      <h3>👥 Contact & Access Control Directory</h3>
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Contact & Access Control Directory
+      </h3>
       <div style="margin-top:16px;overflow-x:auto">
         <table>
           <thead>
@@ -351,7 +377,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 5: LOGS -->
   <div id="tab-logs" style="display:none">
     <div class="card-box">
-      <h3>📜 Live Terminal Logs</h3>
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Live Terminal Logs
+      </h3>
       <pre id="rawLogBox" style="background:#070a18;padding:20px;border-radius:12px;border:1px solid var(--border);color:#a5b4fc;font-family:monospace;font-size:0.85rem;max-height:450px;overflow-y:auto">Loading logs...</pre>
     </div>
   </div>
@@ -426,15 +455,15 @@ function refreshAll() {
   // Status
   fetchAPI('/status').then(function(d) {
     document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('topGreeting').textContent = '👋 Hey, ' + (d.botName || 'Admin') + '.';
+    document.getElementById('topGreeting').textContent = 'Hey, ' + (d.botName || 'Admin') + '.';
     
     var badge = document.getElementById('statusBadge');
     if (d.connected) {
       badge.className = 'status-tag online';
-      badge.textContent = '🟢 Online (' + d.user + ')';
+      badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block"></span> Online (' + d.user + ')';
     } else {
       badge.className = 'status-tag offline';
-      badge.textContent = '🔴 Offline';
+      badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#f87171;display:inline-block"></span> Offline';
     }
 
     document.getElementById('mUptime').textContent = d.uptime || '0s';
@@ -488,10 +517,10 @@ function loadKeysStatus() {
     var statusBox = document.getElementById('keyStatusRes');
     if (statusBox) {
       statusBox.innerHTML = '⚡ <strong>Active AI Provider:</strong> ' + (d.provider || 'none') + ' (' + (d.model || 'N/A') + ')<br>' +
-        '• Groq Key: ' + (d.groqSet ? '✅ Active' : '❌ Not Set') + '<br>' +
-        '• OpenAI Key: ' + (d.openaiSet ? '✅ Active' : '❌ Not Set') + '<br>' +
-        '• OpenRouter Key: ' + (d.openrouterSet ? '✅ Active' : '❌ Not Set') + '<br>' +
-        '• Brave Search Key: ' + (d.braveSet ? '✅ Active' : '⚠️ Not Set (using DuckDuckGo)');
+        '• Groq Key: ' + (d.groqSet ? 'Active' : 'Not Set') + '<br>' +
+        '• OpenAI Key: ' + (d.openaiSet ? 'Active' : 'Not Set') + '<br>' +
+        '• OpenRouter Key: ' + (d.openrouterSet ? 'Active' : 'Not Set') + '<br>' +
+        '• Brave Search Key: ' + (d.braveSet ? 'Active' : 'Not Set (using DuckDuckGo)');
     }
   }).catch(function(){});
 }
@@ -510,7 +539,7 @@ function saveKeysAction() {
     body: JSON.stringify({ groq: groq, openai: openai, openrouter: openrouter, brave: brave })
   }).then(function(d) {
     if (d.success) {
-      alert('✅ API Keys successfully saved! Active Provider: ' + d.provider + ' (' + d.model + ')');
+      alert('API Keys successfully saved! Active Provider: ' + d.provider + ' (' + d.model + ')');
       document.getElementById('keyGroq').value = '';
       document.getElementById('keyOpenAI').value = '';
       document.getElementById('keyOpenRouter').value = '';
@@ -524,14 +553,14 @@ function saveKeysAction() {
 
 function testAiAction() {
   var resBox = document.getElementById('keyStatusRes');
-  if (resBox) resBox.innerHTML = '🧪 Testing AI connection... Please wait.';
+  if (resBox) resBox.innerHTML = 'Testing AI connection... Please wait.';
   fetchAPI('/test-ai', { method: 'POST' }).then(function(d) {
     if (d.success) {
-      resBox.innerHTML = '✅ <strong>AI Test Passed!</strong><br>Provider: ' + d.provider + ' (' + d.model + ')<br>AI Output: "' + d.response + '"';
+      resBox.innerHTML = '<strong>AI Test Passed!</strong><br>Provider: ' + d.provider + ' (' + d.model + ')<br>AI Output: "' + d.response + '"';
     } else {
-      resBox.innerHTML = '❌ <strong>AI Test Failed:</strong> ' + (d.response || 'Unknown error');
+      resBox.innerHTML = '<strong>AI Test Failed:</strong> ' + (d.response || 'Unknown error');
     }
-  }).catch(function(e) { if (resBox) resBox.innerHTML = '❌ Error: ' + e.message; });
+  }).catch(function(e) { if (resBox) resBox.innerHTML = 'Error: ' + e.message; });
 }
 
 function resetSessionAction() {
@@ -548,7 +577,7 @@ function requestPairCodeAction() {
   var out = document.getElementById('pairOutput');
   out.style.display = 'block';
   out.style.color = '#38bdf8';
-  out.innerHTML = '⏳ Requesting pairing code...';
+  out.innerHTML = 'Requesting pairing code...';
 
   fetchAPI('/pair', {
     method: 'POST',
@@ -557,14 +586,14 @@ function requestPairCodeAction() {
   }).then(function(d) {
     if (d.code) {
       out.style.color = '#4ade80';
-      out.innerHTML = '✅ <strong>Pairing Code: ' + d.code + '</strong><br><small style="color:#cbd5e1;font-weight:400">Open WhatsApp → Linked Devices → Link a Device → Link using phone number → Enter code</small>';
+      out.innerHTML = '<strong>Pairing Code: ' + d.code + '</strong><br><small style="color:#cbd5e1;font-weight:400">Open WhatsApp → Linked Devices → Link a Device → Link using phone number → Enter code</small>';
     } else {
       out.style.color = '#f87171';
-      out.textContent = '❌ ' + (d.error || 'Failed to generate pairing code');
+      out.textContent = (d.error || 'Failed to generate pairing code');
     }
   }).catch(function(e) {
     out.style.color = '#f87171';
-    out.textContent = '❌ Request failed: ' + e.message;
+    out.textContent = 'Request failed: ' + e.message;
   });
 }
 
