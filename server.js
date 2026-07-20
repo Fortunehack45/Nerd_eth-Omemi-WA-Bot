@@ -5,7 +5,7 @@ var { loadJson } = require('./src/utils/helpers');
 var config = require('./config');
 
 var app = express();
-var PORT = process.env.DASHBOARD_PORT || 3000;
+var PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 var DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
 var botStatus = { connected: false, user: null, uptime: 0, startTime: Date.now() };
