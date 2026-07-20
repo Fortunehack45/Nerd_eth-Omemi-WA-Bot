@@ -54,11 +54,6 @@ async function startOnboarding(sock) {
     return false;
   }
 
-  if (sock && sock.user && sock.user.id && adminJid === sock.user.id.split(':')[0]) {
-    console.log('Onboarding skipped: admin number is the same as bot number (cannot self-message)');
-    return false;
-  }
-
   var connected = await waitForConnection(sock, 60000);
   if (!connected) {
     console.error('Onboarding skipped: no connection within 60s');

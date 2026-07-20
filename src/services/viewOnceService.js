@@ -20,20 +20,16 @@ function saveIndex(index) {
 }
 
 function detectViewOnce(msg) {
-  var msgType = Object.keys(msg.message || {})[0] || '';
-  return msgType === 'viewOnceMessage' || msgType === 'viewOnceMessageV2';
+  return !!(msg.message?.viewOnceMessage || msg.message?.viewOnceMessageV2);
 }
 
 function getViewOnceContent(msg) {
-  var msgType = Object.keys(msg.message || {})[0] || '';
-  var inner = msg.message[msgType];
-  if (inner && inner.message) {
-    var innerType = Object.keys(inner.message)[0] || '';
-    inner.key = msg.key;
-    inner.pushName = msg.pushName;
-    return { msg: inner, innerType: innerType };
-  }
-  return null;
+  var inner = msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message;
+  if (!inner) return null;
+  var innerType = Object.keys(inner)[0] || '';
+  if (!innerType) return null;
+  var mediaMsg = { key: msg.key, message: inner };
+  return { msg: mediaMsg, innerType: innerType };
 }
 
 function getMediaType(innerType) {
