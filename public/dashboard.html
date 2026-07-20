@@ -124,11 +124,11 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     justify-content:center;
     gap:4px;
     color:#818cf8;
-    font-size:0.75rem;
+    font-size:0.7rem;
     font-weight:700;
     cursor:pointer;
-    padding:8px 10px;
-    border-radius:14px;
+    padding:6px;
+    border-radius:12px;
     transition:all 0.2s;
     flex:1;
     text-align:center;
@@ -137,7 +137,6 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     color:#fff;
     background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(168,85,247,0.25));
     border:1px solid rgba(99,102,241,0.5);
-    box-shadow:0 4px 15px rgba(99,102,241,0.3);
   }
   .main-content{margin-left:0;padding:16px;max-width:100vw;padding-bottom:95px}
   .top-bar{flex-direction:column;align-items:flex-start;gap:14px;margin-bottom:20px}
@@ -159,23 +158,27 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 <!-- Mobile Bottom Navigation Bar -->
 <nav class="mobile-bottom-nav">
   <div class="mobile-nav-item active" onclick="showTab('dashboard')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     <span>Home</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('keys')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
     <span>Keys</span>
   </div>
+  <div class="mobile-nav-item" onclick="showTab('features')">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <span>Control</span>
+  </div>
   <div class="mobile-nav-item" onclick="showTab('connect')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
     <span>Pair</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('users')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
     <span>Users</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('logs')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
     <span>Logs</span>
   </div>
 </nav>
@@ -189,7 +192,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     <div id="loginErr" style="color:#f87171;font-size:0.85rem;margin-bottom:14px;display:none"></div>
     <input type="password" id="pwdInput" class="input-field" placeholder="Enter Admin Password (Default: Omemi)" onkeyup="if(event.key==='Enter')attemptLogin()">
     <button onclick="attemptLogin()" class="btn-primary">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       Unlock Panel
     </button>
   </div>
@@ -204,23 +207,27 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   </div>
   <ul class="nav-list">
     <li class="nav-item active" onclick="showTab('dashboard')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
       <span>Dashboard</span>
     </li>
     <li class="nav-item" onclick="showTab('keys')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
       <span>AI & API Keys</span>
     </li>
+    <li class="nav-item" onclick="showTab('features')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>Feature Controls</span>
+    </li>
     <li class="nav-item" onclick="showTab('connect')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
       <span>QR & Link Phone</span>
     </li>
     <li class="nav-item" onclick="showTab('users')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span>Users & Access</span>
     </li>
     <li class="nav-item" onclick="showTab('logs')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       <span>Real-time Logs</span>
     </li>
   </ul>
@@ -240,7 +247,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     <div class="top-actions">
       <span id="statusBadge" class="status-tag offline">Offline</span>
       <button onclick="logout()" class="btn-secondary" style="background:#1e1b4b">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Lock Panel
       </button>
     </div>
@@ -253,7 +260,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <div class="metric-header">
           <span class="metric-title">Uptime</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mUptime">0s</div>
@@ -262,7 +269,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <div class="metric-header">
           <span class="metric-title">Known Contacts</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mUsers">0</div>
@@ -271,7 +278,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <div class="metric-header">
           <span class="metric-title">Memory Facts</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mFacts">0</div>
@@ -280,7 +287,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <div class="metric-header">
           <span class="metric-title">Commands Run</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mCommands">0</div>
@@ -290,14 +297,14 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     <div class="panel-grid">
       <div class="card-box">
         <h3>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Live Message Stream
         </h3>
         <div id="msgStream" style="max-height:360px;overflow-y:auto"></div>
       </div>
       <div class="card-box">
         <h3>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Command History
         </h3>
         <div id="cmdStream" style="max-height:360px;overflow-y:auto"></div>
@@ -309,7 +316,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <div id="tab-keys" class="tab-content" style="display:none">
     <div class="card-box" style="margin-bottom:24px">
       <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         AI Provider & Public API Key Manager
       </h3>
       <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px">Pre-configured endpoints for Groq, OpenAI, and OpenRouter. Changes save to runtime and .env without crashing.</p>
@@ -336,11 +343,11 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 
       <div style="display:flex;gap:12px;margin-top:24px">
         <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 28px">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
           Save API Keys
         </button>
         <button onclick="testAiAction()" class="btn-secondary" style="background:#4c1d95">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
           Test AI Connection
         </button>
       </div>
@@ -349,11 +356,33 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     </div>
   </div>
 
-  <!-- TAB 3: CONNECT -->
+  <!-- TAB 3: FEATURE CONTROLS -->
+  <div id="tab-features" class="tab-content" style="display:none">
+    <div class="card-box" style="margin-bottom:24px">
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Feature & Command Switcher
+      </h3>
+      <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px">Enable or disable specific features or commands live. Disabled items will not run for users.</p>
+      
+      <div id="featureStatusRes">Loading features...</div>
+
+      <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
+        <label style="display:block;font-size:0.88rem;font-weight:600;color:#a5b4fc;margin-bottom:8px">Disable/Enable Any Command or Feature by Name</label>
+        <div style="display:flex;gap:12px;max-width:500px">
+          <input type="text" id="toggleItemName" class="input-field" placeholder="e.g. music, download, movie, nuke" style="margin:0">
+          <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">Disable</button>
+          <button onclick="toggleCustomItem('enable')" class="btn-primary" style="width:auto">Enable</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: CONNECT -->
   <div id="tab-connect" class="tab-content" style="display:none">
     <div class="card-box" style="text-align:center;margin-bottom:24px">
       <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         WhatsApp Linking — QR Code
       </h3>
       <p style="color:#94a3b8;margin:10px 0">Open WhatsApp → Linked Devices → Link a Device</p>
@@ -372,14 +401,14 @@ tr:hover td{background:rgba(99,102,241,0.08)}
       </div>
 
       <button onclick="resetSessionAction()" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Reset Session & Refresh QR
       </button>
     </div>
 
     <div class="card-box">
       <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         Alternative: Pairing Code
       </h3>
       <p style="color:#94a3b8;margin:8px 0 16px 0">Enter phone number with country code (e.g. 2348012345678)</p>
@@ -391,11 +420,11 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     </div>
   </div>
 
-  <!-- TAB 4: USERS -->
+  <!-- TAB 5: USERS -->
   <div id="tab-users" class="tab-content" style="display:none">
     <div class="card-box">
       <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
         Contact & Access Control Directory
       </h3>
       <div style="margin-top:16px;overflow-x:auto">
@@ -409,11 +438,11 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     </div>
   </div>
 
-  <!-- TAB 5: LOGS -->
+  <!-- TAB 6: LOGS -->
   <div id="tab-logs" class="tab-content" style="display:none">
     <div class="card-box">
       <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
         Live Terminal Logs
       </h3>
       <pre id="rawLogBox" style="background:#070a18;padding:20px;border-radius:12px;border:1px solid var(--border);color:#a5b4fc;font-family:monospace;font-size:0.85rem;max-height:450px;overflow-y:auto">Loading logs...</pre>
@@ -480,7 +509,7 @@ function logout() {
 }
 
 function showTab(name) {
-  var tabs = ['dashboard', 'keys', 'connect', 'users', 'logs'];
+  var tabs = ['dashboard', 'keys', 'features', 'connect', 'users', 'logs'];
   tabs.forEach(function(t) {
     var el = document.getElementById('tab-' + t);
     if (el) el.style.display = (t === name) ? 'block' : 'none';
@@ -492,6 +521,7 @@ function showTab(name) {
     btn.classList.toggle('active', tabs[idx] === name);
   });
   if (name === 'keys') loadKeysStatus();
+  if (name === 'features') loadFeaturesStatus();
 }
 
 function refreshAll() {
@@ -568,6 +598,48 @@ function loadKeysStatus() {
         '• Brave Search Key: ' + (d.braveSet ? 'Active' : 'Not Set (using DuckDuckGo)');
     }
   }).catch(function(){});
+}
+
+function loadFeaturesStatus() {
+  fetchAPI('/features').then(function(d) {
+    var box = document.getElementById('featureStatusRes');
+    if (!box) return;
+    var html = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">';
+    var coreFeats = ['autoreply', 'schedule', 'proactive', 'ai', 'status', 'viewonce'];
+    coreFeats.forEach(function(f) {
+      var isDis = (d.disabledFeatures || []).includes(f);
+      html += '<div style="background:#0b0f24;padding:16px;border-radius:12px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">';
+      html += '<div><strong style="text-transform:capitalize;color:#fff">' + f + '</strong><br><small style="color:#94a3b8">' + (isDis ? '🔴 Disabled' : '🟢 Active') + '</small></div>';
+      html += '<button onclick="toggleFeatureAction(\'' + f + '\', \'' + (isDis ? 'enable' : 'disable') + '\')" class="btn-secondary" style="padding:6px 14px;font-size:0.8rem">' + (isDis ? 'Enable' : 'Disable') + '</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    if (d.disabledCommands && d.disabledCommands.length > 0) {
+      html += '<div style="margin-top:20px;padding:16px;background:#0b0f24;border-radius:12px;border:1px solid var(--border)">';
+      html += '<strong style="color:#f87171">Disabled Commands:</strong> ' + d.disabledCommands.join(', ');
+      html += '</div>';
+    }
+    box.innerHTML = html;
+  }).catch(function(){});
+}
+
+function toggleFeatureAction(name, action) {
+  fetchAPI('/features/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, action: action })
+  }).then(function(d) {
+    showToast(name + ' ' + action + 'd');
+    loadFeaturesStatus();
+  });
+}
+
+function toggleCustomItem(action) {
+  var val = document.getElementById('toggleItemName').value.trim();
+  if (!val) return alert('Enter a command or feature name');
+  toggleFeatureAction(val, action);
+  document.getElementById('toggleItemName').value = '';
 }
 
 function saveKeysAction() {

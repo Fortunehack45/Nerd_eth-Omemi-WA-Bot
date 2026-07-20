@@ -151,6 +151,21 @@ app.get('/api/keys', auth, function(req, res) {
   });
 });
 
+app.get('/api/features', auth, function(req, res) {
+  var featSvc = require('./src/services/featureService');
+  res.json(featSvc.getFeatureConfig());
+});
+
+app.post('/api/features/toggle', auth, function(req, res) {
+  var featSvc = require('./src/services/featureService');
+  var name = req.body.name;
+  var action = req.body.action;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  var result = (action === 'disable') ? featSvc.disableItem(name) : featSvc.enableItem(name);
+  res.json(result);
+});
+
 app.post('/api/keys', auth, function(req, res) {
   var aiSvc = require('./src/services/aiService');
   var groq = req.body.groq;

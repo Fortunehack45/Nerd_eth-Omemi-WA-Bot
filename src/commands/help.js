@@ -67,13 +67,6 @@ module.exports = {
 
     text += '_Type `!help <command>` for detailed info on any command._';
 
-    try {
-      await sock.sendMessage(sender, {
-        image: { url: 'https://iili.io/Cwvlxwv.png' },
-        caption: text.substring(0, 4000)
-      });
-    } catch (e) {
-      await sock.sendMessage(sender, { text: text.substring(0, 4000) });
-    }
+    await sock.sendMessage(sender, { text: text.substring(0, 4000) });
   },
 };

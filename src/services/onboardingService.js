@@ -42,19 +42,16 @@ function waitForConnection(sock, maxWaitMs) {
 
 async function startOnboarding(sock) {
   if (isOnboarded()) return false;
-  var admins = Array.isArray(config.admins) && config.admins.length > 0 ? config.admins : [];
-  if (admins.length === 0) {
-    markOnboarded();
-    return false;
-  }
-
-  var adminJid = admins[0] + '@s.whatsapp.net';
-  if (!adminJid || adminJid === '@s.whatsapp.net') {
-    markOnboarded();
-    return false;
-  }
 
   var connected = await waitForConnection(sock, 60000);
+  if (!connected) {
+    console.error('Onboarding skipped: no connection within 60s');
+    return false;
+  }
+
+  var admins = Array.isArray(config.admins) && config.admins.length > 0 ? config.admins : [];
+  var adminJid = admins[0] ? (admins[0] + '@s.whatsapp.net') : (sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null);
+  if (!adminJid) return false;
   if (!connected) {
     console.error('Onboarding skipped: no connection within 60s');
     return false;
@@ -78,7 +75,20 @@ async function startOnboarding(sock) {
     steps.push('▸ `!access add <number>` — Grant friends access to AI features\n');
     steps.push('I\'m ready when you are! 🚀');
 
-    await sock.sendMessage(adminJid, { text: steps.join('\n') });
+    var welcomeCaption = steps.join('\n');
+    var targetJid = adminJid;
+    if (sock && sock.user && sock.user.id) {
+      targetJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+    }
+
+    try {
+      await sock.sendMessage(targetJid, {
+        image: { url: 'https://iili.io/Cwvlxwv.png' },
+        caption: welcomeCaption
+      });
+    } catch (e) {
+      await sock.sendMessage(targetJid, { text: welcomeCaption });
+    }
     markOnboarded();
     return true;
   } catch (err) {

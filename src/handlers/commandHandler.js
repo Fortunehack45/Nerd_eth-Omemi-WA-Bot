@@ -67,6 +67,12 @@ async function handleCommand(sock, msg, text) {
   var cmd = getCommand(command);
   if (!cmd) return null;
 
+  var { isCommandDisabled } = require('../services/featureService');
+  if (isCommandDisabled(cmd.name) || isCommandDisabled(command)) {
+    await sock.sendMessage(sender, { text: '⚠️ The command `!' + command + '` has been disabled by the Admin.' });
+    return true;
+  }
+
   if (config.antiBan.enabled && !isFromMe) {
     var cooldownKey = 'cmd_' + cmd.name + '_' + senderId;
     var now = Date.now();
