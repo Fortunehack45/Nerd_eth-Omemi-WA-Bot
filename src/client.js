@@ -252,10 +252,34 @@ function getLastQR() {
 }
 
 async function requestPairingCode(phoneNumber) {
-  if (!sock) throw new Error('Client not initialized');
-  const code = await sock.requestPairingCode(phoneNumber);
-  console.log('[CLIENT] Pairing code requested for:', phoneNumber, 'Code:', code);
-  return code;
+  var cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+  if (!cleanPhone || cleanPhone.length < 10) {
+    throw new Error('Invalid phone number. Provide number with country code (e.g. 2348012345678)');
+  }
+
+  // Wait if socket is currently initializing
+  var attempts = 0;
+  while (!sock && attempts < 10) {
+    await new Promise(r => setTimeout(r, 500));
+    attempts++;
+  }
+
+  if (!sock) {
+    throw new Error('WhatsApp client is starting up. Please wait 5 seconds and try again.');
+  }
+
+  if (sock.authState?.creds?.registered) {
+    throw new Error('Bot is already connected to WhatsApp! Click "Reset Session" first if you want to link a new number.');
+  }
+
+  try {
+    const code = await sock.requestPairingCode(cleanPhone);
+    console.log('[CLIENT] Pairing code generated for:', cleanPhone, 'Code:', code);
+    return code;
+  } catch (err) {
+    console.error('[CLIENT] Pairing code error:', err.message);
+    throw new Error('Pairing code failed: ' + (err.message || 'Unknown error'));
+  }
 }
 
 module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession };

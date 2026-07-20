@@ -424,16 +424,27 @@ function resetSessionAction() {
 
 function requestPairCodeAction() {
   var phone = document.getElementById('pairPhoneNum').value.trim();
-  if (!phone) return alert('Enter phone number with country code');
+  if (!phone) return alert('Enter phone number with country code (e.g. 2348012345678)');
+  var out = document.getElementById('pairOutput');
+  out.style.display = 'block';
+  out.style.color = '#38bdf8';
+  out.innerHTML = '⏳ Requesting pairing code...';
+
   fetchAPI('/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
   }).then(function(d) {
-    var out = document.getElementById('pairOutput');
-    out.style.display = 'block';
-    if (d.code) out.textContent = 'Pairing Code: ' + d.code + ' (enter in WhatsApp)';
-    else out.textContent = 'Error: ' + (d.error || 'Failed');
+    if (d.code) {
+      out.style.color = '#4ade80';
+      out.innerHTML = '✅ <strong>Pairing Code: ' + d.code + '</strong><br><small style="color:#cbd5e1;font-weight:400">Open WhatsApp → Linked Devices → Link a Device → Link using phone number → Enter code</small>';
+    } else {
+      out.style.color = '#f87171';
+      out.textContent = '❌ ' + (d.error || 'Failed to generate pairing code');
+    }
+  }).catch(function(e) {
+    out.style.color = '#f87171';
+    out.textContent = '❌ Request failed: ' + e.message;
   });
 }
 
