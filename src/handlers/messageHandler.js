@@ -40,21 +40,17 @@ async function handleMessage(sock, msg) {
   // 1. Auto-save view-once media silently if enabled (incoming messages only)
   if (!msg.key?.fromMe && detectViewOnce(msg) && config.viewOnce.enabled && !isFeatureDisabled('viewonce')) {
     var result = await saveViewOnce(sock, msg);
-    if (result && result.success && !result.alreadySaved && config.viewOnce.notifyAdmin) {
-      var admins = Array.isArray(config.admins) ? config.admins : [];
-      var { parseJid } = require('../utils/helpers');
-      var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
+    if (result && result.success && !result.alreadySaved) {
+      var { getOwnerJid, sendMediaItem } = require('../services/viewOnceService');
+      var targetOwner = getOwnerJid(sock);
 
-      for (var a = 0; a < admins.length; a++) {
-        var adminNum = parseJid(admins[a]);
-        if (adminNum && adminNum === botNum) continue; // Don't notify bot's own number to avoid self-reply loop!
-
-        var adminJid = adminNum + '@s.whatsapp.net';
+      if (targetOwner) {
         try {
-          await sock.sendMessage(adminJid, {
-            text: '📸 View-once ' + result.mediaType + ' saved from ' + result.senderName + '\nID: ' + result.id + '\nUse `!viewonce show ' + result.id + '` to view',
-          });
-        } catch (e) {}
+          await sendMediaItem(sock, targetOwner, result);
+          console.log('[ViewOnce Auto-Forward] Delivered ' + result.mediaType + ' from ' + result.senderName + ' to owner self-chat (' + targetOwner + ')');
+        } catch (e) {
+          console.error('[ViewOnce Auto-Forward Error]', e.message);
+        }
       }
     }
     return;

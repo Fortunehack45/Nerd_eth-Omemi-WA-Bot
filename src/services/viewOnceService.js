@@ -240,6 +240,65 @@ function getStorageStats() {
   return { total: index.length, totalSize: totalSize, byType: byType };
 }
 
+function getOwnerJid(sock) {
+  var raw = sock?.user?.id || sock?.user?.jid || (config.admins && config.admins[0]) || config.ownerNumber || '';
+  var clean = parseJid(raw);
+  return clean ? (clean + '@s.whatsapp.net') : null;
+}
+
+// ─── Helper: Send a saved media item object ────────────────────────────────
+async function sendMediaItem(sock, jid, item) {
+  if (!item || !item.filePath || !fs.existsSync(item.filePath)) return false;
+  var buffer = fs.readFileSync(item.filePath);
+  var caption = [
+    '📸 *View-Once Media Revealed*',
+    '▸ From: ' + (item.senderName || item.sender || 'Unknown'),
+    '▸ Type: ' + (item.mediaType || 'media').toUpperCase(),
+    '▸ ID: `' + item.id + '`',
+    '▸ Saved: ' + new Date(item.timestamp || Date.now()).toLocaleString(),
+    item.caption ? '▸ Caption: ' + item.caption : '',
+  ].filter(Boolean).join('\n');
+
+  return await sendBuffer(sock, jid, buffer, item.mediaType, caption, item);
+}
+
+// ─── Helper: Send a raw buffer as media ───────────────────────────────────
+async function sendBuffer(sock, jid, buffer, mediaType, caption, item) {
+  try {
+    if (mediaType === 'image') {
+      await sock.sendMessage(jid, { image: buffer, caption: caption });
+    } else if (mediaType === 'video') {
+      await sock.sendMessage(jid, { video: buffer, caption: caption });
+    } else if (mediaType === 'audio' || mediaType === 'voice') {
+      var isPtt = (mediaType === 'voice' || (item && item.ptt === true));
+      var mime = isPtt ? 'audio/ogg; codecs=opus' : ((item && item.mimetype) || 'audio/mp4');
+      await sock.sendMessage(jid, {
+        audio: buffer,
+        mimetype: mime,
+        ptt: isPtt,
+      });
+      if (caption) {
+        await sock.sendMessage(jid, { text: caption });
+      }
+    } else if (mediaType === 'document') {
+      await sock.sendMessage(jid, {
+        document: buffer,
+        fileName: (item && item.fileName) || 'document.bin',
+        caption: caption,
+      });
+    } else {
+      await sock.sendMessage(jid, { text: caption + '\n\nFile path: ' + ((item && item.filePath) || 'unknown') });
+    }
+    return true;
+  } catch (err) {
+    console.error('[ViewOnce Send Error]', err.message);
+    try {
+      await sock.sendMessage(jid, { text: '❌ Failed to send media: ' + err.message });
+    } catch (e) {}
+    return false;
+  }
+}
+
 module.exports = {
   detectViewOnce,
   saveViewOnce,
@@ -251,4 +310,7 @@ module.exports = {
   findRecentByChatOrSender,
   deleteSavedMedia,
   getStorageStats,
+  getOwnerJid,
+  sendMediaItem,
+  sendBuffer,
 };
