@@ -19,26 +19,34 @@ function saveIndex(index) {
   saveJson(INDEX_FILE, index);
 }
 
-// Detect ALL view-once message types (Baileys v6 compatible)
+// Detect ALL view-once message types (including v1, v2, v2Extension, ephemeral, & flag properties)
 function detectViewOnce(msg) {
   if (!msg || !msg.message) return false;
-  return !!(
-    msg.message.viewOnceMessage ||
-    msg.message.viewOnceMessageV2 ||
-    msg.message.viewOnceMessageV2Extension
-  );
+  var m = msg.message;
+  if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message;
+  if (m.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
+
+  if (m.viewOnceMessage || m.viewOnceMessageV2 || m.viewOnceMessageV2Extension) return true;
+  if (m.imageMessage?.viewOnce || m.videoMessage?.viewOnce || m.audioMessage?.viewOnce || m.voiceMessage?.viewOnce) return true;
+
+  return false;
 }
 
 // Extract the actual inner media message from the view-once wrapper
 function getViewOnceContent(msg) {
+  if (!msg || !msg.message) return null;
+  var m = msg.message;
+  if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message;
+  if (m.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
+
   var inner =
-    msg.message?.viewOnceMessage?.message ||
-    msg.message?.viewOnceMessageV2?.message ||
-    msg.message?.viewOnceMessageV2Extension?.message;
+    m.viewOnceMessage?.message ||
+    m.viewOnceMessageV2?.message ||
+    m.viewOnceMessageV2Extension?.message ||
+    m;
 
   if (!inner) return null;
 
-  // Find the actual media key
   var innerType = null;
   var mediaKeys = ['imageMessage', 'videoMessage', 'audioMessage', 'voiceMessage', 'documentMessage'];
   for (var i = 0; i < mediaKeys.length; i++) {
@@ -48,13 +56,10 @@ function getViewOnceContent(msg) {
     }
   }
 
-  if (!innerType) {
-    innerType = Object.keys(inner)[0] || '';
-  }
   if (!innerType) return null;
 
   var mediaMsg = { key: msg.key, message: inner };
-  return { msg: mediaMsg, innerType: innerType };
+  return { msg: mediaMsg, innerType: innerType, inner: inner };
 }
 
 function getMediaType(innerType) {
@@ -81,7 +86,18 @@ async function saveViewOnce(sock, msg) {
   var chatId = msg.key.remoteJid;
 
   try {
-    var buffer = await sock.downloadMediaMessage(innerMsg);
+    var buffer = null;
+    try {
+      buffer = await sock.downloadMediaMessage(innerMsg);
+    } catch (e1) {
+      try {
+        buffer = await sock.downloadMediaMessage(msg);
+      } catch (e2) {
+        console.error('[ViewOnce] Download error:', e2.message);
+        return { error: 'Media download failed: ' + e2.message };
+      }
+    }
+
     if (!buffer || buffer.length === 0) return { error: 'Media download returned empty buffer.' };
 
     ensureDirs();
@@ -93,7 +109,7 @@ async function saveViewOnce(sock, msg) {
 
     fs.writeFileSync(filePath, buffer);
     var size = buffer.length;
-    var caption = innerMsg.message?.[innerType]?.caption || '';
+    var caption = extracted.inner?.[innerType]?.caption || '';
 
     var index = getIndex();
     index.push({

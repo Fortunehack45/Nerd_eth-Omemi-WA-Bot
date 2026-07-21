@@ -1,7 +1,7 @@
 var fs = require('fs');
 var { listSavedMedia, getSavedMedia, getLastSavedMedia, deleteSavedMedia, getStorageStats } = require('../services/viewOnceService');
 
-var HELP = '*📸 View-Once Media*\n\nView, list, and manage saved view-once media (images, videos, voice notes).\n\n*Usage:* `!viewonce <subcommand>`\n\n*Subcommands:*\n  `show [id]`         View the last saved media or a specific ID\n  `list`              List all saved media\n  `delete <id>`       Delete a saved media\n  `stats`             Show storage statistics\n\n*Flags:*\n  `--type`, `-t` image|video|audio  Filter by type\n  `--limit`, `-l` N                 Number of results (default: 20)\n\n*Examples:*\n  `!viewonce show`              (shows most recent view-once)\n  `!viewonce show 1712345678000` (shows specific ID)\n  `!viewonce list`              (lists all saved media)\n  `!viewonce stats`             (shows storage usage)';
+var HELP = '*📸 View-Once Media*\n\nView, list, and manage saved view-once media (images, videos, voice notes).\n\n*Usage:* `!viewonce [show|list|delete|stats] [id]`\n\n*Subcommands:*\n  `show [id]`         View the last saved media or a specific ID\n  `list`              List all saved media\n  `delete <id>`       Delete a saved media\n  `stats`             Show storage statistics\n\n*Flags:*\n  `--type`, `-t` image|video|audio  Filter by type\n  `--limit`, `-l` N                 Number of results (default: 20)\n\n*Examples:*\n  `!viewonce`                   (shows most recent view-once)\n  `!viewonce show`              (shows most recent view-once)\n  `!viewonce show 1712345678000` (shows specific ID)\n  `!viewonce list`              (lists all saved media)\n  `!viewonce stats`             (shows storage usage)';
 
 module.exports = {
   name: 'viewonce',
@@ -12,12 +12,12 @@ module.exports = {
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
 
-    if (!args || args === '--help' || args === '-h') {
+    if (args === '--help' || args === '-h' || args === 'help') {
       return sock.sendMessage(sender, { text: HELP });
     }
 
-    var parts = args.trim().split(/\s+/);
-    var sub = parts[0].toLowerCase();
+    var parts = args ? args.trim().split(/\s+/) : [];
+    var sub = parts[0] ? parts[0].toLowerCase() : 'show';
     var flags = {};
     var rest = parts.slice(1);
 
@@ -66,7 +66,7 @@ module.exports = {
         if (!id || id.toLowerCase() === 'last' || id.toLowerCase() === 'latest') {
           item = getLastSavedMedia();
           if (!item) {
-            return sock.sendMessage(sender, { text: '⚠️ No saved view-once media found.' });
+            return sock.sendMessage(sender, { text: '⚠️ No saved view-once media found.\n\n' + HELP });
           }
         } else {
           item = getSavedMedia(id);
