@@ -146,6 +146,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     }
 
     if (connection === 'close') {
+      try { require('../server').setDisconnected(); } catch(e) {}
       const statusCode = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
 
@@ -162,12 +163,13 @@ async function startClient(messageHandler, statusHandler, onConnected) {
           ? Math.min(5000 * Math.min(consecutiveErrors, 6), 30000)
           : Math.min(2000 * Math.min(consecutiveErrors, 5), 10000);
 
-        console.log(`[CLIENT] Connection closed, reconnecting in ${Math.round(delay/1000)}s... (attempt #${consecutiveErrors})`);
+        console.log(`[CLIENT] Connection closed (${statusCode || 'Unknown reason'}), reconnecting in ${Math.round(delay/1000)}s... (attempt #${consecutiveErrors})`);
         lastReconnectTime = now;
 
         setTimeout(() => startClient(messageHandler, statusHandler, onConnected), delay);
       } else {
-        console.log('[CLIENT] Logged out or unrecoverable error. Restarting fresh auth session...');
+        console.log('[CLIENT] Logged out or unrecoverable error (401). Resetting auth for fresh pairing...');
+        clearSessionFolder();
         setTimeout(() => startClient(messageHandler, statusHandler, onConnected), 3000);
       }
     }

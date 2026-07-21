@@ -8,6 +8,17 @@ const { startOnboarding } = require('./src/services/onboardingService');
 const { startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl } = require('./server');
 const config = require('./config');
 
+// 24/7 Uptime Guards: prevent unhandled errors from crashing the bot process
+process.on('uncaughtException', function(err) {
+  console.error('[24/7 GUARD] Uncaught Exception (prevented crash):', err?.message || err);
+  if (err?.stack) console.error(err.stack);
+});
+
+process.on('unhandledRejection', function(reason, promise) {
+  console.error('[24/7 GUARD] Unhandled Rejection (prevented crash):', reason?.message || reason);
+});
+
+
 console.log(`
 ╔══════════════════════════════════╗
 ║     🤖 ${(config.botName || 'Nerd-eth').padEnd(20)} ║

@@ -33,6 +33,21 @@ function logCommand(cmd, user, status) {
 }
 
 app.use(express.json());
+
+// Public health & keep-alive endpoints for 24/7 Uptime services (e.g. UptimeRobot, Render keep-alive)
+app.get('/ping', function(req, res) {
+  res.status(200).json({ status: 'ok', uptime: Math.floor((Date.now() - botStatus.startTime) / 1000), timestamp: Date.now() });
+});
+
+app.get('/health', function(req, res) {
+  res.status(200).json({
+    status: 'online',
+    connected: botStatus.connected,
+    user: botStatus.user,
+    uptime: Math.floor((Date.now() - botStatus.startTime) / 1000)
+  });
+});
+
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -303,15 +318,37 @@ function getDashboardUrl() {
   return baseUrl + '/dashboard?pwd=' + pwd;
 }
 
+function startSelfPing() {
+  var http = require('http');
+  var https = require('https');
+  var pingIntervalMs = 5 * 60 * 1000; // 5 minutes
+
+  setInterval(function() {
+    var selfUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+    if (!selfUrl && process.env.RENDER_SERVICE_NAME) {
+      selfUrl = 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com';
+    }
+    if (!selfUrl) return;
+
+    try {
+      var pingTarget = selfUrl.replace(/\/$/, '') + '/ping';
+      var requester = pingTarget.startsWith('https') ? https : http;
+      requester.get(pingTarget, function(res) {
+        console.log('[24/7 SELF-PING] Pinged server (' + res.statusCode + ')');
+      }).on('error', function(e) {});
+    } catch (e) {}
+  }, pingIntervalMs);
+}
+
 function startServer() {
   app.listen(PORT, '0.0.0.0', function() {
     var dashUrl = getDashboardUrl();
-    console.log('\n================================================════');
+    console.log('\n====================================================');
     console.log('🌐 ADMIN DASHBOARD URL (OPEN TO SCAN QR / PAIR CODE):');
     console.log('👉 ' + dashUrl);
     console.log('====================================================\n');
+    startSelfPing();
   });
 }
 
 module.exports = { startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl, botStatus };
-
