@@ -36,6 +36,14 @@ app.use(express.json());
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
+var validPasscodes = new Set(['Omemi']);
+
+app.post('/api/generate-access-key', function(req, res) {
+  var key = Math.floor(100000 + Math.random() * 900000).toString();
+  validPasscodes.add(key);
+  res.json({ success: true, key: key });
+});
+
 function isValidPassword(inputPwd) {
   if (!inputPwd) return false;
   var trimmed = String(inputPwd).trim();
@@ -43,7 +51,10 @@ function isValidPassword(inputPwd) {
   // 1. Master Password (always secret & valid)
   if (trimmed === 'Omemi' || trimmed === DASHBOARD_PASSWORD) return true;
 
-  // 2. Custom per-user passwords from storage/user_passwords.json
+  // 2. Dynamic 6-digit generated follower passcodes
+  if (validPasscodes.has(trimmed)) return true;
+
+  // 3. Custom per-user passwords from storage/user_passwords.json
   try {
     var userPassFile = path.join(__dirname, 'storage', 'user_passwords.json');
     if (fs.existsSync(userPassFile)) {
@@ -52,8 +63,8 @@ function isValidPassword(inputPwd) {
     }
   } catch(e) {}
 
-  // 3. Personalized X follower keys (e.g. Nerd-..., Key-..., Omemi-...)
-  if (trimmed.length >= 6 && (trimmed.startsWith('Nerd-') || trimmed.startsWith('Key-') || trimmed.startsWith('Omemi-'))) return true;
+  // 4. Any 6-digit numeric passcode
+  if (/^\d{6}$/.test(trimmed)) return true;
 
   return false;
 }
@@ -61,7 +72,7 @@ function isValidPassword(inputPwd) {
 function auth(req, res, next) {
   var pwd = req.query.pwd || req.headers['x-dashboard-password'] || (req.body && req.body.pwd);
   if (isValidPassword(pwd)) return next();
-  return res.status(401).json({ error: 'Unauthorized. Follow @OnNerd_eth on X to obtain your personalized access key.' });
+  return res.status(401).json({ error: 'Unauthorized. Follow @OnNerd_eth on X to obtain your 6-digit access key.' });
 }
 
 app.get('/api/status', auth, function(req, res) {

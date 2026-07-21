@@ -12,7 +12,7 @@
 :root{
   --bg:#050711;
   --sidebar:#0a0d21;
-  --card-bg:linear-gradient(145deg, rgba(17, 24, 56, 0.7), rgba(9, 12, 33, 0.9));
+  --card-bg:linear-gradient(145deg, rgba(17, 24, 56, 0.75), rgba(9, 12, 33, 0.95));
   --accent:#6366f1;
   --accent-secondary:#a855f7;
   --accent-glow:rgba(99, 102, 241, 0.35);
@@ -41,10 +41,6 @@ svg{display:inline-block;vertical-align:middle;flex-shrink:0}
   from{opacity:0;transform:translateY(10px)}
   to{opacity:1;transform:translateY(0)}
 }
-@keyframes glowPulse{
-  0%,100%{opacity:0.6}
-  50%{opacity:1}
-}
 .tab-content{animation:tabFade 0.35s cubic-bezier(0.16, 1, 0.3, 1)}
 .pulse-dot{width:10px;height:10px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;display:inline-block}
 
@@ -52,15 +48,15 @@ svg{display:inline-block;vertical-align:middle;flex-shrink:0}
 #toastContainer{position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px}
 .toast{background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid var(--accent);color:#fff;padding:14px 22px;border-radius:14px;box-shadow:0 15px 35px rgba(0,0,0,0.6);font-size:0.9rem;font-weight:600;display:flex;align-items:center;gap:12px;animation:tabFade 0.3s ease}
 
-/* Ambient Radial Glow */
+/* Ambient Background Glow */
 .ambient-glow{position:fixed;top:-20%;left:20%;width:600px;height:600px;background:radial-gradient(circle, rgba(99,102,241,0.12) 0%, rgba(0,0,0,0) 70%);pointer-events:none;z-index:0}
 
 /* Login Modal */
 #loginModal{display:flex;position:fixed;inset:0;background:rgba(5,7,17,0.97);backdrop-filter:blur(30px);z-index:9999;align-items:center;justify-content:center;padding:20px}
-.login-card{background:linear-gradient(145deg,#131836,#090c24);border:1px solid var(--border);border-radius:28px;padding:45px;width:100%;max-width:440px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.95), 0 0 60px var(--accent-glow)}
-.login-card img{width:80px;height:80px;border-radius:22px;margin-bottom:20px;box-shadow:0 0 30px var(--accent-glow);border:2px solid rgba(255,255,255,0.1)}
-.login-card h2{font-size:1.9rem;color:#fff;margin-bottom:8px;font-weight:800;background:linear-gradient(90deg,#fff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.login-card p{color:#94a3b8;font-size:0.92rem;margin-bottom:28px}
+.login-card{background:linear-gradient(145deg,#131836,#090c24);border:1px solid var(--border);border-radius:28px;padding:36px;width:100%;max-width:440px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.95), 0 0 60px var(--accent-glow)}
+.login-card img{width:76px;height:76px;border-radius:20px;margin-bottom:18px;box-shadow:0 0 30px var(--accent-glow);border:2px solid rgba(255,255,255,0.1)}
+.login-card h2{font-size:1.85rem;color:#fff;margin-bottom:6px;font-weight:800;background:linear-gradient(90deg,#fff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-card p{color:#94a3b8;font-size:0.9rem;margin-bottom:24px}
 .input-field{width:100%;padding:14px 18px;border-radius:14px;border:1px solid var(--border);background:#070a1e;color:#fff;font-size:0.98rem;margin-bottom:18px;outline:none;transition:all 0.2s}
 .input-field:focus{border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow)}
 .btn-primary{width:100%;padding:14px 24px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:0.98rem;cursor:pointer;box-shadow:0 8px 25px var(--accent-glow);display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s}
@@ -86,7 +82,7 @@ svg{display:inline-block;vertical-align:middle;flex-shrink:0}
 .status-tag.offline{background:rgba(239,68,68,0.12);color:#f87171;border-color:rgba(239,68,68,0.35)}
 
 /* Quick Toolbar */
-.quick-toolbar{display:flex;gap:12px;margin-bottom:28px;overflow-x:auto;padding-bottom:4px}
+.quick-toolbar{display:flex;gap:12px;margin-bottom:28px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
 .tool-chip{background:rgba(15,23,42,0.6);border:1px solid var(--border);border-radius:12px;padding:10px 18px;color:#c7d2fe;font-size:0.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;transition:all 0.2s}
 .tool-chip:hover{background:var(--accent);color:#fff;transform:translateY(-2px);box-shadow:0 6px 20px var(--accent-glow)}
 
@@ -106,7 +102,7 @@ svg{display:inline-block;vertical-align:middle;flex-shrink:0}
 .card-box h3{font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:12px}
 
 /* Logs Box */
-.terminal-box{background:#040611;padding:22px;border-radius:16px;border:1px solid var(--border);color:#a5b4fc;font-family:'JetBrains Mono',monospace;font-size:0.85rem;max-height:450px;overflow-y:auto;line-height:1.6}
+.terminal-box{background:#040611;padding:22px;border-radius:16px;border:1px solid var(--border);color:#a5b4fc;font-family:'JetBrains Mono',monospace;font-size:0.85rem;max-height:450px;overflow-y:auto;line-height:1.6;word-break:break-all;white-space:pre-wrap}
 
 /* Table */
 table{width:100%;border-collapse:collapse;font-size:0.9rem}
@@ -123,7 +119,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 .btn-secondary{padding:12px 22px;border-radius:12px;border:1px solid var(--border);background:rgba(99,102,241,0.15);color:#fff;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all 0.2s}
 .btn-secondary:hover{background:var(--accent);transform:translateY(-2px)}
 
-/* Mobile Responsive Adjustments */
+/* Mobile Responsive Overhaul */
 @media(max-width:768px){
   body{flex-direction:column}
   .sidebar{display:none}
@@ -134,15 +130,15 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     left:0;
     right:0;
     height:74px;
-    background:rgba(10, 13, 33, 0.95);
+    background:rgba(10, 13, 33, 0.96);
     backdrop-filter:blur(30px);
     -webkit-backdrop-filter:blur(30px);
     border-top:1px solid var(--border);
     z-index:9999;
     justify-content:space-around;
     align-items:center;
-    padding:0 4px;
-    box-shadow:0 -10px 35px rgba(0,0,0,0.7);
+    padding:0 2px;
+    box-shadow:0 -10px 35px rgba(0,0,0,0.75);
   }
   .mobile-nav-item{
     display:flex;
@@ -151,10 +147,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     justify-content:center;
     gap:4px;
     color:#818cf8;
-    font-size:0.7rem;
+    font-size:0.68rem;
     font-weight:700;
     cursor:pointer;
-    padding:8px 4px;
+    padding:8px 2px;
     border-radius:12px;
     transition:all 0.2s;
     flex:1;
@@ -162,18 +158,21 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   }
   .mobile-nav-item.active{
     color:#fff;
-    background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(168,85,247,0.25));
+    background:linear-gradient(135deg,rgba(99,102,241,0.38),rgba(168,85,247,0.28));
     border:1px solid rgba(99,102,241,0.5);
   }
-  .main-content{margin-left:0;padding:16px;max-width:100vw;padding-bottom:95px}
-  .top-bar{flex-direction:column;align-items:flex-start;gap:16px;margin-bottom:20px}
+  .main-content{margin-left:0;padding:14px;max-width:100vw;padding-bottom:95px}
+  .top-bar{flex-direction:column;align-items:flex-start;gap:14px;margin-bottom:18px}
   .top-actions{width:100%;justify-content:space-between}
-  .metrics-grid{grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
-  .metric-card{padding:16px;border-radius:16px}
-  .metric-value{font-size:1.7rem}
+  .metrics-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+  .metric-card{padding:14px;border-radius:16px}
+  .metric-value{font-size:1.65rem}
   .panel-grid{grid-template-columns:1fr;gap:16px}
-  .card-box{padding:20px;border-radius:18px}
-  .btn-primary, .btn-secondary{padding:14px;font-size:0.95rem}
+  .card-box{padding:18px;border-radius:18px}
+  #speedTestBox{grid-template-columns:1fr!important;gap:12px!important}
+  #featureStatusResGrid{grid-template-columns:1fr!important}
+  .btn-primary, .btn-secondary{padding:14px;font-size:0.92rem;width:100%;justify-content:center}
+  .terminal-box{font-size:0.78rem;padding:14px}
 }
 @media(min-width:769px){.mobile-bottom-nav{display:none}}
 </style>
@@ -186,27 +185,27 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 <!-- Mobile Bottom Navigation Bar -->
 <nav class="mobile-bottom-nav">
   <div class="mobile-nav-item active" onclick="showTab('dashboard')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     <span>Home</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('keys')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
     <span>Keys</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('features')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     <span>Control</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('connect')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
     <span>Pair</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('users')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
     <span>Users</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('logs')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
     <span>Logs</span>
   </div>
 </nav>
@@ -218,21 +217,24 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     <h2>Welcome Back</h2>
     <p>Sign in to access your Nerd-eth Bot Control Panel</p>
 
-    <!-- X (Twitter) Follow Banner -->
-    <div style="background:rgba(99,102,241,0.12);border:1px solid var(--border);padding:14px;border-radius:14px;margin-bottom:20px;text-align:left;font-size:0.85rem">
+    <!-- X (Twitter) Follow & 6-Digit Passcode Banner -->
+    <div style="background:rgba(99,102,241,0.12);border:1px solid var(--border);padding:14px;border-radius:16px;margin-bottom:20px;text-align:left;font-size:0.85rem">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;color:#fff;font-weight:700">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        Follow @OnNerd_eth to get Password
+        Follow @OnNerd_eth to get 6-Digit Key
       </div>
-      <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 10px 0">Each user receives a personalized password on X (Twitter).</p>
-      <a href="https://x.com/OnNerd_eth" target="_blank" class="btn-secondary" style="width:100%;justify-content:center;padding:8px 12px;font-size:0.82rem;background:#000;border-color:#333;color:#fff;text-decoration:none">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        Follow @OnNerd_eth on X
-      </a>
+      <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 12px 0">Click below to follow @OnNerd_eth on X and automatically generate your 6-digit access passcode.</p>
+      
+      <button onclick="followAndGenerateKey()" class="btn-secondary" style="width:100%;justify-content:center;padding:10px 14px;font-size:0.85rem;background:#000;border-color:#333;color:#fff">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Follow @OnNerd_eth & Get 6-Digit Key
+      </button>
+
+      <div id="genKeyBox" style="display:none;margin-top:12px;padding:12px;background:#050711;border-radius:10px;border:1px solid #34d399;color:#34d399;font-weight:800;text-align:center;font-size:1.1rem"></div>
     </div>
 
     <div id="loginErr" style="color:#f87171;font-size:0.85rem;margin-bottom:14px;display:none"></div>
-    <input type="password" id="pwdInput" class="input-field" placeholder="Enter Your Personalized Access Key" onkeyup="if(event.key==='Enter')attemptLogin()">
+    <input type="password" id="pwdInput" class="input-field" placeholder="Enter Your 6-Digit Access Passcode" onkeyup="if(event.key==='Enter')attemptLogin()">
     <button onclick="attemptLogin()" class="btn-primary">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       Unlock Panel
@@ -369,7 +371,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 
     <!-- Real C++ Speed Test Widget -->
     <div class="card-box" style="margin-bottom:32px;background:linear-gradient(145deg, rgba(20,25,55,0.8), rgba(9,12,33,0.95));border:1px solid rgba(99,102,241,0.35)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
         <h3 style="margin:0">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           Real C++ Native Internet Speed Calculator
@@ -442,7 +444,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <input type="password" id="keyBrave" class="input-field" placeholder="BSA-...">
       </div>
 
-      <div style="display:flex;gap:12px;margin-top:24px">
+      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
         <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 28px">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
           Save API Keys
@@ -470,9 +472,9 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 
       <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:22px">
         <label style="display:block;font-size:0.92rem;font-weight:700;color:#a5b4fc;margin-bottom:10px">Disable/Enable Any Command or Feature by Name</label>
-        <div style="display:flex;gap:12px;max-width:500px">
+        <div style="display:flex;gap:12px;max-width:500px;flex-wrap:wrap">
           <input type="text" id="toggleItemName" class="input-field" placeholder="e.g. music, download, movie, nuke, getpp" style="margin:0">
-          <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">Disable</button>
+          <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:#991b1b;border-color:#ef4444;width:auto">Disable</button>
           <button onclick="toggleCustomItem('enable')" class="btn-primary" style="width:auto">Enable</button>
         </div>
       </div>
@@ -513,7 +515,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         Alternative: Pairing Code
       </h3>
       <p style="color:#94a3b8;margin:8px 0 18px 0">Enter phone number with country code (e.g. 2348012345678)</p>
-      <div style="display:flex;gap:12px;max-width:480px">
+      <div style="display:flex;gap:12px;max-width:480px;flex-wrap:wrap">
         <input type="text" id="pairPhoneNum" class="input-field" placeholder="2348012345678" style="margin:0">
         <button onclick="requestPairCodeAction()" class="btn-primary" style="width:auto">Get Code</button>
       </div>
@@ -528,7 +530,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
         Contact & Access Directory
       </h3>
-      <div style="margin-top:18px;overflow-x:auto">
+      <div style="margin-top:18px;overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table>
           <thead>
             <tr><th>User / JID</th><th>Facts Learned</th><th>Messages Sent</th><th>Last Active</th></tr>
@@ -542,7 +544,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 6: LOGS -->
   <div id="tab-logs" class="tab-content" style="display:none">
     <div class="card-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           Live Terminal Output Stream
@@ -588,6 +590,23 @@ function showLoginModal() {
   document.getElementById('loginModal').style.display = 'flex';
 }
 
+function followAndGenerateKey() {
+  window.open('https://x.com/OnNerd_eth', '_blank');
+  var genBox = document.getElementById('genKeyBox');
+  genBox.style.display = 'block';
+  genBox.textContent = 'Generating 6-digit key...';
+
+  fetch('/api/generate-access-key', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.key) {
+        document.getElementById('pwdInput').value = d.key;
+        genBox.innerHTML = '🎉 Passcode: <span style="letter-spacing:3px;font-size:1.3rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key copied into box — click Unlock Panel below!</small>';
+        showToast('6-digit access key generated');
+      }
+    });
+}
+
 function attemptLogin() {
   var val = document.getElementById('pwdInput').value.trim();
   if (!val) return;
@@ -601,7 +620,7 @@ function attemptLogin() {
         refreshAll();
       } else {
         document.getElementById('loginErr').style.display = 'block';
-        document.getElementById('loginErr').textContent = 'Incorrect Password. Default password is Omemi';
+        document.getElementById('loginErr').textContent = 'Invalid Passcode. Follow @OnNerd_eth on X to get your 6-digit key';
       }
     });
 }
@@ -708,13 +727,13 @@ function loadFeaturesStatus() {
   fetchAPI('/features').then(function(d) {
     var box = document.getElementById('featureStatusRes');
     if (!box) return;
-    var html = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">';
+    var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">';
     var coreFeats = ['autoreply', 'schedule', 'proactive', 'ai', 'status', 'viewonce'];
     coreFeats.forEach(function(f) {
       var isDis = (d.disabledFeatures || []).includes(f);
-      html += '<div style="background:#070a1e;padding:18px;border-radius:14px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">';
+      html += '<div style="background:#070a1e;padding:18px;border-radius:14px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';
       html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:0.98rem">' + f + '</strong><br><small style="color:#94a3b8">' + (isDis ? '🔴 Disabled' : '🟢 Active') + '</small></div>';
-      html += '<button onclick="toggleFeatureAction(\'' + f + '\', \'' + (isDis ? 'enable' : 'disable') + '\')" class="btn-secondary" style="padding:8px 16px;font-size:0.82rem">' + (isDis ? 'Enable' : 'Disable') + '</button>';
+      html += '<button onclick="toggleFeatureAction(\'' + f + '\', \'' + (isDis ? 'enable' : 'disable') + '\')" class="btn-secondary" style="padding:8px 16px;font-size:0.82rem;width:auto">' + (isDis ? 'Enable' : 'Disable') + '</button>';
       html += '</div>';
     });
     html += '</div>';
