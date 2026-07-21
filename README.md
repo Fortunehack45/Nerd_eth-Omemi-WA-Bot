@@ -11,10 +11,13 @@
 [![License](https://img.shields.io/badge/License-MIT-4f46e5?style=for-the-badge)](LICENSE)
 [![AI](https://img.shields.io/badge/AI-Groq%20%7C%20OpenAI%20%7C%20OpenRouter-a855f7?style=for-the-badge&logo=openai&logoColor=white)](https://groq.com)
 [![Version](https://img.shields.io/badge/Version-2.0.0-f59e0b?style=for-the-badge)](package.json)
+[![Portfolio](https://img.shields.io/badge/Portfolio-Fortune__Adebayo-6366f1?style=for-the-badge&logo=googlechrome&logoColor=white)](https://fortuneadebayo.space/)
 [![Creator](https://img.shields.io/badge/Creator-%40OnNerd__eth-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/OnNerd_eth)
 
 ---
 
+🌐 **Portfolio:** [fortuneadebayo.space](https://fortuneadebayo.space/)
+&nbsp;|&nbsp;
 📲 **WhatsApp Support:** [+234 916 768 9200](https://wa.me/2349167689200?text=Hi%20Nerd-eth%2C%20I%20need%20help%20with%20the%20bot!)
 &nbsp;|&nbsp;
 𝕏 **Follow:** [@OnNerd_eth](https://x.com/OnNerd_eth)

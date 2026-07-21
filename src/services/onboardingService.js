@@ -60,19 +60,24 @@ async function startOnboarding(sock) {
   try {
     var steps = [];
     steps.push('*🎉 Welcome to Nerd-eth Bot!*\n');
-    steps.push('I\'m your new WhatsApp assistant. Let\'s get you set up quickly!\n');
+    steps.push('I\'m your new WhatsApp assistant built for multi-purpose automation, AI, and media management!\n');
+    steps.push('*👨‍💻 About the Creator:*');
+    steps.push('Created with ❤️ by *Fortune Adebayo (AKA: Nerd_eth)* — Full-Stack & AI Software Engineer.');
+    steps.push('🌐 *Portfolio:* https://fortuneadebayo.space/');
+    steps.push('📲 *WhatsApp:* +234 916 768 9200');
+    steps.push('𝕏 *Follow:* @OnNerd_eth\n');
     steps.push('*Step 1:* Choose my persona');
     steps.push('▸ Use `!persona male` for *Nerd-eth* 🤖 (male)');
-    steps.push('▸ Use `!persona female` for *Omemi* 👩‍💻 (female)');
-    steps.push('');
+    steps.push('▸ Use `!persona female` for *Omemi* 👩‍💻 (female)\n');
     steps.push('*Step 2:* Explore what I can do');
     steps.push('▸ `!help` — See all commands');
-    steps.push('▸ `!ping` — Check if I\'m alive');
-    steps.push('▸ Just send me a message and I\'ll chat with you!\n');
+    steps.push('▸ `!ping` — Check bot health');
+    steps.push('▸ `!apk <app>` — Download Android APKs');
+    steps.push('▸ `!music play <song>` — Stream & download music\n');
     steps.push('*Step 3:* Configure me');
     steps.push('▸ `!profile set name <your name>` — Tell me your name');
     steps.push('▸ `!remember <note>` — Save important notes');
-    steps.push('▸ `!access add <number>` — Grant friends access to AI features\n');
+    steps.push('▸ `!access add <number>` — Grant friends AI access\n');
     steps.push('I\'m ready when you are! 🚀');
 
     var welcomeCaption = steps.join('\n');
