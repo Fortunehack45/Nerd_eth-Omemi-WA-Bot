@@ -273,12 +273,16 @@ async function sendBuffer(sock, jid, buffer, mediaType, caption, item) {
     } else if (mediaType === 'video') {
       await sock.sendMessage(jid, { video: buffer, caption: caption });
     } else if (mediaType === 'audio' || mediaType === 'voice') {
+      var isPtt = (mediaType === 'voice' || (item && item.ptt === true));
+      var mime = isPtt ? 'audio/ogg; codecs=opus' : ((item && item.mimetype) || 'audio/mp4');
       await sock.sendMessage(jid, {
         audio: buffer,
-        mimetype: 'audio/ogg; codecs=opus',
-        ptt: (mediaType === 'voice'),
+        mimetype: mime,
+        ptt: isPtt,
       });
-      await sock.sendMessage(jid, { text: caption });
+      if (caption) {
+        await sock.sendMessage(jid, { text: caption });
+      }
     } else if (mediaType === 'document') {
       await sock.sendMessage(jid, {
         document: buffer,

@@ -79,6 +79,17 @@ function getMediaType(innerType) {
 
 async function saveViewOnce(sock, msg) {
   if (!config.viewOnce.enabled) return null;
+  if (msg.key?.fromMe) return null; // Never auto-save own outgoing messages
+
+  var messageId = msg.key?.id || '';
+
+  // DEDUPLICATION CHECK: If this message ID was already saved, return existing entry to prevent loops!
+  if (messageId) {
+    var existing = findByMessageId(messageId);
+    if (existing && fs.existsSync(existing.filePath)) {
+      return { success: true, alreadySaved: true, ...existing };
+    }
+  }
 
   var extracted = getViewOnceContent(msg);
   if (!extracted) return null;
@@ -141,28 +152,32 @@ async function saveViewOnce(sock, msg) {
 
     fs.writeFileSync(filePath, buffer);
     var size = buffer.length;
-    var caption = extracted.inner?.[innerType]?.caption || '';
-
-    var messageId = msg.key?.id || '';
+    var innerObj = extracted.inner?.[innerType] || {};
+    var caption = innerObj.caption || '';
+    var mimetype = innerObj.mimetype || '';
+    var ptt = innerObj.ptt || (mediaType === 'voice');
 
     var index = getIndex();
-    index.push({
+    var newEntry = {
       id: timestamp,
       messageId: messageId,
       fileName: fileName,
       filePath: filePath,
       mediaType: mediaType,
+      mimetype: mimetype,
+      ptt: ptt,
       sender: sender,
       senderName: senderName,
       chatId: chatId,
       timestamp: timestamp,
       size: size,
       caption: caption,
-    });
+    };
+    index.push(newEntry);
     saveIndex(index);
 
     console.log('[ViewOnce] Saved ' + mediaType + ' from ' + senderName + ' (' + (size / 1024).toFixed(1) + 'KB)');
-    return { success: true, mediaType: mediaType, senderName: senderName, filePath: filePath, id: timestamp, caption: caption };
+    return { success: true, alreadySaved: false, ...newEntry };
   } catch (err) {
     console.error('[ViewOnce] Save error:', err.message);
     return { error: err.message };
