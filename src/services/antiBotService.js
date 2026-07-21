@@ -158,6 +158,66 @@ function getAntiBotStats() {
   };
 }
 
+async function banAccount(sock, targetNumberOrJid, groupJid) {
+  var clean = parseJid(targetNumberOrJid);
+  if (!clean) return { success: false, error: 'Invalid phone number or JID' };
+  var targetJid = clean + '@s.whatsapp.net';
+
+  var actionsTaken = [];
+  var errors = [];
+
+  // 1. Block the target account on WhatsApp
+  if (sock && typeof sock.updateBlockStatus === 'function') {
+    try {
+      await sock.updateBlockStatus(targetJid, 'block');
+      actionsTaken.push('Blocked target on WhatsApp');
+    } catch (e1) {
+      errors.push('Block error: ' + e1.message);
+    }
+  }
+
+  // 2. If in a group chat, kick the target account from the group
+  if (groupJid && groupJid.endsWith('@g.us') && sock && typeof sock.groupParticipantsUpdate === 'function') {
+    try {
+      await sock.groupParticipantsUpdate(groupJid, [targetJid], 'remove');
+      actionsTaken.push('Kicked target from group');
+    } catch (e2) {
+      errors.push('Group kick error: ' + e2.message);
+    }
+  }
+
+  // 3. Report user to WhatsApp if supported
+  if (sock && typeof sock.reportUser === 'function') {
+    try {
+      await sock.reportUser(targetJid);
+      actionsTaken.push('Reported target account to WhatsApp server');
+    } catch (e3) {}
+  }
+
+  // 4. Save to banned accounts registry
+  addBlockedBot(clean);
+
+  var data = getAntiBotData();
+  if (!data.bannedAccounts) data.bannedAccounts = [];
+  if (!data.bannedAccounts.find(b => b.number === clean)) {
+    data.bannedAccounts.push({
+      number: clean,
+      bannedAt: Date.now(),
+      groupJid: groupJid || null,
+      actions: actionsTaken,
+    });
+    saveAntiBotData(data);
+  }
+
+  return {
+    success: true,
+    target: clean,
+    targetJid: targetJid,
+    actionsTaken: actionsTaken,
+    errors: errors,
+  };
+}
+
 module.exports = {
   isAntiBotEnabled,
   setAntiBotEnabled,
@@ -167,4 +227,5 @@ module.exports = {
   isBotMessage,
   logAntiBotEvent,
   getAntiBotStats,
+  banAccount,
 };

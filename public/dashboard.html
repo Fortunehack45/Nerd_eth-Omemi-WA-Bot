@@ -664,46 +664,62 @@ input:checked + .slider:before{transform:translateX(24px);background-color:#fff}
 
   <!-- TAB 7: TERMS, PRIVACY & DISCLAIMER -->
   <div id="tab-terms" class="tab-content" style="display:none">
-    <div class="card-box" style="border:1px solid rgba(239,68,68,0.3);background:linear-gradient(135deg,rgba(239,68,68,0.06),rgba(30,27,75,0.4))">
-      <h3 style="color:#f87171">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" style="vertical-align:middle;margin-right:8px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Caution, Legal Disclaimer & Agreement
+    <div class="card-box" style="border:1px solid rgba(239,68,68,0.4);background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(30,27,75,0.6));padding:24px">
+      <h3 style="color:#f87171;font-size:1.25rem;display:flex;align-items:center;gap:10px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Master Terms of Service, Privacy Policy & Legal Governance
       </h3>
-      <p style="color:#cbd5e1;line-height:1.7;margin-top:12px;font-size:0.92rem">
-        <strong>By using or deploying this bot, you explicitly agree to all terms, privacy policies, disclaimers, and caution notices outlined below.</strong>
+      <p style="color:#cbd5e1;line-height:1.7;margin-top:12px;font-size:0.95rem">
+        <strong>Binding Agreement Notice:</strong> By installing, hosting, deploying, connecting, or interacting with <strong>Nerd-eth WhatsApp Engine</strong>, you formally agree to be bound by all terms, privacy frameworks, operational cautions, and liability disclaimers set forth below. If you do not agree, you must immediately terminate the session and cease software usage.
       </p>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;margin-top:20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px;margin-top:24px">
       <!-- Terms & Conditions -->
-      <div class="card-box">
-        <h3 style="color:#818cf8">📜 Terms & Conditions</h3>
-        <ul style="color:#94a3b8;line-height:1.7;margin-top:14px;padding-left:18px;font-size:0.9rem">
-          <li><strong>User Responsibility:</strong> You are solely responsible for all messages, media, and automated actions executed through this bot.</li>
-          <li><strong>Platform Compliance:</strong> By using this bot, you agree to strictly comply with WhatsApp's Terms of Service and Anti-Spam policies.</li>
-          <li><strong>Acceptable Use:</strong> Automated messaging must be limited to authorized groups, personal utility, and consensual contacts. Spamming or harassment is strictly prohibited.</li>
-        </ul>
+      <div class="card-box" style="padding:24px">
+        <h3 style="color:#818cf8;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          1. Terms & Conditions of Usage
+        </h3>
+        <div style="color:#94a3b8;line-height:1.75;margin-top:16px;font-size:0.9rem">
+          <p style="margin-bottom:12px"><strong>1.1 User Responsibility:</strong> You maintain sole and exclusive legal liability for all text, media files, API requests, automated responses, and broadcast messages processed through your bot instance.</p>
+          <p style="margin-bottom:12px"><strong>1.2 WhatsApp Platform Guidelines:</strong> All software deployment must strictly align with WhatsApp's Commerce Policy, Business Terms, and Anti-Spam standards. Unsolicited mass marketing or bulk spam is strictly prohibited.</p>
+          <p style="margin-bottom:12px"><strong>1.3 Consensual Interactions:</strong> Automated messaging, AI memory logging, and group management features must only operate within authorized group chats or with consenting contacts.</p>
+          <p><strong>1.4 Rival Bot Counter-Measures:</strong> Automated protection features (including Anti-Bot interception and <code>!banaccount</code> counter-attacks) are provided exclusively to safeguard your group environments against spam vectors.</p>
+        </div>
       </div>
 
       <!-- Privacy Policy -->
-      <div class="card-box">
-        <h3 style="color:#34d399">🔒 Privacy Policy</h3>
-        <ul style="color:#94a3b8;line-height:1.7;margin-top:14px;padding-left:18px;font-size:0.9rem">
-          <li><strong>Local Data Storage:</strong> All credentials, sessions, database records, and logs remain 100% on your local server deployment.</li>
-          <li><strong>No Telemetry:</strong> No personal data, chat content, or phone numbers are harvested, sold, or transmitted to third parties.</li>
-          <li><strong>External APIs:</strong> When using AI or media download features, queries are processed securely via provider APIs (e.g. Groq, OpenAI, Aptoide) solely to fulfill user requests.</li>
-        </ul>
+      <div class="card-box" style="padding:24px">
+        <h3 style="color:#34d399;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          2. Privacy & Local Data Sovereignty
+        </h3>
+        <div style="color:#94a3b8;line-height:1.75;margin-top:16px;font-size:0.9rem">
+          <p style="margin-bottom:12px"><strong>2.1 Zero Telemetry Guarantee:</strong> 100% of your session tokens, WhatsApp authentication keys, memory databases, and terminal logs remain strictly on your local host deployment server. No telemetry is collected.</p>
+          <p style="margin-bottom:12px"><strong>2.2 Message Confidentiality:</strong> Neither the software author nor any third-party server intercepts, stores, reads, or harvests private messages or media files passed through Baileys WebSocket connection.</p>
+          <p style="margin-bottom:12px"><strong>2.3 Third-Party AI APIs:</strong> When AI options (Groq / OpenAI) are activated, user text prompts are processed over encrypted HTTPS strictly to generate requested intelligence responses.</p>
+          <p><strong>2.4 Local Vault Security:</strong> Retrieved View-Once files are saved to your private local <code>storage/vault/</code> folder and are only accessible by your verified admin JID.</p>
+        </div>
       </div>
     </div>
 
     <!-- Caution & Liability Disclaimer -->
-    <div class="card-box" style="margin-top:24px">
-      <h3 style="color:#f59e0b">⚠️ Caution & Legal Disclaimer Notice</h3>
-      <p style="color:#94a3b8;line-height:1.7;margin-top:12px;font-size:0.9rem">
-        This software (<strong>Nerd-eth WA Bot</strong>) is an independent open-source automation utility created by <strong>Fortune Adebayo (AKA: Nerd_eth)</strong>. It is provided on an <em>"AS IS"</em> basis, without warranty of any kind, express or implied.
+    <div class="card-box" style="margin-top:24px;padding:24px">
+      <h3 style="color:#f59e0b;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        3. Operational Caution & Liability Disclaimer
+      </h3>
+      <p style="color:#94a3b8;line-height:1.75;margin-top:14px;font-size:0.9rem">
+        This software is provided on an <strong>"AS IS" and "AS AVAILABLE"</strong> basis without any express or implied warranties. The lead creator — <strong>Fortune Adebayo (AKA: Nerd_eth)</strong> — and any project contributors explicitly disclaim all legal liability for:
       </p>
-      <div style="background:rgba(245,158,11,0.1);border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-top:14px;color:#fcd34d;font-size:0.88rem;line-height:1.6">
-        <strong>Account Safety Warning:</strong> The creator and contributors shall not be held liable or responsible for any WhatsApp account bans, suspensions, group conflicts, data loss, or misapplication of automated features (such as view-once recovery or stealth mode). Use responsibly and at your own discretion.
+      <div style="background:rgba(245,158,11,0.08);border-left:4px solid #f59e0b;padding:16px;border-radius:10px;margin-top:16px;color:#fcd34d;font-size:0.89rem;line-height:1.75">
+        <ul style="margin:0;padding-left:18px">
+          <li>WhatsApp account suspensions, temporary cooldowns, or permanent bans resulting from automated usage.</li>
+          <li>Group management disputes, group participant removals, or automated bot counter-attack executions.</li>
+          <li>Data loss, network interruption, or hosting provider downtime during bot execution.</li>
+        </ul>
+        <div style="margin-top:12px;font-weight:700;color:#fbbf24">Recommendation: Always run Stealth Mode and Anti-Ban rate limiting to ensure maximum account safety.</div>
       </div>
     </div>
   </div>

@@ -836,24 +836,32 @@ If this project helped you, please star it on GitHub! It helps others discover i
 
 ---
 
-## 📜 Terms, Privacy Policy & Legal Disclaimer
+## 📜 Master Terms of Service, Privacy Policy & Legal Governance
 
 > [!IMPORTANT]
-> **Agreement of Use:** By deploying, installing, or interacting with this bot, you explicitly agree that you have read, understood, and accepted the terms, privacy policy, and disclaimers below.
+> **Binding Terms of Agreement:** By deploying, installing, hosting, or interacting with **Nerd-eth WhatsApp Bot**, you formally declare that you have read, understood, and accepted all operational terms, privacy frameworks, cautions, and liability disclaimers detailed below.
 
-### 📜 Terms & Conditions
-- **User Responsibility:** You are solely responsible for all messages, media, commands, and actions executed through your bot deployment.
-- **Platform Compliance:** You agree to use this bot in compliance with WhatsApp's Terms of Service and Anti-Spam policies. Automated messaging must be limited to authorized groups and consensual contacts.
-- **Prohibited Conduct:** Using this bot for bulk unsolicited spamming, harassment, illegal content distribution, or harmful automation is strictly forbidden.
+### 📜 1. Terms & Conditions of Usage
+- **1.1 Absolute User Liability:** You retain 100% legal responsibility for all messages, media transfers, API queries, broadcast dispatches, and group actions executed through your bot deployment.
+- **1.2 Compliance with WhatsApp Policy:** Software operation must strictly comply with WhatsApp's Terms of Service, Business Policies, and Anti-Spam standards. Unsolicited mass advertising or aggressive spamming is forbidden.
+- **1.3 Consensual Environment Usage:** Bot interactions, memory logging, and automated tools must operate strictly within authorized groups or with consensual contacts.
+- **1.4 Anti-Bot Protection & Counter-Attacks:** Automated anti-bot detection and the `!banaccount` command are security features designed solely to protect your groups from malicious spam bots. Incoming requests from rival bots are automatically dropped and counter-acted with target blocking and group expulsion.
 
-### 🔒 Privacy Policy
-- **100% Local Data Ownership:** All authentication tokens, session credentials, database logs, and memory files are saved strictly on your local host/server deployment.
-- **No Data Harvesting:** Zero chat logs, phone numbers, or user data are collected, harvested, or transmitted to any centralized third-party servers.
-- **External AI Providers:** When optional AI features are active, message prompts are processed securely via provider APIs (Groq / OpenAI) solely to generate requested responses.
+---
 
-### ⚠️ Caution & Legal Disclaimer
-- **Provided "AS IS":** **Nerd-eth WA Bot** is an independent open-source utility provided without warranty of any kind, express or implied.
-- **Account Safety & Liability Notice:** The creator (**Fortune Adebayo / @OnNerd_eth**) and project contributors accept no responsibility or liability for any WhatsApp account bans, suspensions, data loss, group conflicts, or misapplication of automated stealth or recovery features. Use responsibly.
+### 🔒 2. Privacy Policy & Local Data Sovereignty
+- **2.1 Zero External Telemetry:** All authentication keys, Baileys session data, local database records, and log files remain 100% on your local server environment. No data is harvested, analyzed, or transmitted to centralized author servers.
+- **2.2 Encrypted API Integrations:** When AI features (Groq / OpenAI) or media downloaders are invoked, user queries are transmitted via secure HTTPS standard endpoints solely to fulfill requested responses.
+- **2.3 Vault Security:** Retrieved View-Once media items are stored locally in your private `storage/vault/` directory and are restricted exclusively to your verified admin WhatsApp JID.
+
+---
+
+### ⚠️ 3. Operational Caution & Liability Disclaimer Notice
+- **3.1 Software Provided "AS IS":** **Nerd-eth WA Bot** is an independent open-source utility built for education, administration, and personal productivity. It is provided *"AS IS" and "AS AVAILABLE"* without warranties of any kind.
+- **3.2 Complete Liability Waiver:** The lead creator (**Fortune Adebayo / AKA: Nerd_eth**) and repository contributors accept **zero responsibility or liability** for:
+  - Account suspensions, temporary cooldowns, or permanent bans enacted by WhatsApp.
+  - Group participant removals, automated counter-ban executions, or community management disputes.
+  - Local server data loss, network outages, or third-party API rate limits.
 
 ---
 
