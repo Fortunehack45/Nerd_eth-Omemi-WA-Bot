@@ -207,7 +207,46 @@ async function getYouTubeAudio(url) {
     }
   } catch (e) { log('YT Audio yt-dlp fail: ' + e.message); }
 
-  // Engine 2: Cobalt
+  // Engine 2: y2mate public REST API
+  try {
+    log('YT Audio — trying y2mate...');
+    var fpY2 = path.join(tempDir, 'yt_y2mate_' + ts + '.mp3');
+    var r1 = await axios.post('https://www.y2mate.com/mates/analyzeV2/ajax', 
+      'k_query=' + encodeURIComponent(url) + '&k_page=home&hl=en&q_auto=0', {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.y2mate.com/'
+      },
+      timeout: 15000
+    });
+    if (r1.data && r1.data.links && r1.data.links.mp3) {
+      var mp3Obj = r1.data.links.mp3;
+      var key = Object.keys(mp3Obj)[0];
+      var k = mp3Obj[key] && mp3Obj[key].k;
+      var vid = r1.data.vid;
+      if (k && vid) {
+        var r2 = await axios.post('https://www.y2mate.com/mates/convertV2/index',
+          'vid=' + vid + '&k=' + encodeURIComponent(k), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'User-Agent': 'Mozilla/5.0',
+            'Referer': 'https://www.y2mate.com/'
+          },
+          timeout: 20000
+        });
+        if (r2.data && r2.data.dlink) {
+          var stY2 = await downloadStream(r2.data.dlink, fpY2);
+          if (stY2.size > 5000) {
+            log('YT Audio — y2mate success (' + (stY2.size / 1024).toFixed(0) + 'KB)');
+            return { success: true, filePath: fpY2, title: r1.data.title || title, size: stY2.size };
+          }
+        }
+      }
+    }
+  } catch (e) { log('YT Audio y2mate fail: ' + e.message); }
+
+  // Engine 3: Cobalt
   try {
     log('YT Audio — trying Cobalt...');
     var cobalt = await cobaltRequest(url, true);
