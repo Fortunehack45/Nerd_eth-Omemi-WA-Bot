@@ -6,29 +6,34 @@
 <title>Nerd-eth Bot Pro Admin Dashboard</title>
 <link rel="icon" type="image/png" href="https://iili.io/Cwvlxwv.png">
 <link rel="apple-touch-icon" href="https://iili.io/Cwvlxwv.png">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif}
 :root{
-  --bg:#050711;
-  --sidebar:#0a0d21;
-  --card-bg:linear-gradient(145deg, rgba(17, 24, 56, 0.75), rgba(9, 12, 33, 0.95));
+  --bg:#03050c;
+  --sidebar:#080b1e;
+  --card-bg:linear-gradient(135deg, rgba(15, 22, 54, 0.78), rgba(8, 11, 30, 0.96));
   --accent:#6366f1;
+  --accent-light:#818cf8;
   --accent-secondary:#a855f7;
-  --accent-glow:rgba(99, 102, 241, 0.35);
-  --border:rgba(99, 102, 241, 0.22);
-  --text-muted:#818cf8;
+  --accent-cyan:#06b6d4;
+  --accent-emerald:#10b981;
+  --accent-glow:rgba(99, 102, 241, 0.38);
+  --border:rgba(99, 102, 241, 0.25);
+  --border-subtle:rgba(255, 255, 255, 0.08);
+  --text-muted:#94a3b8;
   --success:#10b981;
   --danger:#ef4444;
+  --warning:#f59e0b;
 }
 
-body{background:var(--bg);color:#e0e7ff;min-height:100vh;display:flex;overflow-x:hidden}
+body{background:var(--bg);color:#e2e8f0;min-height:100vh;display:flex;overflow-x:hidden}
 svg{display:inline-block;vertical-align:middle;flex-shrink:0}
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:rgba(5,7,17,0.5)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+::-webkit-scrollbar-track{background:rgba(3,5,12,0.6)}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.35);border-radius:10px}
 ::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
 /* Animations */
@@ -37,89 +42,113 @@ svg{display:inline-block;vertical-align:middle;flex-shrink:0}
   70%{transform:scale(1);box-shadow:0 0 0 8px rgba(16,185,129,0)}
   100%{transform:scale(0.95);box-shadow:0 0 0 0 rgba(16,185,129,0)}
 }
-@keyframes tabFade{
-  from{opacity:0;transform:translateY(10px)}
-  to{opacity:1;transform:translateY(0)}
+@keyframes laserScan{
+  0%{top:0%}
+  50%{top:100%}
+  100%{top:0%}
 }
+@keyframes tabFade{
+  from{opacity:0;transform:translateY(12px) scale(0.99)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes floatGlow{
+  0%, 100%{transform:translate(0, 0) scale(1)}
+  50%{transform:translate(20px, -20px) scale(1.1)}
+}
+
 .tab-content{animation:tabFade 0.35s cubic-bezier(0.16, 1, 0.3, 1)}
 .pulse-dot{width:10px;height:10px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;display:inline-block}
 
 /* Toast Notifications */
-#toastContainer{position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px}
-.toast{background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid var(--accent);color:#fff;padding:14px 22px;border-radius:14px;box-shadow:0 15px 35px rgba(0,0,0,0.6);font-size:0.9rem;font-weight:600;display:flex;align-items:center;gap:12px;animation:tabFade 0.3s ease}
+#toastContainer{position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:12px}
+.toast{background:linear-gradient(135deg,#1e1b4b,#0f172a);border:1px solid var(--accent);color:#fff;padding:14px 24px;border-radius:16px;box-shadow:0 20px 45px rgba(0,0,0,0.7), 0 0 25px var(--accent-glow);font-size:0.9rem;font-weight:700;display:flex;align-items:center;gap:12px;animation:tabFade 0.3s ease}
 
-/* Ambient Background Glow */
-.ambient-glow{position:fixed;top:-20%;left:20%;width:600px;height:600px;background:radial-gradient(circle, rgba(99,102,241,0.12) 0%, rgba(0,0,0,0) 70%);pointer-events:none;z-index:0}
+/* Ambient Background Glows */
+.ambient-glow{position:fixed;top:-20%;left:15%;width:700px;height:700px;background:radial-gradient(circle, rgba(99,102,241,0.14) 0%, rgba(168,85,247,0.08) 40%, rgba(0,0,0,0) 70%);pointer-events:none;z-index:0;animation:floatGlow 12s infinite ease-in-out}
+.ambient-glow-2{position:fixed;bottom:-20%;right:10%;width:600px;height:600px;background:radial-gradient(circle, rgba(6,182,212,0.12) 0%, rgba(99,102,241,0.06) 40%, rgba(0,0,0,0) 70%);pointer-events:none;z-index:0;animation:floatGlow 15s infinite ease-in-out reverse}
 
 /* Login Modal */
-#loginModal{display:flex;position:fixed;inset:0;background:rgba(5,7,17,0.97);backdrop-filter:blur(30px);z-index:9999;align-items:center;justify-content:center;padding:20px}
-.login-card{background:linear-gradient(145deg,#131836,#090c24);border:1px solid var(--border);border-radius:28px;padding:36px;width:100%;max-width:440px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.95), 0 0 60px var(--accent-glow)}
-.login-card img{width:76px;height:76px;border-radius:20px;margin-bottom:18px;box-shadow:0 0 30px var(--accent-glow);border:2px solid rgba(255,255,255,0.1)}
-.login-card h2{font-size:1.85rem;color:#fff;margin-bottom:6px;font-weight:800;background:linear-gradient(90deg,#fff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.login-card p{color:#94a3b8;font-size:0.9rem;margin-bottom:24px}
-.input-field{width:100%;padding:14px 18px;border-radius:14px;border:1px solid var(--border);background:#070a1e;color:#fff;font-size:0.98rem;margin-bottom:18px;outline:none;transition:all 0.2s}
-.input-field:focus{border-color:var(--accent);box-shadow:0 0 18px var(--accent-glow)}
-.btn-primary{width:100%;padding:14px 24px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:0.98rem;cursor:pointer;box-shadow:0 8px 25px var(--accent-glow);display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 35px var(--accent-glow)}
+#loginModal{display:flex;position:fixed;inset:0;background:rgba(3,5,12,0.96);backdrop-filter:blur(35px);-webkit-backdrop-filter:blur(35px);z-index:9999;align-items:center;justify-content:center;padding:20px}
+.login-card{background:linear-gradient(145deg,#101636,#080b22);border:1px solid var(--border);border-radius:30px;padding:40px;width:100%;max-width:450px;text-align:center;box-shadow:0 35px 90px rgba(0,0,0,0.95), 0 0 70px var(--accent-glow)}
+.login-card img{width:82px;height:82px;border-radius:24px;margin-bottom:20px;box-shadow:0 0 35px var(--accent-glow);border:2px solid rgba(255,255,255,0.15)}
+.login-card h2{font-size:2rem;color:#fff;margin-bottom:6px;font-weight:800;background:linear-gradient(90deg,#fff,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-card p{color:var(--text-muted);font-size:0.92rem;margin-bottom:26px}
+.input-field{width:100%;padding:15px 20px;border-radius:14px;border:1px solid var(--border);background:#060818;color:#fff;font-size:0.98rem;margin-bottom:18px;outline:none;transition:all 0.25s}
+.input-field:focus{border-color:var(--accent);box-shadow:0 0 22px var(--accent-glow);background:#090d28}
+
+.btn-primary{width:100%;padding:15px 26px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:0.98rem;cursor:pointer;box-shadow:0 8px 30px var(--accent-glow);display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:all 0.25s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px var(--accent-glow);background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.btn-primary:active{transform:translateY(0)}
+
+.btn-secondary{padding:12px 22px;border-radius:14px;border:1px solid var(--border);background:rgba(99,102,241,0.16);color:#fff;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all 0.25s}
+.btn-secondary:hover{background:var(--accent);border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 25px var(--accent-glow)}
 
 /* Sidebar Navigation */
-.sidebar{width:270px;background:var(--sidebar);border-right:1px solid var(--border);padding:28px 22px;display:flex;flex-direction:column;min-height:100vh;position:fixed;top:0;left:0;z-index:100}
-.brand{font-size:1.35rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:12px;margin-bottom:38px}
-.brand img{width:40px;height:40px;border-radius:12px;box-shadow:0 0 20px var(--accent-glow)}
+.sidebar{width:275px;background:var(--sidebar);border-right:1px solid var(--border);padding:30px 24px;display:flex;flex-direction:column;min-height:100vh;position:fixed;top:0;left:0;z-index:100}
+.brand{font-size:1.4rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:12px;margin-bottom:40px}
+.brand img{width:42px;height:42px;border-radius:14px;box-shadow:0 0 25px var(--accent-glow);border:1px solid rgba(255,255,255,0.1)}
 .brand-badge{background:linear-gradient(135deg,#6366f1,#a855f7);padding:4px 10px;border-radius:8px;font-size:0.75rem;color:#fff;font-weight:800;letter-spacing:0.5px}
+
 .nav-list{list-style:none;display:flex;flex-direction:column;gap:10px}
-.nav-item{padding:13px 18px;border-radius:14px;color:#94a3b8;font-size:0.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all 0.25s}
-.nav-item:hover, .nav-item.active{background:linear-gradient(135deg,rgba(99,102,241,0.28),rgba(168,85,247,0.18));color:#fff;border:1px solid rgba(99,102,241,0.4);box-shadow:0 4px 20px rgba(99,102,241,0.25)}
+.nav-item{padding:14px 20px;border-radius:16px;color:#94a3b8;font-size:0.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all 0.25s}
+.nav-item:hover{background:rgba(99,102,241,0.12);color:#c7d2fe}
+.nav-item.active{background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(168,85,247,0.22));color:#fff;border:1px solid rgba(99,102,241,0.45);box-shadow:0 6px 25px rgba(99,102,241,0.3)}
 
 /* Main Workspace */
-.main-content{margin-left:270px;flex:1;padding:32px;max-width:calc(100vw - 270px);position:relative;z-index:1}
+.main-content{margin-left:275px;flex:1;padding:36px;max-width:calc(100vw - 275px);position:relative;z-index:1}
 .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
-.greeting h1{font-size:1.75rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:14px}
-.greeting p{color:#94a3b8;font-size:0.92rem;margin-top:4px}
+.greeting h1{font-size:1.85rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:14px}
+.greeting p{color:var(--text-muted);font-size:0.94rem;margin-top:4px}
 .top-actions{display:flex;align-items:center;gap:16px}
-.status-tag{padding:8px 20px;border-radius:20px;font-size:0.88rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border)}
-.status-tag.online{background:rgba(16,185,129,0.12);color:#34d399;border-color:rgba(16,185,129,0.35)}
-.status-tag.offline{background:rgba(239,68,68,0.12);color:#f87171;border-color:rgba(239,68,68,0.35)}
+.status-tag{padding:8px 20px;border-radius:24px;font-size:0.88rem;font-weight:700;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border)}
+.status-tag.online{background:rgba(16,185,129,0.14);color:#34d399;border-color:rgba(16,185,129,0.4)}
+.status-tag.offline{background:rgba(239,68,68,0.14);color:#f87171;border-color:rgba(239,68,68,0.4)}
 
 /* Quick Toolbar */
-.quick-toolbar{display:flex;gap:12px;margin-bottom:28px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
-.tool-chip{background:rgba(15,23,42,0.6);border:1px solid var(--border);border-radius:12px;padding:10px 18px;color:#c7d2fe;font-size:0.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;transition:all 0.2s}
-.tool-chip:hover{background:var(--accent);color:#fff;transform:translateY(-2px);box-shadow:0 6px 20px var(--accent-glow)}
+.quick-toolbar{display:flex;gap:12px;margin-bottom:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+.tool-chip{background:rgba(15,23,42,0.7);border:1px solid var(--border);border-radius:14px;padding:11px 20px;color:#c7d2fe;font-size:0.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:10px;white-space:nowrap;transition:all 0.25s;backdrop-filter:blur(12px)}
+.tool-chip:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 25px var(--accent-glow)}
 
-/* Metrics Cards */
+/* Metrics Grid */
 .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-bottom:32px}
-.metric-card{background:var(--card-bg);border:1px solid var(--border);border-radius:20px;padding:24px;backdrop-filter:blur(16px);position:relative;overflow:hidden;transition:all 0.25s}
-.metric-card:hover{transform:translateY(-4px);border-color:rgba(99,102,241,0.5);box-shadow:0 15px 40px rgba(0,0,0,0.6)}
+.metric-card{background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:24px;backdrop-filter:blur(20px);position:relative;overflow:hidden;transition:all 0.25s;box-shadow:0 12px 35px rgba(0,0,0,0.5)}
+.metric-card:hover{transform:translateY(-4px);border-color:rgba(99,102,241,0.55);box-shadow:0 20px 45px rgba(0,0,0,0.65), 0 0 30px var(--accent-glow)}
 .metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent-secondary))}
 .metric-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.metric-title{font-size:0.82rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px}
-.metric-icon{width:40px;height:40px;border-radius:12px;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;color:#a5b4fc}
-.metric-value{font-size:2.3rem;font-weight:800;color:#fff}
+.metric-title{font-size:0.82rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+.metric-icon{width:42px;height:42px;border-radius:14px;background:rgba(99,102,241,0.18);display:flex;align-items:center;justify-content:center;color:#a5b4fc;border:1px solid rgba(99,102,241,0.25)}
+.metric-value{font-size:2.4rem;font-weight:800;color:#fff}
+.metric-sub{font-size:0.8rem;color:#64748b;margin-top:6px;display:flex;align-items:center;gap:6px}
 
 /* Content Panels */
 .panel-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:32px}
-.card-box{background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,0.4)}
-.card-box h3{font-size:1.15rem;font-weight:800;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.card-box{background:var(--card-bg);border:1px solid var(--border);border-radius:24px;padding:30px;backdrop-filter:blur(20px);box-shadow:0 15px 40px rgba(0,0,0,0.45)}
+.card-box h3{font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:22px;display:flex;align-items:center;gap:12px}
 
 /* Logs Box */
-.terminal-box{background:#040611;padding:22px;border-radius:16px;border:1px solid var(--border);color:#a5b4fc;font-family:'JetBrains Mono',monospace;font-size:0.85rem;max-height:450px;overflow-y:auto;line-height:1.6;word-break:break-all;white-space:pre-wrap}
+.terminal-box{background:#040612;padding:24px;border-radius:18px;border:1px solid var(--border);color:#a5b4fc;font-family:'JetBrains Mono',monospace;font-size:0.86rem;max-height:480px;overflow-y:auto;line-height:1.6;word-break:break-all;white-space:pre-wrap;box-shadow:inset 0 0 20px rgba(0,0,0,0.8)}
 
 /* Table */
-table{width:100%;border-collapse:collapse;font-size:0.9rem}
-th{text-align:left;padding:14px 16px;color:#94a3b8;font-weight:700;border-bottom:1px solid var(--border);background:rgba(10,14,35,0.7)}
-td{padding:16px;border-bottom:1px solid rgba(255,255,255,0.04);color:#cbd5e1}
-tr:hover td{background:rgba(99,102,241,0.08)}
+table{width:100%;border-collapse:collapse;font-size:0.92rem}
+th{text-align:left;padding:16px 18px;color:var(--text-muted);font-weight:700;border-bottom:1px solid var(--border);background:rgba(8,11,30,0.8)}
+td{padding:18px;border-bottom:1px solid rgba(255,255,255,0.05);color:#cbd5e1}
+tr:hover td{background:rgba(99,102,241,0.1)}
 
 /* Forms */
-.form-group{margin-bottom:22px}
-.form-group label{display:block;font-size:0.9rem;font-weight:700;color:#a5b4fc;margin-bottom:10px}
-.form-group input, .form-group select{width:100%;padding:14px 18px;border-radius:12px;border:1px solid var(--border);background:#070a1e;color:#fff;font-size:0.95rem;outline:none}
-.form-group input:focus, .form-group select:focus{border-color:var(--accent);box-shadow:0 0 16px var(--accent-glow)}
+.form-group{margin-bottom:24px}
+.form-group label{display:block;font-size:0.92rem;font-weight:700;color:#a5b4fc;margin-bottom:10px}
+.form-group input, .form-group select{width:100%;padding:15px 20px;border-radius:14px;border:1px solid var(--border);background:#060818;color:#fff;font-size:0.96rem;outline:none;transition:all 0.25s}
+.form-group input:focus, .form-group select:focus{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow);background:#090d28}
 
-.btn-secondary{padding:12px 22px;border-radius:12px;border:1px solid var(--border);background:rgba(99,102,241,0.15);color:#fff;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all 0.2s}
-.btn-secondary:hover{background:var(--accent);transform:translateY(-2px)}
+/* Custom iOS Toggle Switch */
+.switch{position:relative;display:inline-block;width:52px;height:28px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#1e293b;transition:.3s;border-radius:34px;border:1px solid var(--border)}
+.slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background-color:#94a3b8;transition:.3s;border-radius:50%}
+input:checked + .slider{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:var(--accent)}
+input:checked + .slider:before{transform:translateX(24px);background-color:#fff}
 
-/* Mobile Responsive Overhaul */
+/* Mobile Responsive */
 @media(max-width:768px){
   body{flex-direction:column}
   .sidebar{display:none}
@@ -129,16 +158,16 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     bottom:0;
     left:0;
     right:0;
-    height:74px;
-    background:rgba(10, 13, 33, 0.96);
+    height:76px;
+    background:rgba(8, 11, 30, 0.96);
     backdrop-filter:blur(30px);
     -webkit-backdrop-filter:blur(30px);
     border-top:1px solid var(--border);
     z-index:9999;
     justify-content:space-around;
     align-items:center;
-    padding:0 2px;
-    box-shadow:0 -10px 35px rgba(0,0,0,0.75);
+    padding:0 4px;
+    box-shadow:0 -10px 40px rgba(0,0,0,0.85);
   }
   .mobile-nav-item{
     display:flex;
@@ -147,32 +176,32 @@ tr:hover td{background:rgba(99,102,241,0.08)}
     justify-content:center;
     gap:4px;
     color:#818cf8;
-    font-size:0.68rem;
+    font-size:0.7rem;
     font-weight:700;
     cursor:pointer;
-    padding:8px 2px;
-    border-radius:12px;
+    padding:8px 4px;
+    border-radius:14px;
     transition:all 0.2s;
     flex:1;
     text-align:center;
   }
   .mobile-nav-item.active{
     color:#fff;
-    background:linear-gradient(135deg,rgba(99,102,241,0.38),rgba(168,85,247,0.28));
-    border:1px solid rgba(99,102,241,0.5);
+    background:linear-gradient(135deg,rgba(99,102,241,0.4),rgba(168,85,247,0.3));
+    border:1px solid rgba(99,102,241,0.55);
   }
-  .main-content{margin-left:0;padding:14px;max-width:100vw;padding-bottom:95px}
-  .top-bar{flex-direction:column;align-items:flex-start;gap:14px;margin-bottom:18px}
+  .main-content{margin-left:0;padding:18px;max-width:100vw;padding-bottom:100px}
+  .top-bar{flex-direction:column;align-items:flex-start;gap:16px;margin-bottom:22px}
   .top-actions{width:100%;justify-content:space-between}
-  .metrics-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
-  .metric-card{padding:14px;border-radius:16px}
-  .metric-value{font-size:1.65rem}
-  .panel-grid{grid-template-columns:1fr;gap:16px}
-  .card-box{padding:18px;border-radius:18px}
-  #speedTestBox{grid-template-columns:1fr!important;gap:12px!important}
+  .metrics-grid{grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
+  .metric-card{padding:16px;border-radius:18px}
+  .metric-value{font-size:1.75rem}
+  .panel-grid{grid-template-columns:1fr;gap:20px}
+  .card-box{padding:20px;border-radius:20px}
+  #speedTestBox{grid-template-columns:1fr!important;gap:14px!important}
   #featureStatusResGrid{grid-template-columns:1fr!important}
-  .btn-primary, .btn-secondary{padding:14px;font-size:0.92rem;width:100%;justify-content:center}
-  .terminal-box{font-size:0.78rem;padding:14px}
+  .btn-primary, .btn-secondary{padding:15px;font-size:0.95rem;width:100%;justify-content:center}
+  .terminal-box{font-size:0.8rem;padding:16px}
 }
 @media(min-width:769px){.mobile-bottom-nav{display:none}}
 </style>
@@ -180,64 +209,65 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 <body>
 
 <div class="ambient-glow"></div>
+<div class="ambient-glow-2"></div>
 <div id="toastContainer"></div>
 
 <!-- Mobile Bottom Navigation Bar -->
 <nav class="mobile-bottom-nav">
   <div class="mobile-nav-item active" onclick="showTab('dashboard')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     <span>Home</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('keys')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
     <span>Keys</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('features')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     <span>Control</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('connect')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
     <span>Pair</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('users')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
     <span>Users</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('logs')">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
     <span>Logs</span>
   </div>
 </nav>
 
-<!-- Login Overlay -->
+<!-- Login Overlay Modal -->
 <div id="loginModal">
   <div class="login-card">
     <img src="https://iili.io/Cwvlxwv.png" alt="Bot Logo">
     <h2>Welcome Back</h2>
     <p>Sign in to access your Nerd-eth Bot Control Panel</p>
 
-    <!-- X (Twitter) Follow & 6-Digit Passcode Banner -->
-    <div style="background:rgba(99,102,241,0.12);border:1px solid var(--border);padding:14px;border-radius:16px;margin-bottom:20px;text-align:left;font-size:0.85rem">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;color:#fff;font-weight:700">
+    <!-- X (Twitter) Follow & Passcode Section -->
+    <div style="background:rgba(99,102,241,0.12);border:1px solid var(--border);padding:16px;border-radius:18px;margin-bottom:22px;text-align:left;font-size:0.86rem">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#fff;font-weight:700">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         Follow @OnNerd_eth to get 6-Digit Key
       </div>
-      <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 12px 0">Click below to follow @OnNerd_eth on X and automatically generate your 6-digit access passcode.</p>
+      <p style="color:#94a3b8;font-size:0.82rem;margin:0 0 12px 0">Follow @OnNerd_eth on X to automatically generate your 6-digit access passcode.</p>
       
-      <button onclick="followAndGenerateKey()" class="btn-secondary" style="width:100%;justify-content:center;padding:10px 14px;font-size:0.85rem;background:#000;border-color:#333;color:#fff">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      <button onclick="followAndGenerateKey()" class="btn-secondary" style="width:100%;justify-content:center;padding:12px 16px;font-size:0.88rem;background:#000;border-color:#333;color:#fff">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         Follow @OnNerd_eth & Get 6-Digit Key
       </button>
 
-      <div id="genKeyBox" style="display:none;margin-top:12px;padding:12px;background:#050711;border-radius:10px;border:1px solid #34d399;color:#34d399;font-weight:800;text-align:center;font-size:1.1rem"></div>
+      <div id="genKeyBox" style="display:none;margin-top:14px;padding:14px;background:#060818;border-radius:12px;border:1px solid #34d399;color:#34d399;font-weight:800;text-align:center;font-size:1.15rem"></div>
     </div>
 
-    <div id="loginErr" style="color:#f87171;font-size:0.85rem;margin-bottom:14px;display:none"></div>
+    <div id="loginErr" style="color:#f87171;font-size:0.88rem;margin-bottom:16px;display:none"></div>
     <input type="password" id="pwdInput" class="input-field" placeholder="Enter Your 6-Digit Access Passcode" onkeyup="if(event.key==='Enter')attemptLogin()">
     <button onclick="attemptLogin()" class="btn-primary">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      Unlock Panel
+      Unlock Control Panel
     </button>
   </div>
 </div>
@@ -251,33 +281,33 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   </div>
   <ul class="nav-list">
     <li class="nav-item active" onclick="showTab('dashboard')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
       <span>Dashboard</span>
     </li>
     <li class="nav-item" onclick="showTab('keys')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
       <span>AI & API Keys</span>
     </li>
     <li class="nav-item" onclick="showTab('features')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       <span>Feature Controls</span>
     </li>
     <li class="nav-item" onclick="showTab('connect')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
       <span>QR & Link Phone</span>
     </li>
     <li class="nav-item" onclick="showTab('users')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
       <span>Users & Access</span>
     </li>
     <li class="nav-item" onclick="showTab('logs')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
       <span>Real-time Logs</span>
     </li>
   </ul>
   
-  <div style="margin-top:auto;padding-top:20px;border-top:1px solid var(--border)">
-    <a href="https://x.com/OnNerd_eth" target="_blank" style="display:flex;align-items:center;gap:10px;color:#a5b4fc;text-decoration:none;font-size:0.82rem;font-weight:600">
+  <div style="margin-top:auto;padding-top:22px;border-top:1px solid var(--border)">
+    <a href="https://x.com/OnNerd_eth" target="_blank" style="display:flex;align-items:center;gap:10px;color:#a5b4fc;text-decoration:none;font-size:0.85rem;font-weight:600">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       Created by @OnNerd_eth
     </a>
@@ -286,25 +316,25 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 
 <!-- Main Workspace -->
 <main class="main-content">
-  <!-- Top Bar -->
+  <!-- Top Header Bar -->
   <div class="top-bar">
     <div class="greeting">
       <h1 id="topGreeting">
-        <img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:38px;height:38px;border-radius:12px;box-shadow:0 0 20px var(--accent-glow)">
+        <img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:40px;height:40px;border-radius:14px;box-shadow:0 0 25px var(--accent-glow)">
         Hey, Admin.
       </h1>
       <p id="topSub">Real-time WhatsApp Bot Engine & AI Analytics Dashboard</p>
     </div>
     <div class="top-actions">
       <span id="statusBadge" class="status-tag offline">Offline</span>
-      <button onclick="logout()" class="btn-secondary" style="background:#1e1b4b">
+      <button onclick="logout()" class="btn-secondary" style="background:rgba(30,27,75,0.8)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Lock Panel
       </button>
     </div>
   </div>
 
-  <!-- Quick Action Toolbar -->
+  <!-- Quick Actions Toolbar -->
   <div class="quick-toolbar">
     <div class="tool-chip" onclick="runSpeedTest()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -330,6 +360,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
 
   <!-- TAB 1: DASHBOARD -->
   <div id="tab-dashboard" class="tab-content">
+    <!-- Stat Metrics Grid -->
     <div class="metrics-grid">
       <div class="metric-card">
         <div class="metric-header">
@@ -339,6 +370,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
           </div>
         </div>
         <div class="metric-value" id="mUptime">0s</div>
+        <div class="metric-sub">⚡ Baileys Engine Active</div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -348,6 +380,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
           </div>
         </div>
         <div class="metric-value" id="mUsers">0</div>
+        <div class="metric-sub">👥 Registered Contacts</div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -357,6 +390,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
           </div>
         </div>
         <div class="metric-value" id="mFacts">0</div>
+        <div class="metric-sub">🧠 Learned Personalities</div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -366,51 +400,53 @@ tr:hover td{background:rgba(99,102,241,0.08)}
           </div>
         </div>
         <div class="metric-value" id="mCommands">0</div>
+        <div class="metric-sub">📊 Executed Bot Actions</div>
       </div>
     </div>
 
-    <!-- Real C++ Speed Test Widget -->
-    <div class="card-box" style="margin-bottom:32px;background:linear-gradient(145deg, rgba(20,25,55,0.8), rgba(9,12,33,0.95));border:1px solid rgba(99,102,241,0.35)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+    <!-- Real C++ Native Speed Test Widget -->
+    <div class="card-box" style="margin-bottom:32px;background:linear-gradient(145deg, rgba(20,28,62,0.82), rgba(8,11,30,0.96));border:1px solid rgba(99,102,241,0.4)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px">
         <h3 style="margin:0">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          Real C++ Native Internet Speed Calculator
+          High-Precision Native Internet Speed Engine
         </h3>
-        <button onclick="runSpeedTest()" id="speedTestBtn" class="btn-primary" style="width:auto;padding:10px 22px;font-size:0.88rem">
-          ⚡ Run Real C++ Speed Test
+        <button onclick="runSpeedTest()" id="speedTestBtn" class="btn-primary" style="width:auto;padding:12px 24px;font-size:0.9rem">
+          ⚡ Run Real Socket Speed Test
         </button>
       </div>
-      <div id="speedTestBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;background:#050711;padding:20px;border-radius:16px;border:1px solid var(--border)">
-        <div style="text-align:center">
-          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700">DOWNLOAD SPEED</span>
-          <div id="spDl" style="font-size:2.2rem;font-weight:800;color:#34d399;margin-top:4px">-- Mbps</div>
+      <div id="speedTestBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#040612;padding:24px;border-radius:18px;border:1px solid var(--border)">
+        <div style="text-align:center;padding:12px;background:rgba(16,185,129,0.06);border-radius:14px;border:1px solid rgba(16,185,129,0.2)">
+          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700;letter-spacing:1px">DOWNLOAD SPEED</span>
+          <div id="spDl" style="font-size:2.3rem;font-weight:800;color:#34d399;margin-top:6px">-- Mbps</div>
         </div>
-        <div style="text-align:center">
-          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700">UPLOAD SPEED</span>
-          <div id="spUl" style="font-size:2.2rem;font-weight:800;color:#38bdf8;margin-top:4px">-- Mbps</div>
+        <div style="text-align:center;padding:12px;background:rgba(56,189,248,0.06);border-radius:14px;border:1px solid rgba(56,189,248,0.2)">
+          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700;letter-spacing:1px">UPLOAD SPEED</span>
+          <div id="spUl" style="font-size:2.3rem;font-weight:800;color:#38bdf8;margin-top:6px">-- Mbps</div>
         </div>
-        <div style="text-align:center">
-          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700">LATENCY / PING</span>
-          <div id="spPing" style="font-size:2.2rem;font-weight:800;color:#a855f7;margin-top:4px">-- ms</div>
+        <div style="text-align:center;padding:12px;background:rgba(168,85,247,0.06);border-radius:14px;border:1px solid rgba(168,85,247,0.2)">
+          <span style="font-size:0.82rem;color:#94a3b8;font-weight:700;letter-spacing:1px">LATENCY / PING</span>
+          <div id="spPing" style="font-size:2.3rem;font-weight:800;color:#c084fc;margin-top:6px">-- ms</div>
         </div>
       </div>
-      <div id="spEngineLabel" style="margin-top:12px;font-size:0.8rem;color:#64748b;text-align:right">Engine: Native C++/C# High-Precision Socket Core</div>
+      <div id="spEngineLabel" style="margin-top:14px;font-size:0.84rem;color:#64748b;text-align:right;font-weight:600">Engine: Native C++/C# Socket Engine & Cloudflare Edge CDN</div>
     </div>
 
+    <!-- Live Stream Grid -->
     <div class="panel-grid">
       <div class="card-box">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Live Message Activity
         </h3>
-        <div id="msgStream" style="max-height:360px;overflow-y:auto"></div>
+        <div id="msgStream" style="max-height:380px;overflow-y:auto;padding-right:6px"></div>
       </div>
       <div class="card-box">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Command Audit Stream
         </h3>
-        <div id="cmdStream" style="max-height:360px;overflow-y:auto"></div>
+        <div id="cmdStream" style="max-height:380px;overflow-y:auto;padding-right:6px"></div>
       </div>
     </div>
   </div>
@@ -422,10 +458,10 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         AI Provider & API Key Manager
       </h3>
-      <p style="color:#94a3b8;font-size:0.92rem;margin-bottom:22px">Configure public and private AI key endpoints. Changes update instantly at runtime without bot restarts.</p>
+      <p style="color:#94a3b8;font-size:0.94rem;margin-bottom:24px">Configure public and private AI key endpoints. Changes update instantly at runtime without bot restarts.</p>
 
       <div class="form-group">
-        <label>Groq API Key (Free, Recommended — console.groq.com)</label>
+        <label>Groq API Key (Free, Ultra-Fast — console.groq.com)</label>
         <input type="password" id="keyGroq" class="input-field" placeholder="gsk-...">
       </div>
 
@@ -444,18 +480,18 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <input type="password" id="keyBrave" class="input-field" placeholder="BSA-...">
       </div>
 
-      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
-        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 28px">
+      <div style="display:flex;gap:14px;margin-top:26px;flex-wrap:wrap">
+        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:14px 30px">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
           Save API Keys
         </button>
-        <button onclick="testAiAction()" class="btn-secondary" style="background:#4c1d95">
+        <button onclick="testAiAction()" class="btn-secondary" style="background:rgba(124,58,237,0.25)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
           Test AI Connection
         </button>
       </div>
 
-      <div id="keyStatusRes" style="margin-top:22px;padding:18px;background:#050711;border-radius:14px;border:1px solid var(--border);font-size:0.92rem"></div>
+      <div id="keyStatusRes" style="margin-top:24px;padding:20px;background:#040612;border-radius:16px;border:1px solid var(--border);font-size:0.94rem;line-height:1.7"></div>
     </div>
   </div>
 
@@ -466,15 +502,15 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Feature & Command Switcher
       </h3>
-      <p style="color:#94a3b8;font-size:0.92rem;margin-bottom:22px">Enable or disable specific features or commands live. Disabled items will not run for users.</p>
+      <p style="color:#94a3b8;font-size:0.94rem;margin-bottom:24px">Enable or disable specific features or commands live. Disabled items will not run for users.</p>
       
       <div id="featureStatusRes">Loading features...</div>
 
-      <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:22px">
-        <label style="display:block;font-size:0.92rem;font-weight:700;color:#a5b4fc;margin-bottom:10px">Disable/Enable Any Command or Feature by Name</label>
-        <div style="display:flex;gap:12px;max-width:500px;flex-wrap:wrap">
-          <input type="text" id="toggleItemName" class="input-field" placeholder="e.g. music, download, movie, nuke, getpp" style="margin:0">
-          <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:#991b1b;border-color:#ef4444;width:auto">Disable</button>
+      <div style="margin-top:30px;border-top:1px solid var(--border);padding-top:24px">
+        <label style="display:block;font-size:0.94rem;font-weight:700;color:#a5b4fc;margin-bottom:12px">Disable/Enable Any Command or Feature by Name</label>
+        <div style="display:flex;gap:14px;max-width:520px;flex-wrap:wrap">
+          <input type="text" id="toggleItemName" class="input-field" placeholder="e.g. music, download, movie, nuke, speed" style="margin:0">
+          <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.5);color:#f87171;width:auto">Disable</button>
           <button onclick="toggleCustomItem('enable')" class="btn-primary" style="width:auto">Enable</button>
         </div>
       </div>
@@ -490,12 +526,12 @@ tr:hover td{background:rgba(99,102,241,0.08)}
       </h3>
       <p style="color:#94a3b8;margin:10px 0">Open WhatsApp → Linked Devices → Link a Device</p>
       
-      <div id="qrWrapper" style="margin:22px 0">
-        <div style="position:relative;display:inline-block;padding:18px;background:#fff;border-radius:24px;box-shadow:0 15px 40px rgba(0,0,0,0.6)">
+      <div id="qrWrapper" style="margin:24px 0">
+        <div style="position:relative;display:inline-block;padding:20px;background:#fff;border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,0.7)">
           <img id="dashQrImg" src="" alt="QR Code" style="width:280px;height:280px;display:block">
-          <!-- WhatsApp Logo Overlay in Center of QR Code -->
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(0,0,0,0.3);border:2px solid #fff">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
+          <!-- WhatsApp Logo Center Overlay -->
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58px;height:58px;background:#fff;border-radius:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,0.35);border:2px solid #fff">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
               <path fill="#25D366" d="M12 2a10 10 0 0 0-8.62 15.08L2 22l5.07-1.33A10 10 0 1 0 12 2z"/>
               <path fill="#FFF" d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07a8.18 8.18 0 0 1-2.41-1.49 9.02 9.02 0 0 1-1.67-2.08c-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37a3.83 3.83 0 0 0-1.2 2.85c0 1.68 1.23 3.3 1.4 3.53.17.23 2.42 3.7 5.86 5.18.82.35 1.46.56 1.96.72.82.26 1.57.22 2.16.14.66-.1 2.02-.83 2.3-1.63.28-.8.28-1.48.2-1.63-.08-.15-.28-.24-.58-.39z"/>
             </svg>
@@ -503,7 +539,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         </div>
       </div>
 
-      <button onclick="resetSessionAction()" class="btn-secondary" style="background:#991b1b;border-color:#ef4444">
+      <button onclick="resetSessionAction()" class="btn-secondary" style="background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.5);color:#f87171">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Reset Session & Refresh QR
       </button>
@@ -514,12 +550,12 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         Alternative: Pairing Code
       </h3>
-      <p style="color:#94a3b8;margin:8px 0 18px 0">Enter phone number with country code (e.g. 2348012345678)</p>
-      <div style="display:flex;gap:12px;max-width:480px;flex-wrap:wrap">
+      <p style="color:#94a3b8;margin:8px 0 20px 0">Enter phone number with country code (e.g. 2348012345678)</p>
+      <div style="display:flex;gap:14px;max-width:500px;flex-wrap:wrap">
         <input type="text" id="pairPhoneNum" class="input-field" placeholder="2348012345678" style="margin:0">
-        <button onclick="requestPairCodeAction()" class="btn-primary" style="width:auto">Get Code</button>
+        <button onclick="requestPairCodeAction()" class="btn-primary" style="width:auto">Get Pairing Code</button>
       </div>
-      <div id="pairOutput" style="margin-top:18px;font-weight:700;font-size:1.1rem;color:#4ade80;display:none"></div>
+      <div id="pairOutput" style="margin-top:20px;font-weight:700;font-size:1.15rem;color:#4ade80;display:none"></div>
     </div>
   </div>
 
@@ -530,7 +566,7 @@ tr:hover td{background:rgba(99,102,241,0.08)}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
         Contact & Access Directory
       </h3>
-      <div style="margin-top:18px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <div style="margin-top:20px;overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table>
           <thead>
             <tr><th>User / JID</th><th>Facts Learned</th><th>Messages Sent</th><th>Last Active</th></tr>
@@ -544,12 +580,12 @@ tr:hover td{background:rgba(99,102,241,0.08)}
   <!-- TAB 6: LOGS -->
   <div id="tab-logs" class="tab-content" style="display:none">
     <div class="card-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <h3>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
           Live Terminal Output Stream
         </h3>
-        <button onclick="copyLogsAction()" class="btn-secondary" style="padding:8px 16px;font-size:0.8rem">Copy Logs</button>
+        <button onclick="copyLogsAction()" class="btn-secondary" style="padding:10px 18px;font-size:0.85rem">Copy Logs</button>
       </div>
       <pre id="rawLogBox" class="terminal-box">Loading terminal output...</pre>
     </div>
@@ -601,7 +637,7 @@ function followAndGenerateKey() {
     .then(function(d) {
       if (d.key) {
         document.getElementById('pwdInput').value = d.key;
-        genBox.innerHTML = '🎉 Passcode: <span style="letter-spacing:3px;font-size:1.3rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key copied into box — click Unlock Panel below!</small>';
+        genBox.innerHTML = '🎉 Passcode: <span style="letter-spacing:3px;font-size:1.35rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key copied into box — click Unlock Control Panel below!</small>';
         showToast('6-digit access key generated');
       }
     });
@@ -653,7 +689,7 @@ function refreshAll() {
   // Status
   fetchAPI('/status').then(function(d) {
     document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('topGreeting').innerHTML = '<img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:38px;height:38px;border-radius:12px;box-shadow:0 0 20px var(--accent-glow)"> Hey, ' + (d.botName || 'Admin') + '.';
+    document.getElementById('topGreeting').innerHTML = '<img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:40px;height:40px;border-radius:14px;box-shadow:0 0 25px var(--accent-glow)"> Hey, ' + (d.botName || 'Admin') + '.';
     
     var badge = document.getElementById('statusBadge');
     if (d.connected) {
@@ -673,14 +709,14 @@ function refreshAll() {
     var mBox = document.getElementById('msgStream');
     mBox.innerHTML = '';
     (d.recentMessages || []).forEach(function(m) {
-      mBox.innerHTML += '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.9rem"><strong style="color:#a5b4fc">' + m.from.substring(0, 16) + ':</strong> ' + m.text + '</div>';
+      mBox.innerHTML += '<div style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.92rem"><strong style="color:#a5b4fc">' + m.from.substring(0, 16) + ':</strong> ' + m.text + '</div>';
     });
 
     // Commands
     var cBox = document.getElementById('cmdStream');
     cBox.innerHTML = '';
     (d.commandLog || []).forEach(function(c) {
-      cBox.innerHTML += '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.9rem"><strong style="color:#38bdf8">!' + c.cmd + '</strong> by ' + c.user.substring(0, 14) + '</div>';
+      cBox.innerHTML += '<div style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:0.92rem"><strong style="color:#38bdf8">!' + c.cmd + '</strong> by ' + c.user.substring(0, 14) + '</div>';
     });
   }).catch(function(){});
 
@@ -727,20 +763,20 @@ function loadFeaturesStatus() {
   fetchAPI('/features').then(function(d) {
     var box = document.getElementById('featureStatusRes');
     if (!box) return;
-    var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">';
+    var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px">';
     var coreFeats = ['schedule', 'proactive', 'ai', 'status', 'viewonce'];
     coreFeats.forEach(function(f) {
       var isDis = (d.disabledFeatures || []).includes(f);
-      html += '<div style="background:#070a1e;padding:18px;border-radius:14px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';
-      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:0.98rem">' + f + '</strong><br><small style="color:#94a3b8">' + (isDis ? '🔴 Disabled' : '🟢 Active') + '</small></div>';
-      html += '<button onclick="toggleFeatureAction(\'' + f + '\', \'' + (isDis ? 'enable' : 'disable') + '\')" class="btn-secondary" style="padding:8px 16px;font-size:0.82rem;width:auto">' + (isDis ? 'Enable' : 'Disable') + '</button>';
+      html += '<div style="background:rgba(6,8,24,0.8);padding:20px;border-radius:18px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">';
+      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:1.05rem">' + f + '</strong><br><small style="color:#94a3b8;font-weight:600">' + (isDis ? '🔴 Disabled' : '🟢 Active') + '</small></div>';
+      html += '<label class="switch"><input type="checkbox" ' + (!isDis ? 'checked' : '') + ' onchange="toggleFeatureAction(\'' + f + '\', \'' + (!isDis ? 'disable' : 'enable') + '\')"><span class="slider"></span></label>';
       html += '</div>';
     });
     html += '</div>';
 
     if (d.disabledCommands && d.disabledCommands.length > 0) {
-      html += '<div style="margin-top:22px;padding:18px;background:#070a1e;border-radius:14px;border:1px solid var(--border)">';
-      html += '<strong style="color:#f87171">Disabled Commands:</strong> ' + d.disabledCommands.join(', ');
+      html += '<div style="margin-top:24px;padding:20px;background:rgba(6,8,24,0.8);border-radius:18px;border:1px solid rgba(239,68,68,0.4)">';
+      html += '<strong style="color:#f87171">Disabled Commands:</strong> ' + d.disabledCommands.map(function(c){ return '<code>!' + c + '</code>'; }).join(', ');
       html += '</div>';
     }
     box.innerHTML = html;
@@ -861,7 +897,7 @@ function runSpeedTest() {
 
   fetchAPI('/speedtest', { method: 'POST' }).then(function(d) {
     btn.disabled = false;
-    btn.textContent = '⚡ Run Real C++ Speed Test';
+    btn.textContent = '⚡ Run Real Socket Speed Test';
     if (d.success) {
       dl.textContent = d.download_mbps + ' Mbps';
       ul.textContent = d.upload_mbps + ' Mbps';
@@ -873,7 +909,7 @@ function runSpeedTest() {
     }
   }).catch(function(e) {
     btn.disabled = false;
-    btn.textContent = '⚡ Run Real C++ Speed Test';
+    btn.textContent = '⚡ Run Real Socket Speed Test';
     alert('Speed test error: ' + e.message);
   });
 }
