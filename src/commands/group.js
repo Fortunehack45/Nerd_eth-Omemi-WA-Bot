@@ -58,13 +58,20 @@ module.exports = {
     var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
     var callerNum = parseJid(senderId || '');
 
-    var botParticipant = participants.find(p => parseJid(p.id) === botNum);
+    var botParticipant = participants.find(p => {
+      var pNum = parseJid(p.id);
+      return pNum && (pNum === botNum || pNum === callerNum);
+    });
+
     var isBotAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
+    var userDisplayNum = botNum || callerNum || 'your phone number';
 
     // ── 1. NUKE / PURGE / MASS KICK ALL ──────────────────────────────────────
     if (['nuke', 'purge', 'kickall', 'removeall', 'clean'].includes(sub)) {
       if (!isBotAdmin) {
-        return sock.sendMessage(sender, { text: '❌ The bot must be a **Group Admin** first to perform mass kick / nuke. Please promote the bot to Group Admin and try again.' });
+        return sock.sendMessage(sender, {
+          text: '❌ *Admin Privileges Required*\n\nSince your WhatsApp number (`' + userDisplayNum + '`) is linked to the bot, **your WhatsApp account must be a Group Admin in this group** for admin actions to work.\n\n👉 **How to fix:** Ask the group creator or another admin to make `' + userDisplayNum + '` a **Group Admin** in this group settings!',
+        });
       }
 
       var confirm = subArgs.includes('--confirm') || subArgs.includes('-y') || subArgs.includes('confirm');
@@ -108,7 +115,9 @@ module.exports = {
     // ── 2. ADMINME (Make caller Group Admin) ──────────────────────────────────
     if (['adminme', 'makeadmin'].includes(sub)) {
       if (!isBotAdmin) {
-        return sock.sendMessage(sender, { text: '❌ The bot must be a **Group Admin** first to promote you. Please promote the bot to Group Admin in this group!' });
+        return sock.sendMessage(sender, {
+          text: '❌ *Admin Privileges Required*\n\nYour account (`' + userDisplayNum + '`) is not a Group Admin in this group yet. In WhatsApp, another admin in the group must promote `' + userDisplayNum + '` to Group Admin first!',
+        });
       }
       var targetJid = parseJid(senderId) + '@s.whatsapp.net';
       try {
@@ -122,7 +131,7 @@ module.exports = {
 
     // ── 3. PROMOTE ────────────────────────────────────────────────────────────
     if (['promote', 'admin'].includes(sub)) {
-      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to promote members.' });
+      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Your WhatsApp account (`' + userDisplayNum + '`) must be a Group Admin in this group first.' });
       var targetJid = getTargetJid(msg, subArgs);
       if (!targetJid) return sock.sendMessage(sender, { text: 'Usage: `!promote @user` or reply to a message' });
 
@@ -137,7 +146,7 @@ module.exports = {
 
     // ── 4. DEMOTE ─────────────────────────────────────────────────────────────
     if (['demote', 'unadmin'].includes(sub)) {
-      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to demote members.' });
+      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Your WhatsApp account (`' + userDisplayNum + '`) must be a Group Admin in this group first.' });
       var targetJid = getTargetJid(msg, subArgs);
       if (!targetJid) return sock.sendMessage(sender, { text: 'Usage: `!demote @user` or reply to a message' });
 
@@ -181,9 +190,9 @@ module.exports = {
 
     // ── 7. LINK ───────────────────────────────────────────────────────────────
     if (['link', 'invitelink'].includes(sub)) {
-      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Bot must be a group admin to get invite link.' });
+      if (!isBotAdmin) return sock.sendMessage(sender, { text: '❌ Your WhatsApp account (`' + userDisplayNum + '`) must be a Group Admin in this group to get invite link.' });
       try {
-        var code = await sock.groupInviteCode(sender);
+        var code = me = await sock.groupInviteCode(sender);
         await sock.sendMessage(sender, { text: '🔗 *Group Invite Link:*\nhttps://chat.whatsapp.com/' + code });
       } catch (e) {
         await sock.sendMessage(sender, { text: '❌ Link failed: ' + e.message });
