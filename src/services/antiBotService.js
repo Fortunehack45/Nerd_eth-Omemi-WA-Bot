@@ -1,0 +1,170 @@
+const path = require('path');
+const fs = require('fs');
+const { loadJson, saveJson, parseJid } = require('../utils/helpers');
+const config = require('../../config');
+
+const STORAGE_FILE = path.join(__dirname, '..', '..', 'storage', 'antibot.json');
+
+function ensureDirs() {
+  const dir = path.dirname(STORAGE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function getAntiBotData() {
+  ensureDirs();
+  return loadJson(STORAGE_FILE, {
+    enabled: true,
+    blockedBots: [],
+    logs: [],
+  });
+}
+
+function saveAntiBotData(data) {
+  saveJson(STORAGE_FILE, data);
+}
+
+function isAntiBotEnabled() {
+  var data = getAntiBotData();
+  return data.enabled !== false;
+}
+
+function setAntiBotEnabled(enabled) {
+  var data = getAntiBotData();
+  data.enabled = !!enabled;
+  saveAntiBotData(data);
+  return data.enabled;
+}
+
+function addBlockedBot(numberOrJid) {
+  var clean = parseJid(numberOrJid);
+  if (!clean) return { success: false, error: 'Invalid phone number or JID' };
+  var data = getAntiBotData();
+  if (!data.blockedBots) data.blockedBots = [];
+  if (!data.blockedBots.includes(clean)) {
+    data.blockedBots.push(clean);
+    saveAntiBotData(data);
+  }
+  return { success: true, jid: clean, total: data.blockedBots.length };
+}
+
+function removeBlockedBot(numberOrJid) {
+  var clean = parseJid(numberOrJid);
+  if (!clean) return { success: false, error: 'Invalid phone number or JID' };
+  var data = getAntiBotData();
+  data.blockedBots = (data.blockedBots || []).filter(b => b !== clean);
+  saveAntiBotData(data);
+  return { success: true, jid: clean, total: data.blockedBots.length };
+}
+
+function getBlockedBots() {
+  var data = getAntiBotData();
+  return data.blockedBots || [];
+}
+
+// Bot signature patterns
+const BOT_ID_PATTERNS = [
+  /^BAE5/i,  // Baileys default ID prefix
+  /^3EB0/i,  // Baileys multi-device ID prefix
+  /^3EB/i,   // WhatsApp Web / Bot API prefix
+  /^BOT/i,   // Popular bot frameworks
+  /^AZ/i,    // Auto-responder bots
+];
+
+const BOT_TEXT_SIGNATURES = [
+  /powered by.*bot/i,
+  /whatsapp bot/i,
+  /\[bot\]/i,
+  /🤖 bot response/i,
+  /auto-reply/i,
+  /type !help for menu/i,
+  /command list:/i,
+  /created by @/i,
+  /md bot/i,
+];
+
+function isBotMessage(msg) {
+  if (!msg || !msg.key) return { isBot: false };
+  if (msg.key.fromMe) return { isBot: false }; // Never block own bot messages
+
+  var senderJid = msg.key.participant || msg.key.remoteJid || '';
+  var senderNum = parseJid(senderJid);
+  var data = getAntiBotData();
+
+  // 1. Check if sender is in manually blocked bot list
+  if (data.blockedBots && data.blockedBots.includes(senderNum)) {
+    return { isBot: true, reason: 'Sender is listed in blocked bots directory (' + senderNum + ')' };
+  }
+
+  // Check if sender is owner or admin (owners & admins are never blocked as bots)
+  var isOwner = (config.admins || []).includes(senderNum);
+  if (isOwner) return { isBot: false };
+
+  var msgId = msg.key.id || '';
+  var messageText = msg.message?.conversation
+    || msg.message?.extendedTextMessage?.text
+    || msg.message?.imageMessage?.caption
+    || msg.message?.videoMessage?.caption
+    || '';
+
+  // 2. Check message ID signature (e.g. Baileys / automated bot prefixes)
+  for (var i = 0; i < BOT_ID_PATTERNS.length; i++) {
+    if (BOT_ID_PATTERNS[i].test(msgId)) {
+      // Auto-add to blocked bots database to prevent future spam
+      addBlockedBot(senderNum);
+      return { isBot: true, reason: 'Automated Bot ID pattern detected (' + msgId.substring(0, 8) + ')' };
+    }
+  }
+
+  // 3. Check for bot text signatures in message body
+  if (messageText) {
+    for (var j = 0; j < BOT_TEXT_SIGNATURES.length; j++) {
+      if (BOT_TEXT_SIGNATURES[j].test(messageText)) {
+        addBlockedBot(senderNum);
+        return { isBot: true, reason: 'Bot text signature detected in message' };
+      }
+    }
+  }
+
+  return { isBot: false };
+}
+
+function logAntiBotEvent(msg, reason) {
+  try {
+    var data = getAntiBotData();
+    var sender = msg.key.participant || msg.key.remoteJid;
+    var senderName = msg.pushName || parseJid(sender);
+    if (!data.logs) data.logs = [];
+
+    data.logs.unshift({
+      timestamp: Date.now(),
+      sender: sender,
+      senderName: senderName,
+      reason: reason,
+      chat: msg.key.remoteJid,
+    });
+
+    if (data.logs.length > 200) data.logs = data.logs.slice(0, 200);
+    saveAntiBotData(data);
+  } catch (e) {}
+}
+
+function getAntiBotStats() {
+  var data = getAntiBotData();
+  return {
+    enabled: data.enabled !== false,
+    totalBlocked: (data.blockedBots || []).length,
+    blockedBots: data.blockedBots || [],
+    recentLogs: (data.logs || []).slice(0, 20),
+  };
+}
+
+module.exports = {
+  isAntiBotEnabled,
+  setAntiBotEnabled,
+  addBlockedBot,
+  removeBlockedBot,
+  getBlockedBots,
+  isBotMessage,
+  logAntiBotEvent,
+  getAntiBotStats,
+};

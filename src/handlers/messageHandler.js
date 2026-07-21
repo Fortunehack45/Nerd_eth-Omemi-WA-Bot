@@ -3,6 +3,7 @@ const { handleCommand } = require('./commandHandler');
 const { getUser, updateUser, addToConversation } = require('../services/memoryService');
 const { detectViewOnce, saveViewOnce } = require('../services/viewOnceService');
 const { isFeatureDisabled } = require('../services/featureService');
+const { isAntiBotEnabled, isBotMessage, logAntiBotEvent } = require('../services/antiBotService');
 const { logMessage } = require('../../server');
 
 function isCommand(text) {
@@ -17,6 +18,16 @@ async function handleMessage(sock, msg) {
     || msg.message?.imageMessage?.caption
     || msg.message?.videoMessage?.caption
     || '';
+
+  // 0. Anti-Bot Engine: Detect & Block requests from other automated bots (DMs & Groups)
+  if (isAntiBotEnabled() && !isFeatureDisabled('antibot') && !msg.key?.fromMe) {
+    var botCheck = isBotMessage(msg);
+    if (botCheck.isBot) {
+      logAntiBotEvent(msg, botCheck.reason);
+      console.log('[AntiBot] Blocked bot request from: ' + (msg.key.participant || sender) + ' | Reason: ' + botCheck.reason);
+      return; // Drop / Ignore the request completely!
+    }
+  }
 
   // 1. Auto-save view-once media silently if enabled
   if (detectViewOnce(msg) && config.viewOnce.enabled && !isFeatureDisabled('viewonce')) {
