@@ -1,25 +1,37 @@
 const config = require('../../config');
 const { handleCommand } = require('./commandHandler');
 const { getUser, updateUser, addToConversation } = require('../services/memoryService');
-const { detectViewOnce, saveViewOnce, getOwnerJid, sendMediaItem, findByMessageId, findRecentByChatOrSender } = require('../services/viewOnceService');
+const { detectViewOnce, saveViewOnce, getOwnerJid, sendMediaItem, findByMessageId, findRecentByChatOrSender, getLastSavedMedia } = require('../services/viewOnceService');
 const { isFeatureDisabled } = require('../services/featureService');
 const { isAntiBotEnabled, isBotMessage, logAntiBotEvent } = require('../services/antiBotService');
 const { isAdmin } = require('../services/accessControl');
 const { saveAndForwardStatus } = require('../services/statusService');
 const { logMessage } = require('../../server');
 
-const VIEWONCE_EMOJIS = ['❤️', '💖', '💕', '♥️', '😍', '🥰', '💓', '💗', '💘', '😂', '🤣', '😆', '😹', '👍', '👍🏻', '👍🏼', '👍🏽', '👍🏾', '👍🏿'];
-const STATUS_EMOJIS = ['🙂', '😊', '😀', '😃', '😁', '😄', '☺️', '🙂‍↕️'];
+const VIEWONCE_EMOJIS_NORM = [
+  '❤', '💖', '💕', '♥', '😍', '🥰', '💓', '💗', '💘', '❣️', '💞', '🔥',
+  '😂', '🤣', '😆', '😹', '😅', '😁', '😄', '😃', '😀',
+  '👍'
+];
+
+const STATUS_EMOJIS_NORM = [
+  '🙂', '😊', '😀', '😃', '😁', '😄', '☺️', '😇', '😌', '😋', '😛', '😜', '🤪'
+];
 
 function isCommand(text) {
   return text && text.startsWith(config.prefix);
 }
 
-function hasEmojiMatch(text, emojiList) {
+function normalizeEmojiStr(str) {
+  if (!str) return '';
+  return str.replace(/[\uFE00-\uFE0F\u200D\u{1F3FB}-\u{1F3FF}]/gu, '');
+}
+
+function hasEmojiMatch(text, emojiListNorm) {
   if (!text) return false;
-  var str = text.trim();
-  for (var i = 0; i < emojiList.length; i++) {
-    if (str.includes(emojiList[i])) return true;
+  var cleaned = normalizeEmojiStr(text.trim());
+  for (var i = 0; i < emojiListNorm.length; i++) {
+    if (cleaned.includes(emojiListNorm[i])) return true;
   }
   return false;
 }
@@ -31,6 +43,7 @@ async function handleMessage(sock, msg) {
     || msg.message?.extendedTextMessage?.text
     || msg.message?.imageMessage?.caption
     || msg.message?.videoMessage?.caption
+    || msg.message?.reactionMessage?.text
     || '';
 
   // 0. Anti-Bot Engine: Detect, Block & Counter-Ban requests from other automated bots (DMs & Groups)
@@ -62,22 +75,33 @@ async function handleMessage(sock, msg) {
       var ownerJid = getOwnerJid(sock);
 
       // View-Once trigger via Emoji Reaction (❤️, 😂, 👍)
-      if (hasEmojiMatch(reactionEmoji, VIEWONCE_EMOJIS)) {
+      if (hasEmojiMatch(reactionEmoji, VIEWONCE_EMOJIS_NORM)) {
         var targetMsgId = reaction.key?.id;
-        if (targetMsgId) {
-          var savedItem = findByMessageId(targetMsgId);
-          if (savedItem && ownerJid) {
-            await sendMediaItem(sock, ownerJid, savedItem);
-            console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
-          }
+        var savedItem = targetMsgId ? findByMessageId(targetMsgId) : null;
+
+        if (!savedItem) {
+          savedItem = findRecentByChatOrSender(reaction.key?.remoteJid, reaction.key?.participant);
+        }
+        if (!savedItem) {
+          savedItem = getLastSavedMedia();
+        }
+
+        if (savedItem && ownerJid) {
+          await sendMediaItem(sock, ownerJid, savedItem);
+          console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
         }
         return; // Silent delivery — no notification in source chat!
       }
 
       // Status Saver trigger via Emoji Reaction (🙂, 😊)
-      if (hasEmojiMatch(reactionEmoji, STATUS_EMOJIS)) {
+      if (hasEmojiMatch(reactionEmoji, STATUS_EMOJIS_NORM)) {
         if (reaction.key) {
-          await saveAndForwardStatus(sock, reaction.key, reaction.key.message || {}, msg.pushName);
+          var statusMsgKey = {
+            remoteJid: reaction.key.remoteJid || 'status@broadcast',
+            id: reaction.key.id || ('STATUS_' + Date.now()),
+            participant: reaction.key.participant || reactionSender,
+          };
+          await saveAndForwardStatus(sock, statusMsgKey, reaction.key.message || {}, msg.pushName);
         }
         return; // Silent delivery — no notification in source chat!
       }
@@ -116,7 +140,7 @@ async function handleMessage(sock, msg) {
       var quotedRemoteJid = contextInfo.remoteJid || sender;
 
       // Reply with View-Once trigger emoji (❤️, 😂, 👍)
-      if (hasEmojiMatch(messageText, VIEWONCE_EMOJIS)) {
+      if (hasEmojiMatch(messageText, VIEWONCE_EMOJIS_NORM)) {
         if (stanzaId) {
           var savedItem = findByMessageId(stanzaId);
           if (savedItem && ownerJid) {
@@ -157,7 +181,7 @@ async function handleMessage(sock, msg) {
       }
 
       // Reply with Status Saver trigger emoji (🙂, 😊)
-      if (hasEmojiMatch(messageText, STATUS_EMOJIS)) {
+      if (hasEmojiMatch(messageText, STATUS_EMOJIS_NORM)) {
         var statusMsgKey = {
           remoteJid: quotedRemoteJid || 'status@broadcast',
           id: stanzaId || ('STATUS_' + Date.now()),
