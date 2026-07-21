@@ -1,12 +1,38 @@
 var fs = require('fs');
-var { listSavedMedia, getSavedMedia, getLastSavedMedia, deleteSavedMedia, getStorageStats } = require('../services/viewOnceService');
+var {
+  listSavedMedia,
+  getSavedMedia,
+  getLastSavedMedia,
+  deleteSavedMedia,
+  getStorageStats,
+  saveViewOnce,
+  detectViewOnce,
+  getViewOnceContent,
+} = require('../services/viewOnceService');
 
-var HELP = '*📸 View-Once Media*\n\nView, list, and manage saved view-once media (images, videos, voice notes).\n\n*Usage:* `!viewonce [show|list|delete|stats] [id]`\n\n*Subcommands:*\n  `show [id]`         View the last saved media or a specific ID\n  `list`              List all saved media\n  `delete <id>`       Delete a saved media\n  `stats`             Show storage statistics\n\n*Flags:*\n  `--type`, `-t` image|video|audio  Filter by type\n  `--limit`, `-l` N                 Number of results (default: 20)\n\n*Examples:*\n  `!viewonce`                   (shows most recent view-once)\n  `!viewonce show`              (shows most recent view-once)\n  `!viewonce show 1712345678000` (shows specific ID)\n  `!viewonce list`              (lists all saved media)\n  `!viewonce stats`             (shows storage usage)';
+var HELP = [
+  '*📸 View-Once Media Manager* (Admin Only)',
+  '',
+  'Automatically saves all view-once media sent in any chat.',
+  'Retrieve by replying to any view-once OR using the commands below.',
+  '',
+  '*Usage:*',
+  '  `!viewonce show`           → Shows the most recently saved view-once',
+  '  `!viewonce show <id>`      → Shows a specific saved view-once by ID',
+  '  `!viewonce list`           → Lists all saved view-once media',
+  '  `!viewonce delete <id>`    → Deletes a saved view-once by ID',
+  '  `!viewonce stats`          → Shows storage usage & statistics',
+  '',
+  '*💡 Quick Tip:*',
+  '  Reply to any view-once message with `!viewonce show` to instantly retrieve it.',
+  '',
+  '*Aliases:* `!vo`, `!saved`',
+].join('\n');
 
 module.exports = {
   name: 'viewonce',
   alias: ['vo', 'saved'],
-  description: 'Manage saved view-once media (admin only)',
+  description: 'Manage and retrieve saved view-once media (admin only)',
   usage: '!viewonce [show|list|delete|stats] [id]',
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
@@ -30,6 +56,7 @@ module.exports = {
     }
 
     switch (sub) {
+      // ── LIST ─────────────────────────────────────────────────────────────────
       case 'list':
       case 'ls':
       case 'all': {
@@ -37,111 +64,212 @@ module.exports = {
         var limit = flags.limit || 20;
         var items = listSavedMedia(limit, type);
         if (items.length === 0) {
-          return sock.sendMessage(sender, { text: 'No saved view-once media' + (type ? ' of type "' + type + '"' : '') + '.' });
+          return sock.sendMessage(sender, {
+            text: '📂 No saved view-once media' + (type ? ' of type "' + type + '"' : '') + '.\n\nView-once media is automatically saved when someone sends it in any chat.',
+          });
         }
-        var text = '*📸 Saved View-Once Media*\n';
-        if (type) text += ' (filtered: ' + type + ')';
-        text += '\n\n';
-        items.forEach(function(item) {
+        var text = '*📸 Saved View-Once Media (' + items.length + ' items)*\n\n';
+        items.forEach(function(item, idx) {
           var date = new Date(item.timestamp).toLocaleString();
-          var size = item.size > 1024 * 1024 ? (item.size / 1024 / 1024).toFixed(1) + 'MB' : (item.size / 1024).toFixed(1) + 'KB';
-          text += '▸ *ID:* `' + item.id + '`\n';
-          text += '   Type: ' + item.mediaType + ' | Size: ' + size + '\n';
-          text += '   From: ' + item.senderName + ' | ' + date + '\n';
-          text += '   Use: `!viewonce show ' + item.id + '`\n\n';
+          var sizeStr = item.size > 1024 * 1024
+            ? (item.size / 1024 / 1024).toFixed(1) + ' MB'
+            : (item.size / 1024).toFixed(1) + ' KB';
+          text += (idx + 1) + '. *' + item.mediaType.toUpperCase() + '* — from ' + item.senderName + '\n';
+          text += '   🆔 `' + item.id + '` | 📦 ' + sizeStr + ' | 🕐 ' + date + '\n';
+          text += '   👉 `!viewonce show ' + item.id + '`\n\n';
         });
-        text += 'Total shown: ' + items.length;
         await sock.sendMessage(sender, { text: text.substring(0, 4000) });
         break;
       }
 
+      // ── SHOW / GET (default) ─────────────────────────────────────────────────
       case 'show':
       case 'get':
       case 'view':
       case 'last':
-      case 'latest': {
+      case 'latest':
+      case 'retrieve': {
+        // ── CASE A: Admin replied to a view-once message — save & show it NOW ──
+        var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        var quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+        var stanzaId = msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
+
+        if (quotedMsg) {
+          // Reconstruct the quoted message as a full Baileys message object
+          var reconstructed = {
+            key: {
+              remoteJid: sender,
+              fromMe: false,
+              id: stanzaId || ('QUOTED_' + Date.now()),
+              participant: quotedParticipant || '',
+            },
+            message: quotedMsg,
+            pushName: msg.message?.extendedTextMessage?.contextInfo?.pushName || 'Unknown',
+          };
+
+          // Check if the quoted message is a view-once
+          var isVO = detectViewOnce(reconstructed);
+          if (isVO) {
+            await sock.sendMessage(sender, { text: '📥 Detected view-once in reply — downloading now...' });
+            try {
+              var saveResult = await saveViewOnce(sock, reconstructed);
+              if (saveResult && saveResult.success) {
+                // Now retrieve and send
+                var savedItem = getSavedMedia(saveResult.id);
+                if (savedItem && fs.existsSync(savedItem.filePath)) {
+                  await sendMediaItem(sock, sender, savedItem);
+                  return;
+                }
+              } else if (saveResult && saveResult.error) {
+                // Fall through to try direct buffer extraction from quoted message
+              }
+            } catch (e) {}
+
+            // Fallback: try direct buffer extraction from quoted message content
+            var extracted = getViewOnceContent(reconstructed);
+            if (extracted) {
+              try {
+                var buf = await sock.downloadMediaMessage({ key: reconstructed.key, message: extracted.inner });
+                if (buf && buf.length > 0) {
+                  var mtype = extracted.innerType.replace('Message', '').toLowerCase();
+                  var caption = '*📸 View-Once Media (directly retrieved)*\n▸ From: ' + (quotedParticipant || 'Unknown') + '\n▸ Decrypted: ' + new Date().toLocaleString();
+                  await sendBuffer(sock, sender, buf, mtype, caption);
+                  return;
+                }
+              } catch (e2) {}
+            }
+
+            // Try a completely different approach - send the quoted msg raw
+            try {
+              var innerContent = getViewOnceContent(reconstructed);
+              if (innerContent) {
+                var fallbackBuf = await sock.downloadMediaMessage(reconstructed);
+                if (fallbackBuf && fallbackBuf.length > 0) {
+                  var fallbackType = innerContent.innerType.replace('Message', '').toLowerCase();
+                  await sendBuffer(sock, sender, fallbackBuf, fallbackType, '📸 View-Once Media retrieved from reply');
+                  return;
+                }
+              }
+            } catch (e3) {}
+
+            return sock.sendMessage(sender, {
+              text: '⚠️ Could not retrieve view-once from reply.\n\nThe media may have expired from WhatsApp servers, or the view-once was already opened.\n\n💡 Bot auto-saves view-once media as soon as it arrives. Use `!viewonce list` to see all saved view-once media.',
+            });
+          }
+
+          // If quoted msg is NOT view-once, try treating it as if the ID is provided
+        }
+
+        // ── CASE B: No reply — show latest saved or a specific ID ──
         var id = rest[0];
         var item = null;
 
         if (!id || id.toLowerCase() === 'last' || id.toLowerCase() === 'latest') {
           item = getLastSavedMedia();
           if (!item) {
-            return sock.sendMessage(sender, { text: '⚠️ No saved view-once media found.\n\n' + HELP });
+            return sock.sendMessage(sender, {
+              text: '⚠️ No saved view-once media found.\n\n*How to use:*\n1️⃣ Bot automatically saves view-once media when anyone sends it in any chat.\n2️⃣ Reply to any view-once message with `!viewonce show`\n3️⃣ Or use `!viewonce list` to see all previously saved media.',
+            });
           }
         } else {
           item = getSavedMedia(id);
           if (!item) {
-            return sock.sendMessage(sender, { text: '⚠️ Media with ID "' + id + '" not found. Use `!viewonce list` to view saved IDs.' });
+            return sock.sendMessage(sender, {
+              text: '⚠️ Media ID "' + id + '" not found.\n\nUse `!viewonce list` to see all saved IDs.',
+            });
           }
         }
 
         if (!fs.existsSync(item.filePath)) {
-          return sock.sendMessage(sender, { text: '⚠️ File no longer exists on disk.' });
+          return sock.sendMessage(sender, {
+            text: '⚠️ File for ID `' + item.id + '` no longer exists on disk.\n\nUse `!viewonce delete ' + item.id + '` to clean up the entry.',
+          });
         }
 
-        var buffer = fs.readFileSync(item.filePath);
-        var captionText = '📸 *View-Once Media*\n▸ From: ' + item.senderName + '\n▸ ID: `' + item.id + '`\n▸ Saved: ' + new Date(item.timestamp).toLocaleString();
-        if (item.caption) {
-          captionText += '\n▸ Caption: ' + item.caption;
-        }
-
-        var msgOptions = { caption: captionText };
-
-        try {
-          if (item.mediaType === 'image') {
-            msgOptions.image = buffer;
-            await sock.sendMessage(sender, msgOptions);
-          } else if (item.mediaType === 'video') {
-            msgOptions.video = buffer;
-            await sock.sendMessage(sender, msgOptions);
-          } else if (item.mediaType === 'audio' || item.mediaType === 'voice') {
-            await sock.sendMessage(sender, {
-              audio: buffer,
-              mimetype: 'audio/ogg; codecs=opus',
-              ptt: (item.mediaType === 'voice'),
-            });
-            await sock.sendMessage(sender, { text: captionText });
-          } else if (item.mediaType === 'document') {
-            msgOptions.document = buffer;
-            msgOptions.fileName = item.fileName || 'document.bin';
-            await sock.sendMessage(sender, msgOptions);
-          } else {
-            await sock.sendMessage(sender, { text: 'Unknown media type: ' + item.mediaType + '\nFile: ' + item.filePath });
-          }
-        } catch (err) {
-          await sock.sendMessage(sender, { text: 'Error sending media: ' + err.message });
-        }
+        await sendMediaItem(sock, sender, item);
         break;
       }
 
+      // ── DELETE ───────────────────────────────────────────────────────────────
       case 'delete':
       case 'del':
       case 'remove': {
-        var id = rest[0];
-        if (!id) return sock.sendMessage(sender, { text: 'Usage: `!viewonce delete <id>`' });
-        var result = deleteSavedMedia(id);
-        if (result.error) return sock.sendMessage(sender, { text: 'Error: ' + result.error });
-        await sock.sendMessage(sender, { text: '✅ View-once media #' + id + ' deleted.' });
+        var delId = rest[0];
+        if (!delId) return sock.sendMessage(sender, { text: 'Usage: `!viewonce delete <id>`\n\nGet IDs from `!viewonce list`' });
+        var result = deleteSavedMedia(delId);
+        if (result.error) return sock.sendMessage(sender, { text: '❌ Error: ' + result.error });
+        await sock.sendMessage(sender, { text: '✅ View-once media `' + delId + '` has been deleted.' });
         break;
       }
 
+      // ── STATS ────────────────────────────────────────────────────────────────
       case 'stats':
-      case 'storage': {
+      case 'storage':
+      case 'info': {
         var stats = getStorageStats();
-        var text = '*📊 View-Once Storage Stats*\n\n';
-        text += 'Total files: ' + stats.total + '\n';
-        text += 'Total size: ' + (stats.totalSize > 1024 * 1024 * 1024 ? (stats.totalSize / 1024 / 1024 / 1024).toFixed(2) + ' GB' : stats.totalSize > 1024 * 1024 ? (stats.totalSize / 1024 / 1024).toFixed(1) + ' MB' : (stats.totalSize / 1024).toFixed(1) + ' KB') + '\n\n';
-        text += '*By type:*\n';
+        var totalSizeStr = stats.totalSize > 1024 * 1024 * 1024
+          ? (stats.totalSize / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+          : stats.totalSize > 1024 * 1024
+            ? (stats.totalSize / 1024 / 1024).toFixed(1) + ' MB'
+            : (stats.totalSize / 1024).toFixed(1) + ' KB';
+        var statText = '*📊 View-Once Storage Statistics*\n\n';
+        statText += '📁 Total files saved: *' + stats.total + '*\n';
+        statText += '💾 Total storage used: *' + totalSizeStr + '*\n\n';
+        statText += '*By media type:*\n';
         for (var t in stats.byType) {
-          text += '  ▸ ' + t + ': ' + stats.byType[t] + '\n';
+          var icons = { image: '🖼️', video: '🎬', audio: '🎵', voice: '🎤', document: '📄', unknown: '❓' };
+          statText += '  ' + (icons[t] || '▸') + ' ' + t + ': ' + stats.byType[t] + ' file(s)\n';
         }
-        text += '\n_Use `!viewonce list` to view files._';
-        await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+        statText += '\n_Use `!viewonce list` to browse all files._';
+        await sock.sendMessage(sender, { text: statText });
         break;
       }
 
       default:
-        await sock.sendMessage(sender, { text: 'Unknown: `' + sub + '`. Use `!viewonce --help` for commands.' });
+        await sock.sendMessage(sender, { text: '❓ Unknown subcommand: `' + sub + '`\n\n' + HELP });
     }
   },
 };
+
+// ─── Helper: Send a saved media item object ────────────────────────────────
+async function sendMediaItem(sock, jid, item) {
+  var buffer = fs.readFileSync(item.filePath);
+  var caption = [
+    '📸 *View-Once Media Revealed*',
+    '▸ From: ' + item.senderName,
+    '▸ Type: ' + item.mediaType.toUpperCase(),
+    '▸ ID: `' + item.id + '`',
+    '▸ Saved: ' + new Date(item.timestamp).toLocaleString(),
+    item.caption ? '▸ Caption: ' + item.caption : '',
+  ].filter(Boolean).join('\n');
+
+  await sendBuffer(sock, jid, buffer, item.mediaType, caption, item);
+}
+
+// ─── Helper: Send a raw buffer as media ───────────────────────────────────
+async function sendBuffer(sock, jid, buffer, mediaType, caption, item) {
+  try {
+    if (mediaType === 'image') {
+      await sock.sendMessage(jid, { image: buffer, caption: caption });
+    } else if (mediaType === 'video') {
+      await sock.sendMessage(jid, { video: buffer, caption: caption });
+    } else if (mediaType === 'audio' || mediaType === 'voice') {
+      await sock.sendMessage(jid, {
+        audio: buffer,
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: (mediaType === 'voice'),
+      });
+      await sock.sendMessage(jid, { text: caption });
+    } else if (mediaType === 'document') {
+      await sock.sendMessage(jid, {
+        document: buffer,
+        fileName: (item && item.fileName) || 'document.bin',
+        caption: caption,
+      });
+    } else {
+      await sock.sendMessage(jid, { text: caption + '\n\nFile path: ' + ((item && item.filePath) || 'unknown') });
+    }
+  } catch (err) {
+    await sock.sendMessage(jid, { text: '❌ Failed to send media: ' + err.message });
+  }
+}

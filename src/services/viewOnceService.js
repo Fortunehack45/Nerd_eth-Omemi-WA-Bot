@@ -174,6 +174,7 @@ function getStorageStats() {
 module.exports = {
   detectViewOnce,
   saveViewOnce,
+  getViewOnceContent,
   listSavedMedia,
   getSavedMedia,
   getLastSavedMedia,
