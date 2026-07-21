@@ -3,11 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../../config');
 
+const { execFile } = require('child_process');
+
 // Try loading ytdl
 var ytdl = null;
 try { ytdl = require('@distube/ytdl-core'); } catch (e) {
   try { ytdl = require('ytdl-core'); } catch (e2) {}
 }
+
+var ffmpegPath = null;
+try { ffmpegPath = require('ffmpeg-static'); } catch (e) {}
 
 var ytSearch = null;
 try { ytSearch = require('yt-search'); } catch (e) {}
@@ -71,6 +76,24 @@ function log(msg) {
   console.log('[DownloadService] ' + msg);
 }
 
+function runYtDlp(args, timeout) {
+  return new Promise(function(resolve) {
+    var fullArgs = ['-m', 'yt_dlp'];
+    if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+      fullArgs.push('--ffmpeg-location', ffmpegPath);
+    }
+    fullArgs.push.apply(fullArgs, args);
+
+    execFile('python', fullArgs, { timeout: timeout || 180000, maxBuffer: 10 * 1024 * 1024 }, function(err, stdout, stderr) {
+      if (err) {
+        log('yt-dlp log: ' + (err.message || stderr || '').substring(0, 150));
+        return resolve({ success: false, error: err.message || stderr, stdout: stdout, stderr: stderr });
+      }
+      resolve({ success: true, stdout: stdout, stderr: stderr });
+    });
+  });
+}
+
 // ─── Cobalt API Helper (v10 format) ──────────────────────────────────────────
 // Tries multiple community-hosted Cobalt instances for reliability
 
@@ -114,23 +137,15 @@ async function cobaltRequest(url, isAudioOnly, customOpts) {
       var data = resp.data;
       if (!data) continue;
 
-      // Cobalt v10 returns { status: "tunnel"/"redirect", url: "..." }
-      // or { status: "picker", picker: [...] }
       if (data.url) {
         return { success: true, url: data.url, filename: data.filename || null };
       }
 
-      // Cobalt v10 picker format (multiple media items, e.g. Instagram carousel)
       if (data.picker && data.picker.length > 0) {
         var picked = data.picker[0];
         if (picked.url) {
           return { success: true, url: picked.url, filename: picked.filename || null };
         }
-      }
-
-      // Legacy format fallback
-      if (data.url) {
-        return { success: true, url: data.url };
       }
 
     } catch (e) {
@@ -147,38 +162,74 @@ async function cobaltRequest(url, isAudioOnly, customOpts) {
 
 async function getYouTubeAudio(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'yt_audio_' + Date.now() + '.mp3');
+  var ts = Date.now();
+  var outPattern = path.join(tempDir, 'yt_audio_' + ts + '.%(ext)s');
+  var expectedMp3 = path.join(tempDir, 'yt_audio_' + ts + '.mp3');
   var title = 'YouTube Audio';
 
-  // Get title early via ytdl if available
-  if (ytdl) {
+  if (ytSearch) {
     try {
-      var info0 = await ytdl.getInfo(url);
-      title = (info0.videoDetails.title || title).replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
+      var info0 = await ytSearch({ url });
+      if (info0 && info0.title) title = info0.title;
+      else if (info0 && info0.videos && info0.videos[0]) title = info0.videos[0].title;
     } catch (e) {}
   }
 
-  // API 1: Cobalt (most reliable for YouTube)
+  // Engine 1: Python yt-dlp (fast, reliable, formats automatically)
+  try {
+    log('YT Audio — trying yt-dlp...');
+    var res = await runYtDlp([
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
+      '-o', outPattern,
+      '--no-playlist',
+      '--no-warnings',
+      url
+    ], 180000);
+
+    if (fs.existsSync(expectedMp3)) {
+      var st0 = fs.statSync(expectedMp3);
+      if (st0.size > 5000) {
+        log('YT Audio — yt-dlp success (' + (st0.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: expectedMp3, title: title, size: st0.size };
+      }
+    }
+
+    var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_audio_' + ts); });
+    if (files.length > 0) {
+      var fp0 = path.join(tempDir, files[0]);
+      var st1 = fs.statSync(fp0);
+      if (st1.size > 5000) {
+        log('YT Audio — yt-dlp fallback file success (' + (st1.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: fp0, title: title, size: st1.size };
+      }
+    }
+  } catch (e) { log('YT Audio yt-dlp fail: ' + e.message); }
+
+  // Engine 2: Cobalt
   try {
     log('YT Audio — trying Cobalt...');
     var cobalt = await cobaltRequest(url, true);
     if (cobalt.success && cobalt.url) {
-      var st1 = await downloadStream(cobalt.url, fp);
+      var fpCob = path.join(tempDir, 'yt_cobalt_' + ts + '.mp3');
+      var st1 = await downloadStream(cobalt.url, fpCob);
       if (st1.size > 10000) {
         log('YT Audio — Cobalt success (' + (st1.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: title, size: st1.size };
+        return { success: true, filePath: fpCob, title: title, size: st1.size };
       }
     }
   } catch (e) { log('YT Audio Cobalt fail: ' + e.message); }
 
-  // API 2: @distube/ytdl-core direct stream
+  // Engine 3: ytdl-core stream fallback
   if (ytdl) {
     try {
       log('YT Audio — trying ytdl-core stream...');
+      var fpCore = path.join(tempDir, 'yt_core_' + ts + '.mp3');
       var info4 = await ytdl.getInfo(url);
       title = (info4.videoDetails.title || title).replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
       var stream4 = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
-      var writer4 = fs.createWriteStream(fp);
+      var writer4 = fs.createWriteStream(fpCore);
       await new Promise(function(resolve, reject) {
         stream4.pipe(writer4);
         writer4.on('finish', resolve);
@@ -186,141 +237,79 @@ async function getYouTubeAudio(url) {
         stream4.on('error', reject);
         setTimeout(function() { reject(new Error('ytdl-core timeout')); }, 180000);
       });
-      var st4 = fs.statSync(fp);
+      var st4 = fs.statSync(fpCore);
       if (st4.size > 10000) {
         log('YT Audio — ytdl-core success (' + (st4.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: title, size: st4.size };
+        return { success: true, filePath: fpCore, title: title, size: st4.size };
       }
     } catch (e) { log('YT Audio ytdl-core fail: ' + e.message); }
   }
 
-  // API 3: yt-dlp style via public converter (tomp3.cc)
-  try {
-    log('YT Audio — trying tomp3.cc...');
-    var videoId = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    if (videoId) {
-      var r3 = await axios.post('https://tomp3.cc/api/ajax/search', 'query=' + encodeURIComponent(url) + '&vt=mp3', {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tomp3.cc/' },
-        timeout: 15000
-      });
-      if (r3.data && r3.data.links && r3.data.links.mp3) {
-        var mp3Links = r3.data.links.mp3;
-        var mp3Key = Object.keys(mp3Links)[0];
-        if (mp3Key && mp3Links[mp3Key] && mp3Links[mp3Key].k) {
-          var r3b = await axios.post('https://tomp3.cc/api/ajax/convert', 'vid=' + (r3.data.vid || videoId[1]) + '&k=' + encodeURIComponent(mp3Links[mp3Key].k), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tomp3.cc/' },
-            timeout: 30000
-          });
-          if (r3b.data && r3b.data.dlink) {
-            var st3 = await downloadStream(r3b.data.dlink, fp);
-            if (st3.size > 10000) {
-              log('YT Audio — tomp3 success (' + (st3.size / 1024).toFixed(0) + 'KB)');
-              return { success: true, filePath: fp, title: r3.data.title || title, size: st3.size };
-            }
-          }
-        }
-      }
-    }
-  } catch (e) { log('YT Audio tomp3 fail: ' + e.message); }
-
-  // API 4: savefrom.ca style API
-  try {
-    log('YT Audio — trying mp3download.to...');
-    var r4 = await axios.get('https://api.mp3download.to/v2/converter?url=' + encodeURIComponent(url) + '&format=mp3', {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 20000,
-    });
-    if (r4.data && r4.data.url) {
-      var st5 = await downloadStream(r4.data.url, fp);
-      if (st5.size > 10000) {
-        log('YT Audio — mp3download success (' + (st5.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: r4.data.title || title, size: st5.size };
-      }
-    }
-  } catch (e) { log('YT Audio mp3download fail: ' + e.message); }
-
-  safeUnlink(fp);
-  return { error: 'YouTube audio download failed after trying all servers. The video may be restricted or too long. Please try again later.' };
+  return { error: 'YouTube audio download failed after trying all engines. Please try again later.' };
 }
 
 // ─── YOUTUBE VIDEO ────────────────────────────────────────────────────────────
 
 async function getYouTubeVideo(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'yt_video_' + Date.now() + '.mp4');
+  var ts = Date.now();
+  var outPattern = path.join(tempDir, 'yt_video_' + ts + '.%(ext)s');
+  var expectedMp4 = path.join(tempDir, 'yt_video_' + ts + '.mp4');
   var title = 'YouTube Video';
 
-  // API 1: Cobalt (most reliable)
+  if (ytSearch) {
+    try {
+      var info0 = await ytSearch({ url });
+      if (info0 && info0.title) title = info0.title;
+      else if (info0 && info0.videos && info0.videos[0]) title = info0.videos[0].title;
+    } catch (e) {}
+  }
+
+  // Engine 1: yt-dlp
+  try {
+    log('YT Video — trying yt-dlp...');
+    var res = await runYtDlp([
+      '-f', 'b[ext=mp4]/best[ext=mp4]/best',
+      '-o', outPattern,
+      '--no-playlist',
+      '--no-warnings',
+      url
+    ], 180000);
+
+    if (fs.existsSync(expectedMp4)) {
+      var st0 = fs.statSync(expectedMp4);
+      if (st0.size > 10000) {
+        log('YT Video — yt-dlp success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: expectedMp4, title: title, size: st0.size, quality: 'HD' };
+      }
+    }
+
+    var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_video_' + ts); });
+    if (files.length > 0) {
+      var fp0 = path.join(tempDir, files[0]);
+      var st1 = fs.statSync(fp0);
+      if (st1.size > 10000) {
+        log('YT Video — yt-dlp fallback file success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fp0, title: title, size: st1.size, quality: 'HD' };
+      }
+    }
+  } catch (e) { log('YT Video yt-dlp fail: ' + e.message); }
+
+  // Engine 2: Cobalt
   try {
     log('YT Video — trying Cobalt...');
+    var fpCob = path.join(tempDir, 'yt_video_cobalt_' + ts + '.mp4');
     var cobalt = await cobaltRequest(url, false, { videoQuality: '720' });
     if (cobalt.success && cobalt.url) {
-      var stC = await downloadStream(cobalt.url, fp);
+      var stC = await downloadStream(cobalt.url, fpCob);
       if (stC.size > 50000) {
         log('YT Video — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp, title: title, size: stC.size, quality: '720p' };
+        return { success: true, filePath: fpCob, title: title, size: stC.size, quality: '720p' };
       }
     }
   } catch (e) { log('YT Video Cobalt fail: ' + e.message); }
 
-  // API 2: ytdl-core
-  if (ytdl) {
-    try {
-      log('YT Video — trying ytdl-core...');
-      var info3 = await ytdl.getInfo(url);
-      title = (info3.videoDetails.title || title).replace(/[<>:"/\\|?*]/g, '_').substring(0, 80);
-      var formats = info3.formats.filter(function(f) { return f.hasVideo && f.hasAudio && f.container === 'mp4'; });
-      formats.sort(function(a, b) { return (parseInt(b.height) || 0) - (parseInt(a.height) || 0); });
-      var fmt = formats[0];
-      if (!fmt) fmt = ytdl.chooseFormat(info3.formats, { quality: 'highestvideo' });
-      if (fmt) {
-        var stream3 = ytdl(url, { format: fmt });
-        var writer3 = fs.createWriteStream(fp);
-        await new Promise(function(resolve, reject) {
-          stream3.pipe(writer3);
-          writer3.on('finish', resolve);
-          writer3.on('error', reject);
-          stream3.on('error', reject);
-          setTimeout(function() { reject(new Error('timeout')); }, 300000);
-        });
-        var st3 = fs.statSync(fp);
-        if (st3.size > 50000) {
-          log('YT Video — ytdl-core success (' + (st3.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fp, title: title, size: st3.size, quality: fmt.qualityLabel || 'HD' };
-        }
-      }
-    } catch (e) { log('YT Video ytdl-core fail: ' + e.message); }
-  }
-
-  // API 3: tomp3.cc video
-  try {
-    log('YT Video — trying tomp3.cc (video)...');
-    var r5 = await axios.post('https://tomp3.cc/api/ajax/search', 'query=' + encodeURIComponent(url) + '&vt=mp4', {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tomp3.cc/' },
-      timeout: 15000
-    });
-    if (r5.data && r5.data.links && r5.data.links.mp4) {
-      var mp4Links = r5.data.links.mp4;
-      // Try 720p first, then any available
-      var quality = mp4Links['720p'] || mp4Links['480p'] || mp4Links['360p'] || mp4Links[Object.keys(mp4Links)[0]];
-      if (quality && quality.k) {
-        var r5b = await axios.post('https://tomp3.cc/api/ajax/convert', 'vid=' + (r5.data.vid || '') + '&k=' + encodeURIComponent(quality.k), {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://tomp3.cc/' },
-          timeout: 30000
-        });
-        if (r5b.data && r5b.data.dlink) {
-          var st5v = await downloadStream(r5b.data.dlink, fp);
-          if (st5v.size > 50000) {
-            log('YT Video — tomp3 success (' + (st5v.size / 1024 / 1024).toFixed(1) + 'MB)');
-            return { success: true, filePath: fp, title: r5.data.title || title, size: st5v.size, quality: '720p' };
-          }
-        }
-      }
-    }
-  } catch (e) { log('YT Video tomp3 fail: ' + e.message); }
-
-  safeUnlink(fp);
-  return { error: 'YouTube video download failed. Please try again later.' };
+  return { error: 'YouTube video download failed.' };
 }
 
 // ─── TIKTOK ───────────────────────────────────────────────────────────────────
@@ -640,15 +629,56 @@ async function downloadAudio(url) {
 // ─── YouTube search helper for music command ──────────────────────────────────
 
 async function searchYouTubeAndDownloadAudio(query) {
-  if (!ytSearch) return { error: 'yt-search not installed' };
+  var tempDir = ensureTempDir();
+  var ts = Date.now();
+  var outPattern = path.join(tempDir, 'yt_search_' + ts + '.%(ext)s');
+  var expectedMp3 = path.join(tempDir, 'yt_search_' + ts + '.mp3');
+
+  log('YT Search Audio — trying yt-dlp search for "' + query + '"...');
+
+  var searchQuery = query.startsWith('http') ? query : ('ytsearch1:' + query);
+
   try {
-    var results = await ytSearch({ query: query, pageStart: 1, pageEnd: 2 });
-    var video = results.videos && results.videos[0];
-    if (!video) return { error: 'No YouTube results for: ' + query };
-    return await getYouTubeAudio(video.url);
-  } catch (e) {
-    return { error: 'Search failed: ' + e.message };
+    var res = await runYtDlp([
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
+      '-o', outPattern,
+      '--no-playlist',
+      '--no-warnings',
+      searchQuery
+    ], 180000);
+
+    var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_search_' + ts); });
+    if (files.length > 0) {
+      var fp0 = path.join(tempDir, files[0]);
+      var st0 = fs.statSync(fp0);
+      if (st0.size > 5000) {
+        var title = query;
+        if (ytSearch) {
+          try {
+            var sr = await ytSearch({ query: query, pageStart: 1, pageEnd: 1 });
+            if (sr.videos && sr.videos[0]) title = sr.videos[0].title;
+          } catch (e) {}
+        }
+        log('YT Search Audio — yt-dlp success (' + (st0.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: fp0, title: title, size: st0.size };
+      }
+    }
+  } catch (e) { log('YT Search Audio yt-dlp fail: ' + e.message); }
+
+  if (ytSearch) {
+    try {
+      var results = await ytSearch({ query: query, pageStart: 1, pageEnd: 2 });
+      var video = results.videos && results.videos[0];
+      if (!video) return { error: 'No YouTube results for: ' + query };
+      return await getYouTubeAudio(video.url);
+    } catch (e) {
+      return { error: 'Search failed: ' + e.message };
+    }
   }
+
+  return { error: 'No audio found for query: ' + query };
 }
 
 module.exports = {
