@@ -1,401 +1,166 @@
-# 🤖 Nerd-eth WhatsApp Bot
+# 🤖 Nerd-eth Multi-Purpose WhatsApp AI Bot & Dashboard
 
-A powerful, feature-rich multi-purpose WhatsApp bot built with [Baileys](https://github.com/WhiskeySockets/Baileys). Supports AI chat, HD media downloads, movie finder with direct download links, internet search, auto-status viewing, view-once reveal, and much more.
+![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green.svg)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![WhatsApp](https://img.shields.io/badge/WhatsApp-Multi--Device-25D366.svg)
+![AI](https://img.shields.io/badge/AI-Groq%20%7C%20OpenAI%20%7C%20OpenRouter-indigo.svg)
+![Creator](https://img.shields.io/badge/Created%20By-%40OnNerd__eth-black.svg)
 
----
-
-## ✨ Features
-
-| Category | Features |
-|----------|----------|
-| 🤖 **AI Chat** | Chat with AI (Groq free / OpenAI), persistent memory, persona |
-| 📥 **Downloads** | YouTube HD, TikTok HD, Instagram, Spotify MP3 |
-| 🎬 **Movies** | Search, info, trending, download links (YTS torrent) |
-| 🎵 **Music** | YouTube search/download, lyrics, trending, playlists |
-| 🔍 **Search** | DuckDuckGo / Brave Search / Wikipedia |
-| 👁 **View-Once** | Auto-save & reveal view-once media |
-| 📊 **Status** | Auto-view & auto-like contacts' status updates |
-| 🔐 **Access Control** | Grant/revoke features per user |
-| 👑 **Admin** | Self-commands, API key management, broadcast |
-| 🤖 **Agents** | Multi-step AI agents |
-| 📅 **Scheduler** | Schedule messages |
-| 🧠 **Memory** | Remembers user facts across conversations |
+An enterprise-grade, zero-configuration WhatsApp Automation Bot and Web Control Center built with [@whiskeysockets/baileys](https://github.com/WhiskeySockets/Baileys). Features high-speed AI Chat, HD Media Downloads (YouTube, TikTok, Instagram, Spotify), Movie Finder, Real C++ Network Speed Calculator, View-Once Media Vault, Group Administration Tools (`!nuke`, `!adminme`), and a Mobile-First Glassmorphic Admin Control Panel.
 
 ---
 
-## 🚀 Quick Setup
+## 🌟 Key Highlights & Advantages
 
-### 1. Install Node.js
-Download and install Node.js v18+ from https://nodejs.org
+- ⚡ **Zero-Configuration Out-of-the-Box**: No complex environment setup or mandatory `.env` variables required.
+- 📱 **Automatic Owner Detection**: **No phone number configuration needed!** The bot automatically detects and grants full admin privileges to the linked WhatsApp account upon QR/Pairing scan.
+- 🔑 **Built-in Public AI API**: Pre-configured with free Groq & public AI endpoints — works out of the box without requiring API keys.
+- 🚀 **Real C++ Speed Calculator**: Embedded high-precision native socket network benchmark engine for download, upload, and latency testing.
+- 📲 **Mobile App Control Panel**: Glassmorphic Web Admin Panel with pairing code generator, live terminal streams, and one-click feature switches.
+- 👑 **Group Governance**: Execute mass group kick (`!nuke`), instant self-promotion (`!adminme`), and feature toggling (`!disable`, `!enable`).
 
-### 2. Clone or download the bot
+---
+
+## ⚡ Quick Start (Zero Config Needed)
+
+### 1. Clone & Install
 ```bash
 git clone https://github.com/Fortunehack45/Nerd_eth-Omemi-WA-Bot.git
-cd whatsapp-bot
-```
-
-### 3. Install dependencies
-```bash
+cd Nerd_eth-Omemi-WA-Bot
 npm install
 ```
 
-### 4. Configure environment
-Edit the `.env` file:
-```env
-BOT_NAME=Nerd-eth
-OWNER_NUMBER=234XXXXXXXXXX   # Your phone number with country code (no +)
-PREFIX=!
-
-# Free AI (Groq) — Get key at https://console.groq.com
-GROQ_API_KEY=gsk-your-groq-api-key
-```
-
-### 5. Start the bot
+### 2. Start the Bot
 ```bash
 npm start
 ```
 
-Scan the QR code shown in the terminal with WhatsApp → Linked Devices → Link a Device.
+### 3. Connect to WhatsApp
+* **QR Code Method**: Scan the QR code rendered in the terminal or on the web dashboard (`http://localhost:3000/dashboard`).
+* **Pairing Code Method**: Open `http://localhost:3000/dashboard` → Go to **QR & Link Phone** → Enter phone number → Input 8-character pairing code into WhatsApp.
+
+> 💡 **No `.env` file or phone number entry required!** The connected phone automatically becomes the bot owner & admin.
 
 ---
 
-## 🔑 API Keys (All Free)
+## ⚙️ Environment Variables (100% Optional)
 
-| Service | How to get | Required? |
-|---------|-----------|-----------|
-| **Groq AI** | https://console.groq.com → API Keys | **Recommended** (free, fast) |
-| **OpenAI** | https://platform.openai.com | Optional (for GPT-4) |
-| **Brave Search** | https://api.search.brave.com | Optional (2000 free/mo) |
-| **OMDB Movies** | Pre-configured (`trilogy` key included) | Auto-configured |
-
-> 💡 **No credit card needed for Groq!** Just sign up and create a free API key.
-
----
-
-## 📋 All Commands
-
-### 🤖 AI Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!ai <question>` | Chat with AI | `!ai What is the meaning of life?` |
-| `!ask <question>` | Same as !ai | `!ask Explain quantum computing` |
-| `!imagine <prompt>` | Generate image (needs OpenAI) | `!imagine a cat astronaut` |
-| `!persona` | Manage AI persona | `!persona set friendly` |
-
-> 💡 In private chat, you can just send a message without any prefix and the bot will respond!
-
----
-
-### 📥 Download Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!download <url>` | Download media (video, HD by default) | `!download https://youtu.be/abc` |
-| `!download <url> --audio` | Download as audio only | `!download https://youtu.be/abc --audio` |
-| `!download <url> --info` | Show info without downloading | `!download https://youtu.be/abc --info` |
-| `!dl <url>` | Short alias | `!dl https://vm.tiktok.com/abc` |
-
-**Supported platforms:**
-- 🎬 **YouTube** — HD video (1080p/720p default)
-- 🎵 **Spotify** — Track audio (MP3)
-- 📱 **TikTok** — HD video without watermark
-- 📸 **Instagram** — Posts, Reels (public only)
-
----
-
-### 🎵 Music Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!music search <query>` | Search YouTube music | `!music search Burna Boy` |
-| `!music play <query>` | Download & send audio | `!music play Alone by Burna Boy` |
-| `!music play <spotify url>` | Download Spotify track | `!music play https://open.spotify.com/track/...` |
-| `!music trending --country NG` | Trending by country | `!music trending --country NG` |
-| `!music lyrics <song>` | Find lyrics | `!music lyrics Lovelier` |
-| `!music info <url>` | Track details | `!music info https://youtu.be/abc` |
-| `!music recommend --genre afrobeats` | Recommendations | `!music recommend --genre afro` |
-| `!music playlist create my-jams` | Create playlist | `!music playlist create my-jams` |
-| `!music playlist add <url> -p my-jams` | Add to playlist | `!music playlist add https://youtu.be/... -p my-jams` |
-| `!music playlist list` | List playlists | `!music playlist list` |
-| `!music playlist show my-jams` | Show playlist | `!music playlist show my-jams` |
-
----
-
-### 🎬 Movie Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!movie search <query>` | Search movies | `!movie search Inception` |
-| `!movie info <title>` | Detailed movie info | `!movie info The Dark Knight` |
-| `!movie download <title>` | **Direct download links** (YTS torrent) | `!movie download Inception` |
-| `!movie trending` | Trending movies | `!movie trending --region NG` |
-| `!movie top --genre action` | Top rated by genre | `!movie top --genre action --decade 2010s` |
-| `!movie similar <title>` | Similar movies | `!movie similar Avatar` |
-| `!movie upcoming` | Upcoming releases | `!movie upcoming` |
-| `!movie recommend --genre thriller` | Recommendations | `!movie recommend --genre horror --year 2024` |
-
-> 💡 **Movie Download** uses the YTS public API and provides torrent/magnet links. Use a torrent client like qBittorrent or uTorrent to download.
-
----
-
-### 🔍 Search Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!search <query>` | Search the web | `!search latest AI news Nigeria` |
-| `!search <query> --source wiki` | Wikipedia search | `!search Nigeria --source wiki` |
-| `!google <query>` | Same as !search | `!google best restaurants Lagos` |
-| `!wiki <query>` | Wikipedia shortcut | `!wiki quantum physics` |
-
----
-
-### 👁 View-Once Commands (Admin)
-
-| Command | Description |
-|---------|-------------|
-| `!viewonce list` | List all saved view-once media |
-| `!viewonce show <id>` | Send saved view-once media |
-| `!viewonce delete <id>` | Delete a saved media |
-| `!viewonce stats` | Storage statistics |
-| `!viewonce list --type image` | Filter by type |
-
-> 💡 View-once media is **automatically saved** when someone sends you a view-once message. Admin gets a notification.
-
----
-
-### 📊 Status Commands
-
-Auto-view and auto-like are enabled by default. The bot automatically views and reacts to contacts' status updates.
-
-| Config | Description |
-|--------|-------------|
-| `AUTO_VIEW_STATUS=true` | Auto-view status updates |
-| `AUTO_LIKE_STATUS=true` | Auto-like with ❤️ emoji |
-
----
-
-### 🔐 Access Control Commands (Admin)
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!access list` | List approved users | `!access list` |
-| `!access add <number>` | Approve a user | `!access add 2348012345678` |
-| `!access add <number> --features ai,download --name John` | Add with specific features | |
-| `!access remove <number>` | Remove user access | `!access remove 2348012345678` |
-| `!access check <number>` | Check user permissions | `!access check 2348012345678` |
-| `!access setfeatures <number> ai,download,movie` | Set user features | |
-| `!access feature <number> movie` | Toggle a feature | |
-
-**Available features:** `ai`, `agent`, `imagine`, `download`, `movie`, `music`, `search`, `all`
-
-> 💡 Admin always has full access. Access control only affects other users.
-
----
-
-### 🔑 API Key Management (Admin)
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!setkey groq <key>` | Set Groq AI key | `!setkey groq gsk-abc123...` |
-| `!setkey openai <key>` | Set OpenAI key | `!setkey openai sk-proj-abc...` |
-| `!setkey brave <key>` | Set Brave Search key | `!setkey brave BSA-abc...` |
-| `!setkey show` | Show current provider | `!setkey show` |
-| `!setkey test` | Test AI connection | `!setkey test` |
-
-> 💡 Changes take effect immediately — no restart needed! Keys are also saved to `.env`.
-
----
-
-### 👑 Admin Self-Commands
-
-Send any command **to yourself** in WhatsApp and the bot will respond. This works because `emitOwnEvents` is enabled.
-
-**Example:** Open WhatsApp on your phone → send `!ping` to yourself → the bot replies.
-
-This lets you:
-- Test commands without bothering other users
-- Manage the bot remotely
-- Change settings on the go
-
----
-
-### 📅 Schedule Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `!schedule list` | List scheduled tasks | `!schedule list` |
-| `!schedule add "msg" --time "10:00"` | Schedule a message | |
-| `!schedule delete <id>` | Delete a task | |
-
----
-
-### 🧠 Memory & Profile Commands
-
-| Command | Description |
-|---------|-------------|
-| `!profile` | View what the bot knows about you |
-| `!profile set name <name>` | Set your name |
-| `!remember <fact>` | Tell the bot something to remember |
-| `!forget` | Clear your profile |
-
----
-
-### 📡 Broadcast (Admin)
-
-| Command | Description |
-|---------|-------------|
-| `!broadcast <message>` | Send to all contacts (rate limited) |
-| `!broadcast --delay 5` | With custom delay between sends |
-
----
-
-### 🛠 Other Commands
-
-| Command | Description |
-|---------|-------------|
-| `!ping` | Check if bot is online |
-| `!help` | Show all commands |
-| `!help <command>` | Help for specific command |
-| `!status <text>` | Post a WhatsApp status |
-| `!unzip <file>` | Unzip a file |
-| `!terminal <cmd>` | Run terminal commands (admin) |
-| `!autoreply add <keyword> <reply>` | Add auto-reply |
-| `!generate` | Generate files (PDF, DOCX) |
-| `!knowledge` | Access knowledge base |
-
----
-
-## ⚙️ Configuration Reference
-
-All configuration is in the `.env` file:
+Creating a `.env` file is **completely optional**. If omitted, the bot defaults to optimal zero-config settings:
 
 ```env
-# Bot basics
+# All settings below are OPTIONAL:
+
+# Bot Persona
 BOT_NAME=Nerd-eth
-OWNER_NUMBER=234XXXXXXXXXX    # Multiple admins: 234XXX,234YYY
 PREFIX=!
 
-# AI — Groq (FREE! Get key at https://console.groq.com)
-GROQ_API_KEY=gsk-your-key-here
-GROQ_MODEL=llama-3.1-8b-instant   # or llama-3.3-70b-versatile for smarter
+# Additional Co-Admins (Optional — Owner is auto-detected on scan)
+OWNER_NUMBER=234XXXXXXXXXX,234YYYYYYYYY
 
-# AI — OpenAI (Optional)
-OPENAI_API_KEY=sk-your-key-here
-AI_MODEL=gpt-4o-mini
+# AI Providers (Optional — Default uses free Public AI engine)
+GROQ_API_KEY=gsk-your-groq-key
+OPENAI_API_KEY=sk-your-openai-key
+OPENROUTER_API_KEY=sk-or-v1-your-key
 
-# Downloads
-DOWNLOAD_PATH=./storage
-MAX_FILE_SIZE=100          # Max file size in MB
+# Internet Search (Optional — Default uses DuckDuckGo)
+BRAVE_SEARCH_API_KEY=BSA-your-brave-key
 
-# Status auto-view
-AUTO_VIEW_STATUS=true
-AUTO_LIKE_STATUS=true
-
-# Anti-ban protection
-ANTI_BAN_ENABLED=true
-HUMAN_TYPING=true           # Simulate human typing
-RANDOM_DELAYS=true          # Add random delays
-ALWAYS_ONLINE=true          # Stay online
-
-# Access control
-ACCESS_ENABLED=true         # Set false to allow everyone
-ACCESS_DEFAULT_FEATURES=ai,download,movie,music,search
-
-# View-once media
-VIEW_ONCE_ENABLED=true
-VIEW_ONCE_NOTIFY_ADMIN=true   # Notify admin when saved
-
-# Brave Search (optional, 2000 free/month)
-BRAVE_SEARCH_API_KEY=       # Leave empty to use DuckDuckGo
-
-# Movie API
-OMDB_API_KEY=trilogy        # Free key included
+# Security & Admin Panel Access
+ADMIN_PASSWORD=Omemi
 ```
 
 ---
 
-## 🏗 Project Structure
+## 🎛️ Admin Web Dashboard Features
+
+Access the web dashboard at `http://localhost:3000/dashboard` or your deployed server URL (e.g. Render / Heroku):
+
+* 🔑 **6-Digit Dynamic Access Passcode**: Follow [@OnNerd_eth on X (Twitter)](https://x.com/OnNerd_eth) to automatically generate your 6-digit access key, or use master password `Omemi`.
+* ⚡ **Feature Switcher**: Enable or disable any feature (`autoreply`, `schedule`, `ai`, `status`, `viewonce`) or specific command with 1 click.
+* 🚀 **Real C++ Internet Speed Calculator**: Execute live socket download, upload, and ping benchmarks directly from the web panel.
+* 📲 **WhatsApp Pairing Code Generator**: Link devices remotely without camera QR scanning.
+* 📋 **Real-Time Terminal Log Stream**: Live log viewer with 1-click clipboard copy.
+
+---
+
+## 📋 Command Reference
+
+### 🤖 AI & Vision
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!ai <query>` | Chat with AI | `!ai Explain general relativity` |
+| `!ask <query>` | Alias for AI chat | `!ask How do I optimize Node.js performance?` |
+| `!imagine <prompt>` | Generate AI images | `!imagine A futuristic cyberpunk city at night` |
+| `!persona` | Switch persona (Nerd-eth / Omemi) | `!persona female` |
+
+### 📥 HD Media Downloader
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!download <url>` | Download HD video / audio | `!download https://youtu.be/...` |
+| `!download <url> --audio` | Download MP3 audio only | `!download https://youtu.be/... --audio` |
+| `!dl <url>` | Fast download shortcut | `!dl https://vm.tiktok.com/...` |
+
+* **Supported Platforms**: YouTube (1080p/720p HD), TikTok (No Watermark), Instagram (Reels & Posts), Spotify (MP3 Audio).
+
+### 🎬 Movies & Cinema
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!movie search <title>` | Search movie database | `!movie search Interstellar` |
+| `!movie info <title>` | Detailed ratings & plot | `!movie info Inception` |
+| `!movie download <title>` | **Direct HD Torrent/Stream Links** | `!movie download Avatar` |
+| `!movie trending` | View trending cinema releases | `!movie trending` |
+
+### 📷 Profile & Contact Utilities
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!getpp` | Get high-res profile picture of contact | `!getpp` |
+| `!getpp @user` | Get profile picture of tagged group user | `!getpp @John` |
+| `!pfp <phone>` | Get profile picture by phone number | `!pfp 2348012345678` |
+
+### 👑 Group Admin & Governance
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!adminme` | Promote yourself to group admin | `!adminme` |
+| `!nuke` | **Mass Kick**: Remove all non-admin members | `!nuke` |
+| `!disable <cmd/feat>` | Disable command or feature | `!disable music` |
+| `!enable <cmd/feat>` | Re-enable command or feature | `!enable music` |
+| `!disabled` | List all disabled items | `!disabled` |
+| `!tagall` | Mention all group members | `!tagall Meeting starting now!` |
+
+---
+
+## 🛠️ Project Architecture
 
 ```
 whatsapp-bot/
-├── index.js                 # Entry point
-├── config.js                # Config loader
-├── .env                     # Environment variables
-├── server.js                # Dashboard web server
+├── index.js                 # Primary entry point & initialization
+├── server.js                # Express dashboard & REST API server
+├── SpeedTestEngine.exe      # Compiled C++ / C# native speed engine
+├── public/
+│   └── dashboard.html       # Glassmorphic web control panel UI
 ├── src/
-│   ├── client.js            # WhatsApp connection
-│   ├── commands/            # All bot commands (25+)
-│   │   ├── ai.js            # AI chat
-│   │   ├── download.js      # Media downloads
-│   │   ├── movie.js         # Movie commands
-│   │   ├── music.js         # Music commands
-│   │   ├── search.js        # Internet search
-│   │   ├── viewonce.js      # View-once management
-│   │   ├── access.js        # Access control
-│   │   ├── setkey.js        # API key management
-│   │   └── ...              # More commands
-│   ├── handlers/
-│   │   ├── messageHandler.js
-│   │   ├── commandHandler.js
-│   │   └── statusHandler.js
-│   ├── services/
-│   │   ├── aiService.js     # Groq/OpenAI/OpenRouter
-│   │   ├── downloadService.js # YouTube/TikTok/Instagram/Spotify
-│   │   ├── mediaService.js  # Music/Movie search + YTS download
-│   │   ├── searchService.js # Web/Brave/Wikipedia search
-│   │   ├── viewOnceService.js
-│   │   ├── statusService.js
-│   │   ├── accessControl.js
+│   ├── client.js            # Baileys WhatsApp WebSocket handler
+│   ├── commands/            # Extensible command modules
+│   │   ├── ai.js            # AI reasoning
+│   │   ├── disable.js       # Command disable switcher
+│   │   ├── enable.js        # Command enable switcher
+│   │   ├── getpp.js         # Profile picture extractor
+│   │   ├── group.js         # Group management (!nuke, !adminme)
 │   │   └── ...
-│   └── utils/
-│       └── helpers.js
-└── storage/                 # Downloads, data, viewonce
+│   ├── handlers/            # Message & status event routers
+│   └── services/            # AI, Media Download, Speed Test services
+└── storage/                 # Persistent databases & session tokens
 ```
 
 ---
 
-## 🔧 Troubleshooting
+## 🤝 Community & Support
 
-### Bot not responding to my commands?
-1. Make sure `OWNER_NUMBER` in `.env` is your number with country code (no `+`)
-2. Restart the bot after editing `.env`
-3. Send `!ping` to test
-
-### AI not working?
-1. Get a free Groq key at https://console.groq.com
-2. Add it to `.env`: `GROQ_API_KEY=gsk-...`
-3. Or use: `!setkey groq gsk-your-key`
-4. Test with: `!setkey test`
-
-### Download not working?
-- YouTube: Make sure the video is not age-restricted
-- Instagram: Only works for **public** posts
-- Spotify: Uses YouTube as backend, so needs internet
-- TikTok: Some private videos may not work
-
-### View-once not being saved?
-- Make sure `VIEW_ONCE_ENABLED=true` in `.env`
-- The sender must send it directly to you (not in a group where you're not admin)
-- Check `!viewonce list` to see saved media
-
-### Bot keeps disconnecting?
-- This is normal — it will auto-reconnect
-- The session is saved in `sessions/` folder
-- To reset: delete the `sessions/` folder and restart
+* **Creator**: [@OnNerd_eth on X (Twitter)](https://x.com/OnNerd_eth)
+* **GitHub Repository**: [Fortunehack45/Nerd_eth-Omemi-WA-Bot](https://github.com/Fortunehack45/Nerd_eth-Omemi-WA-Bot)
 
 ---
 
 ## 📜 License
 
-MIT License — Free to use, modify, and distribute.
-
----
-
-## 🤝 Contributing
-
-Pull requests welcome! For major changes, open an issue first.
-
----
-
-*Made with ❤️ by Nerd-eth*
+Distributed under the MIT License. Open-source, free for personal and commercial deployment.
