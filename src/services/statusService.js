@@ -42,41 +42,7 @@ async function downloadStatusBuffer(sock, targetMsgKey, content) {
   var singleMsg = {};
   singleMsg[mediaTypeKey] = mediaObj;
 
-  // Attempt 1: Standard downloadMediaMessage
-  try {
-    var buf1 = await downloadMediaMessage(
-      { key: targetMsgKey, message: norm },
-      'buffer',
-      {},
-      { logger: console, reuploadRequest: sock?.updateMediaMessage }
-    );
-    if (buf1 && buf1.length > 0) return buf1;
-  } catch (e1) {}
-
-  // Attempt 2: downloadMediaMessage with singleMsg container
-  try {
-    var buf2 = await downloadMediaMessage(
-      { key: targetMsgKey, message: singleMsg },
-      'buffer',
-      {},
-      { logger: console, reuploadRequest: sock?.updateMediaMessage }
-    );
-    if (buf2 && buf2.length > 0) return buf2;
-  } catch (e2) {}
-
-  // Attempt 3: sock.downloadMediaMessage
-  if (sock && typeof sock.downloadMediaMessage === 'function') {
-    try {
-      var buf3 = await sock.downloadMediaMessage({ key: targetMsgKey, message: norm });
-      if (buf3 && buf3.length > 0) return buf3;
-    } catch (e3) {}
-    try {
-      var buf4 = await sock.downloadMediaMessage({ key: targetMsgKey, message: singleMsg });
-      if (buf4 && buf4.length > 0) return buf4;
-    } catch (e4) {}
-  }
-
-  // Attempt 4: Low-level downloadContentFromMessage stream decoding
+  // Attempt 1: Fast direct stream decoding from media object payload
   try {
     var rawType = mediaTypeKey.replace('Message', '');
     var stream = await downloadContentFromMessage(mediaObj, rawType);
@@ -84,10 +50,42 @@ async function downloadStatusBuffer(sock, targetMsgKey, content) {
     for await (const chunk of stream) {
       chunks.push(chunk);
     }
-    var buf5 = Buffer.concat(chunks);
-    if (buf5 && buf5.length > 0) return buf5;
-  } catch (e5) {
-    console.error('[StatusSaver Stream Error]', e5.message);
+    var buf1 = Buffer.concat(chunks);
+    if (buf1 && buf1.length > 0) return buf1;
+  } catch (e1) {}
+
+  // Attempt 2: Standard downloadMediaMessage
+  try {
+    var buf2 = await downloadMediaMessage(
+      { key: targetMsgKey, message: norm },
+      'buffer',
+      {},
+      { logger: console, reuploadRequest: sock?.updateMediaMessage }
+    );
+    if (buf2 && buf2.length > 0) return buf2;
+  } catch (e2) {}
+
+  // Attempt 3: downloadMediaMessage with singleMsg container
+  try {
+    var buf3 = await downloadMediaMessage(
+      { key: targetMsgKey, message: singleMsg },
+      'buffer',
+      {},
+      { logger: console, reuploadRequest: sock?.updateMediaMessage }
+    );
+    if (buf3 && buf3.length > 0) return buf3;
+  } catch (e3) {}
+
+  // Attempt 4: sock.downloadMediaMessage
+  if (sock && typeof sock.downloadMediaMessage === 'function') {
+    try {
+      var buf4 = await sock.downloadMediaMessage({ key: targetMsgKey, message: norm });
+      if (buf4 && buf4.length > 0) return buf4;
+    } catch (e4) {}
+    try {
+      var buf5 = await sock.downloadMediaMessage({ key: targetMsgKey, message: singleMsg });
+      if (buf5 && buf5.length > 0) return buf5;
+    } catch (e5) {}
   }
 
   return null;
