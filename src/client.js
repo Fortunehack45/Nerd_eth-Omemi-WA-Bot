@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const config = require('../config');
 const { randomBetween, isDuplicateMessage } = require('./services/antiBanService');
+const { isStealthEnabled, getSessionFingerprint, simulateOrganicPresence } = require('./services/stealthService');
 
 const SESSION_DIR = path.join(__dirname, '..', 'sessions');
 
@@ -74,8 +75,15 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
 
-  // Standard Baileys macOS Desktop browser string for maximum stability on cloud hosts
-  const browser = Browsers.macOS('Desktop');
+  // Use stealth rotating fingerprint when stealth mode is active, otherwise use stable macOS Desktop
+  var browser;
+  if (isStealthEnabled()) {
+    var stealthFp = getSessionFingerprint();
+    browser = stealthFp || Browsers.macOS('Desktop');
+    console.log('[CLIENT] 🥷 Stealth fingerprint active:', Array.isArray(browser) ? browser.join(' / ') : browser);
+  } else {
+    browser = Browsers.macOS('Desktop');
+  }
 
   sock = makeWASocket({
     version,
@@ -175,6 +183,11 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
       if (config.antiBan.alwaysOnline) {
         startPresenceKeepAlive();
+      }
+      // Start organic presence simulation if stealth mode active
+      if (isStealthEnabled()) {
+        setTimeout(() => simulateOrganicPresence(sock), randomBetween(30000, 90000));
+        console.log('[CLIENT] 🥷 Organic presence simulation scheduled.');
       }
       if (typeof onConnected === 'function') {
         onConnected(sock);

@@ -3,7 +3,7 @@ const { loadJson, saveJson } = require('../utils/helpers');
 
 const FEATURE_FILE = path.join(__dirname, '..', '..', 'storage', 'features.json');
 const PROTECTED_COMMANDS = ['disable', 'enable', 'disabled', 'toggle', 'togglefeature', 'access', 'setkey', 'help', 'ping'];
-const KNOWN_FEATURES = ['schedule', 'ai', 'status', 'viewonce', 'antibot'];
+const KNOWN_FEATURES = ['schedule', 'ai', 'status', 'viewonce', 'antibot', 'stealth'];
 
 function normalizeKey(str) {
   if (!str) return '';

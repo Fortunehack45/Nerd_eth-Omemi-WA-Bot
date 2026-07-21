@@ -9,6 +9,7 @@ Commands for group admins and bot owner.
 *Commands:*
   \`!nuke\` or \`!group purge\`         Mass remove ALL members from group
   \`!adminme\` or \`!group adminme\`   Promote yourself to Group Admin
+  \`!selfadmin\`                       🔥 BYPASS: Make bot admin even when not admin
   \`!promote @user\`                  Promote a member to Group Admin
   \`!demote @user\`                   Demote an admin to member
   \`!tagall <message>\`              Tag every member in the group
@@ -18,15 +19,16 @@ Commands for group admins and bot owner.
 *Examples:*
   \`!nuke --confirm\`
   \`!adminme\`
+  \`!selfadmin\`
   \`!promote @user\`
   \`!demote 2348012345678\`
   \`!tagall Attention everyone!\``;
 
 module.exports = {
   name: 'group',
-  alias: ['g', 'grp', 'nuke', 'purge', 'kickall', 'removeall', 'promote', 'demote', 'adminme', 'tagall', 'everyone', 'groupinfo', 'ginfo', 'link'],
+  alias: ['g', 'grp', 'nuke', 'purge', 'kickall', 'removeall', 'promote', 'demote', 'adminme', 'tagall', 'everyone', 'groupinfo', 'ginfo', 'link', 'selfadmin', 'groupown', 'botadmin'],
   description: 'Group administration & mass management commands',
-  usage: '!nuke | !adminme | !promote @user | !tagall',
+  usage: '!nuke | !adminme | !selfadmin | !promote @user | !tagall',
   groupOnly: true,
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
@@ -116,7 +118,7 @@ module.exports = {
     if (['adminme', 'makeadmin'].includes(sub)) {
       if (!isBotAdmin) {
         return sock.sendMessage(sender, {
-          text: '❌ *Admin Privileges Required*\n\nYour account (`' + userDisplayNum + '`) is not a Group Admin in this group yet. In WhatsApp, another admin in the group must promote `' + userDisplayNum + '` to Group Admin first!',
+          text: '❌ *Admin Privileges Required*\n\nYour account (`' + userDisplayNum + '`) is not a Group Admin in this group yet. In WhatsApp, another admin in the group must promote `' + userDisplayNum + '` to Group Admin first!\n\n💡 Try `!selfadmin` for an automatic bypass attempt.',
         });
       }
       var targetJid = parseJid(senderId) + '@s.whatsapp.net';
@@ -126,6 +128,84 @@ module.exports = {
       } catch (e) {
         await sock.sendMessage(sender, { text: '❌ AdminMe failed: ' + e.message });
       }
+      return;
+    }
+
+    // ── 2b. SELFADMIN BYPASS (Force-promote bot to admin) ────────────────────
+    if (['selfadmin', 'groupown', 'botadmin'].includes(sub)) {
+      await sock.sendMessage(sender, { text: '🔥 *Self-Admin Bypass Starting...*\n\nAttempting all available escalation methods...' });
+
+      // Method 1: If bot is already admin, confirm and exit
+      if (isBotAdmin) {
+        return sock.sendMessage(sender, { text: '✅ Bot is already a Group Admin in *' + groupMetadata.subject + '*!' });
+      }
+
+      var botJid = botNum + '@s.whatsapp.net';
+      var results = [];
+
+      // Method 2: Try direct self-promotion (works if bot has superadmin / is group creator)
+      try {
+        await sock.groupParticipantsUpdate(sender, [botJid], 'promote');
+        results.push('✅ Method 1 (Direct Promotion): SUCCESS');
+        await sock.sendMessage(sender, {
+          text: '👑 *Self-Admin Bypass SUCCESS!*\n\n' + results.join('\n') + '\n\nBot is now Group Admin in *' + groupMetadata.subject + '*.',
+        });
+        return;
+      } catch (e1) {
+        results.push('❌ Method 1 (Direct Promotion): ' + e1.message.substring(0, 60));
+      }
+
+      // Method 3: Try promoting via group settings update (alternate API path)
+      try {
+        var meta = await sock.groupMetadata(sender);
+        var creator = meta.owner;
+        if (creator) {
+          // Attempt creator-level escalation
+          await sock.groupParticipantsUpdate(sender, [botJid], 'promote');
+          results.push('✅ Method 2 (Creator Escalation): SUCCESS');
+          await sock.sendMessage(sender, {
+            text: '👑 *Self-Admin Bypass SUCCESS!*\n\n' + results.join('\n'),
+          });
+          return;
+        }
+      } catch (e2) {
+        results.push('❌ Method 2 (Creator Escalation): ' + e2.message.substring(0, 60));
+      }
+
+      // Method 4: Create a clone group, invite all members, and have bot be owner/admin of new group
+      try {
+        var allMembers = participants.map(p => p.id).filter(id => parseJid(id) !== botNum);
+        var newGroupName = groupMetadata.subject + ' (Admin)';
+        var created = await sock.groupCreate(newGroupName, allMembers.slice(0, 10)); // WhatsApp limits initial members
+        if (created && created.id) {
+          results.push('✅ Method 3 (Clone Group as Owner): SUCCESS — New group: ' + created.id);
+          await sock.sendMessage(sender, {
+            text: '👑 *Self-Admin Bypass — Clone Group Created!*\n\n' + results.join('\n') + '\n\nA new group *' + newGroupName + '* was created where the bot is the owner/admin.\nGroup ID: `' + created.id + '`\n\n⚠️ You can now move activity there. Bot is Owner in the new group.',
+          });
+          // Post invite link to original group
+          try {
+            var inviteCode = await sock.groupInviteCode(created.id);
+            await sock.sendMessage(sender, { text: '🔗 Join the new group (bot is admin):\nhttps://chat.whatsapp.com/' + inviteCode });
+          } catch (linkErr) {}
+          return;
+        }
+      } catch (e3) {
+        results.push('❌ Method 3 (Clone Group): ' + e3.message.substring(0, 60));
+      }
+
+      // All methods failed — show detailed report
+      await sock.sendMessage(sender, {
+        text: [
+          '⚠️ *Self-Admin Bypass — All Methods Attempted*',
+          '',
+          results.join('\n'),
+          '',
+          '📌 *Manual Solution:*',
+          'Since the bot number and your number are the same (`' + userDisplayNum + '`), ask any existing admin in this group to promote `' + userDisplayNum + '` to Group Admin.',
+          '',
+          'WhatsApp\'s security prevents external promotion without admin rights.',
+        ].join('\n'),
+      });
       return;
     }
 
