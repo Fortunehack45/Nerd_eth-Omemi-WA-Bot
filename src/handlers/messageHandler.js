@@ -71,7 +71,7 @@ async function handleMessage(sock, msg) {
     var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
-      var ownerJid = getOwnerJid(sock);
+      var ownerJid = getOwnerJid(sock) || sender;
 
       // View-Once trigger via Emoji Reaction (❤️, 😂, 👍)
       if (hasEmojiMatch(reactionEmoji, VIEWONCE_EMOJIS_NORM)) {
@@ -87,7 +87,7 @@ async function handleMessage(sock, msg) {
 
         if (savedItem && ownerJid) {
           await sendMediaItem(sock, ownerJid, savedItem);
-          console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
+          console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat (' + ownerJid + ')');
         }
         return; // Silent delivery — no notification in source chat!
       }
@@ -112,7 +112,7 @@ async function handleMessage(sock, msg) {
   if (!msg.key?.fromMe && detectViewOnce(msg) && config.viewOnce.enabled && !isFeatureDisabled('viewonce')) {
     var result = await saveViewOnce(sock, msg);
     if (result && result.success && !result.alreadySaved) {
-      var targetOwner = getOwnerJid(sock);
+      var targetOwner = getOwnerJid(sock) || sender;
       if (targetOwner) {
         try {
           await sendMediaItem(sock, targetOwner, result);
@@ -131,7 +131,7 @@ async function handleMessage(sock, msg) {
     var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
-      var ownerJid = getOwnerJid(sock);
+      var ownerJid = getOwnerJid(sock) || sender;
       var contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
       var stanzaId = contextInfo.stanzaId;
       var quotedParticipant = contextInfo.participant;

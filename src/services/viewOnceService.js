@@ -45,13 +45,31 @@ function detectViewOnce(msg) {
   return false;
 }
 
+// Helper to recursively unwrap nested protocol wrappers (ephemeral, viewOnce, viewOnceV2, etc.)
+function unwrapMessageContent(m) {
+  if (!m) return null;
+  var target = m;
+  for (var i = 0; i < 5; i++) {
+    if (target?.ephemeralMessage?.message) target = target.ephemeralMessage.message;
+    else if (target?.viewOnceMessage?.message) target = target.viewOnceMessage.message;
+    else if (target?.viewOnceMessageV2?.message) target = target.viewOnceMessageV2.message;
+    else if (target?.viewOnceMessageV2Extension?.message) target = target.viewOnceMessageV2Extension.message;
+    else if (target?.documentWithCaptionMessage?.message) target = target.documentWithCaptionMessage.message;
+    else {
+      var n = normalizeMessageContent(target);
+      if (n && n !== target) target = n;
+      else break;
+    }
+  }
+  return target;
+}
+
 // Extract the actual inner media message from the view-once wrapper
 function getViewOnceContent(msg) {
   if (!msg || !msg.message) return null;
-  var m = msg.message;
-  var norm = normalizeMessageContent(m);
+  var target = unwrapMessageContent(msg.message);
+  if (!target) return null;
 
-  var target = norm || m;
   var innerType = null;
   var mediaKeys = ['imageMessage', 'videoMessage', 'audioMessage', 'voiceMessage', 'documentMessage'];
 
@@ -113,7 +131,7 @@ async function saveViewOnce(sock, msg) {
         { logger: console, reuploadRequest: sock?.updateMediaMessage }
       );
     } catch (e1) {
-      // 2. Fallback to innerMsg
+      // 2. Fallback to innerMsg container
       try {
         buffer = await downloadMediaMessage(
           innerMsg,
@@ -129,15 +147,28 @@ async function saveViewOnce(sock, msg) {
           } catch (e3) {
             try {
               buffer = await sock.downloadMediaMessage(innerMsg);
-            } catch (e4) {
-              console.error('[ViewOnce] Download error:', e4.message);
-              return { error: 'Media download failed: ' + e4.message };
-            }
+            } catch (e4) {}
           }
-        } else {
-          console.error('[ViewOnce] Download error:', e2.message);
-          return { error: 'Media download failed: ' + e2.message };
         }
+      }
+    }
+
+    // 4. Low-level downloadContentFromMessage stream decoding fallback
+    if (!buffer || buffer.length === 0) {
+      try {
+        const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+        var mediaObj = extracted.inner?.[innerType];
+        if (mediaObj) {
+          var rawType = innerType.replace('Message', '');
+          var stream = await downloadContentFromMessage(mediaObj, rawType);
+          var chunks = [];
+          for await (const chunk of stream) {
+            chunks.push(chunk);
+          }
+          buffer = Buffer.concat(chunks);
+        }
+      } catch (e5) {
+        console.error('[ViewOnce Stream Download Error]', e5.message);
       }
     }
 
