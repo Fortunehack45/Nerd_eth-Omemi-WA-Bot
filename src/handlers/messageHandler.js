@@ -68,8 +68,7 @@ async function handleMessage(sock, msg) {
   var reaction = msg.message?.reactionMessage;
   if (reaction) {
     var reactionEmoji = reaction.text || '';
-    var reactionSender = msg.key.participant || msg.key.remoteJid;
-    var isCallerAdmin = isAdmin(reactionSender, msg.key.fromMe);
+    var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
       var ownerJid = getOwnerJid(sock);
@@ -99,7 +98,7 @@ async function handleMessage(sock, msg) {
           var statusMsgKey = {
             remoteJid: reaction.key.remoteJid || 'status@broadcast',
             id: reaction.key.id || ('STATUS_' + Date.now()),
-            participant: reaction.key.participant || reactionSender,
+            participant: reaction.key.participant || sender,
           };
           await saveAndForwardStatus(sock, statusMsgKey, reaction.key.message || {}, msg.pushName);
         }
@@ -129,8 +128,7 @@ async function handleMessage(sock, msg) {
   // 3. Admin Emoji Reply Triggers (Admin replying with emoji to View-Once or Status)
   var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
   if (quotedMsg && messageText) {
-    var replySender = msg.key.participant || sender;
-    var isCallerAdmin = isAdmin(replySender, msg.key.fromMe);
+    var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
       var ownerJid = getOwnerJid(sock);

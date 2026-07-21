@@ -246,31 +246,53 @@ function getOwnerJid(sock) {
   return clean ? (clean + '@s.whatsapp.net') : null;
 }
 
+function detectTypeFromBufferOrFile(buffer, filePath, fallbackType) {
+  if (fallbackType && fallbackType !== 'unknown' && fallbackType !== 'media') return fallbackType;
+  var ext = path.extname(filePath || '').toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.webp') return 'image';
+  if (ext === '.mp4' || ext === '.mkv' || ext === '.mov' || ext === '.avi') return 'video';
+  if (ext === '.ogg' || ext === '.opus' || ext === '.mp3' || ext === '.m4a' || ext === '.wav') return 'audio';
+  if (ext === '.pdf' || ext === '.doc' || ext === '.docx' || ext === '.zip') return 'document';
+
+  if (buffer && buffer.length >= 4) {
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image';
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image';
+    if (buffer[0] === 0x4f && buffer[1] === 0x67 && buffer[2] === 0x67 && buffer[3] === 0x53) return 'audio';
+    if (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) return 'audio';
+    if (buffer[0] === 0x00 && buffer[1] === 0x00 && buffer[2] === 0x00 && (buffer[3] === 0x18 || buffer[3] === 0x1c || buffer[3] === 0x20)) return 'video';
+  }
+  return fallbackType || 'image';
+}
+
 // ─── Helper: Send a saved media item object ────────────────────────────────
 async function sendMediaItem(sock, jid, item) {
   if (!item || !item.filePath || !fs.existsSync(item.filePath)) return false;
   var buffer = fs.readFileSync(item.filePath);
+  var realType = detectTypeFromBufferOrFile(buffer, item.filePath, item.mediaType);
+
   var caption = [
     '📸 *View-Once Media Revealed*',
     '▸ From: ' + (item.senderName || item.sender || 'Unknown'),
-    '▸ Type: ' + (item.mediaType || 'media').toUpperCase(),
+    '▸ Type: ' + realType.toUpperCase(),
     '▸ ID: `' + item.id + '`',
     '▸ Saved: ' + new Date(item.timestamp || Date.now()).toLocaleString(),
     item.caption ? '▸ Caption: ' + item.caption : '',
   ].filter(Boolean).join('\n');
 
-  return await sendBuffer(sock, jid, buffer, item.mediaType, caption, item);
+  return await sendBuffer(sock, jid, buffer, realType, caption, item);
 }
 
 // ─── Helper: Send a raw buffer as media ───────────────────────────────────
 async function sendBuffer(sock, jid, buffer, mediaType, caption, item) {
   try {
-    if (mediaType === 'image') {
+    var realType = detectTypeFromBufferOrFile(buffer, item?.filePath, mediaType);
+
+    if (realType === 'image') {
       await sock.sendMessage(jid, { image: buffer, caption: caption });
-    } else if (mediaType === 'video') {
+    } else if (realType === 'video') {
       await sock.sendMessage(jid, { video: buffer, caption: caption });
-    } else if (mediaType === 'audio' || mediaType === 'voice') {
-      var isPtt = (mediaType === 'voice' || (item && item.ptt === true));
+    } else if (realType === 'audio' || realType === 'voice') {
+      var isPtt = (realType === 'voice' || (item && item.ptt === true));
       var mime = isPtt ? 'audio/ogg; codecs=opus' : ((item && item.mimetype) || 'audio/mp4');
       await sock.sendMessage(jid, {
         audio: buffer,
@@ -280,14 +302,14 @@ async function sendBuffer(sock, jid, buffer, mediaType, caption, item) {
       if (caption) {
         await sock.sendMessage(jid, { text: caption });
       }
-    } else if (mediaType === 'document') {
+    } else if (realType === 'document') {
       await sock.sendMessage(jid, {
         document: buffer,
         fileName: (item && item.fileName) || 'document.bin',
         caption: caption,
       });
     } else {
-      await sock.sendMessage(jid, { text: caption + '\n\nFile path: ' + ((item && item.filePath) || 'unknown') });
+      await sock.sendMessage(jid, { image: buffer, caption: caption });
     }
     return true;
   } catch (err) {
