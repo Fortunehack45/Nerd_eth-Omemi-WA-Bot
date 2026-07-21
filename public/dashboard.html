@@ -61,6 +61,41 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.35); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-indigo); }
 
+/* SVG Utilities */
+svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.badge-muted {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.badge-indigo {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
 /* Ambient Background Lights */
 .ambient-orb-1 {
   position: fixed;
@@ -94,7 +129,6 @@ body {
   50% { transform: translate(-30px, 30px) scale(1.15); }
 }
 
-/* Keyframe Animations */
 @keyframes tabFadeIn {
   from { opacity: 0; transform: translateY(10px) scale(0.995); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -103,10 +137,6 @@ body {
   0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
   70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
 }
 
 .tab-content {
@@ -634,9 +664,6 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
   display: none;
 }
 
-/* ==========================================================================
-   RESPONSIVE DESIGN (MOBILE & TABLET BUG FIXES)
-   ========================================================================== */
 @media (max-width: 992px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .panel-grid { grid-template-columns: 1fr; }
@@ -878,7 +905,7 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
       <div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:0.75rem;flex-shrink:0">FA</div>
       <div>
         <div style="color:#f3f4f6;font-size:0.75rem;font-weight:800">Made By Fortune Adebayo</div>
-        <div style="color:#c084fc;font-size:0.68rem;font-weight:600">(AKA: Nerd_eth) 🌐</div>
+        <div style="color:#c084fc;font-size:0.68rem;font-weight:600">(AKA: Nerd_eth)</div>
       </div>
     </a>
 
@@ -954,7 +981,9 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
           </div>
         </div>
         <div class="metric-value" id="mUptime">0s</div>
-        <div class="metric-sub">⚡ Engine Active</div>
+        <div class="metric-sub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Engine Active
+        </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -964,7 +993,9 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
           </div>
         </div>
         <div class="metric-value" id="mUsers">0</div>
-        <div class="metric-sub">👥 Registered Contacts</div>
+        <div class="metric-sub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Registered Contacts
+        </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -974,7 +1005,9 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
           </div>
         </div>
         <div class="metric-value" id="mFacts">0</div>
-        <div class="metric-sub">🧠 Learned Personalities</div>
+        <div class="metric-sub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg> Learned Personalities
+        </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
@@ -984,7 +1017,9 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
           </div>
         </div>
         <div class="metric-value" id="mCommands">0</div>
-        <div class="metric-sub">📊 Executed Bot Actions</div>
+        <div class="metric-sub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Executed Bot Actions
+        </div>
       </div>
     </div>
 
@@ -996,7 +1031,8 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
           High-Precision Internet Speed Test Engine
         </h3>
         <button onclick="runSpeedTest()" id="speedTestBtn" class="btn-primary" style="width:auto;padding:11px 22px;font-size:0.88rem">
-          ⚡ Run Live Speed Test
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Run Live Speed Test
         </button>
       </div>
       <div id="speedTestBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
@@ -1261,7 +1297,7 @@ function showToast(msg) {
   var container = document.getElementById('toastContainer');
   var toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = '⚡ ' + msg;
+  toast.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> ' + msg;
   container.appendChild(toast);
   setTimeout(function() { toast.remove(); }, 3000);
 }
@@ -1299,7 +1335,7 @@ function followAndGenerateKey() {
     .then(function(d) {
       if (d.key) {
         document.getElementById('pwdInput').value = d.key;
-        genBox.innerHTML = '🎉 Passcode: <span style="letter-spacing:3px;font-size:1.3rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key set — click Unlock Panel below!</small>';
+        genBox.innerHTML = '<span class="badge badge-success">Passcode</span> <span style="letter-spacing:3px;font-size:1.3rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key set — click Unlock Panel below!</small>';
         showToast('6-digit access key generated');
       }
     });
@@ -1422,11 +1458,11 @@ function loadKeysStatus() {
   fetchAPI('/keys').then(function(d) {
     var statusBox = document.getElementById('keyStatusRes');
     if (statusBox) {
-      statusBox.innerHTML = '⚡ <strong>Active AI Engine:</strong> ' + (d.provider || 'none') + ' (' + (d.model || 'N/A') + ')<br><br>' +
-        '▸ Groq API Key: ' + (d.groqSet ? '🟢 Active' : '🔴 Not Configured') + '<br>' +
-        '▸ OpenAI API Key: ' + (d.openaiSet ? '🟢 Active' : '⚪ Not Set') + '<br>' +
-        '▸ OpenRouter API Key: ' + (d.openrouterSet ? '🟢 Active' : '⚪ Not Set') + '<br>' +
-        '▸ Brave Search API Key: ' + (d.braveSet ? '🟢 Active' : '⚪ Not Set (using DuckDuckGo Search)');
+      statusBox.innerHTML = '<span class="badge badge-indigo">AI Engine</span> <strong>Active Provider:</strong> ' + (d.provider || 'none') + ' (' + (d.model || 'N/A') + ')<br><br>' +
+        '• Groq API Key: ' + (d.groqSet ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Not Configured</span>') + '<br>' +
+        '• OpenAI API Key: ' + (d.openaiSet ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Not Set</span>') + '<br>' +
+        '• OpenRouter API Key: ' + (d.openrouterSet ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Not Set</span>') + '<br>' +
+        '• Brave Search API Key: ' + (d.braveSet ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Not Set (DuckDuckGo Search)</span>');
     }
   }).catch(function(){});
 }
@@ -1440,7 +1476,7 @@ function loadFeaturesStatus() {
     coreFeats.forEach(function(f) {
       var isDis = (d.disabledFeatures || []).includes(f);
       html += '<div style="background:rgba(6,8,24,0.8);padding:18px;border-radius:18px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';
-      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:1rem">' + f + '</strong><br><small style="color:var(--text-sub);font-weight:600">' + (isDis ? '🔴 Disabled' : '🟢 Active') + '</small></div>';
+      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:1rem">' + f + '</strong><br><small style="margin-top:4px;display:inline-block">' + (isDis ? '<span class="badge badge-danger">Disabled</span>' : '<span class="badge badge-success">Active</span>') + '</small></div>';
       html += '<label class="switch"><input type="checkbox" ' + (!isDis ? 'checked' : '') + ' onchange="toggleFeatureAction(\'' + f + '\', \'' + (!isDis ? 'disable' : 'enable') + '\')"><span class="slider"></span></label>';
       html += '</div>';
     });
@@ -1562,14 +1598,14 @@ function runSpeedTest() {
   var label = document.getElementById('spEngineLabel');
 
   btn.disabled = true;
-  btn.textContent = '⏳ Measuring...';
+  btn.textContent = 'Measuring...';
   dl.textContent = 'Testing...';
   ul.textContent = 'Testing...';
   ping.textContent = 'Testing...';
 
   fetchAPI('/speedtest', { method: 'POST' }).then(function(d) {
     btn.disabled = false;
-    btn.textContent = '⚡ Run Live Speed Test';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
     if (d.success) {
       var rawDl = d.download_mbps || d.downloadSpeed || d.download || d.download_speed;
       var rawUl = d.upload_mbps || d.uploadSpeed || d.upload || d.upload_speed;
@@ -1589,7 +1625,7 @@ function runSpeedTest() {
     }
   }).catch(function(e) {
     btn.disabled = false;
-    btn.textContent = '⚡ Run Live Speed Test';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
     alert('Speed test error: ' + e.message);
   });
 }
