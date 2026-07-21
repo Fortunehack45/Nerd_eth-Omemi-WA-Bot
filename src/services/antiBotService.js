@@ -61,13 +61,11 @@ function getBlockedBots() {
   return data.blockedBots || [];
 }
 
-// Bot signature patterns
+// Bot signature patterns — ONLY match clearly automated prefixes
+// NOTE: 3EB is the standard WhatsApp Web prefix, NOT a bot signature
 const BOT_ID_PATTERNS = [
-  /^BAE5/i,  // Baileys default ID prefix
-  /^3EB0/i,  // Baileys multi-device ID prefix
-  /^3EB/i,   // WhatsApp Web / Bot API prefix
+  /^BAE5/i,  // Baileys default ID prefix (strong signal)
   /^BOT/i,   // Popular bot frameworks
-  /^AZ/i,    // Auto-responder bots
 ];
 
 const BOT_TEXT_SIGNATURES = [
@@ -90,14 +88,20 @@ function isBotMessage(msg) {
   var senderNum = parseJid(senderJid);
   var data = getAntiBotData();
 
+  // Check if sender is owner or admin (owners & admins are never blocked as bots)
+  var isOwner = (config.admins || []).includes(senderNum);
+  if (isOwner) return { isBot: false };
+
+  // Check if sender is an approved user — approved users are never flagged as bots
+  try {
+    var { isApproved } = require('./accessControl');
+    if (isApproved(senderJid)) return { isBot: false };
+  } catch (e) {}
+
   // 1. Check if sender is in manually blocked bot list
   if (data.blockedBots && data.blockedBots.includes(senderNum)) {
     return { isBot: true, reason: 'Sender is listed in blocked bots directory (' + senderNum + ')' };
   }
-
-  // Check if sender is owner or admin (owners & admins are never blocked as bots)
-  var isOwner = (config.admins || []).includes(senderNum);
-  if (isOwner) return { isBot: false };
 
   var msgId = msg.key.id || '';
   var messageText = msg.message?.conversation

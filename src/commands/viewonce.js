@@ -3,6 +3,7 @@ var {
   listSavedMedia,
   getSavedMedia,
   getLastSavedMedia,
+  findByMessageId,
   deleteSavedMedia,
   getStorageStats,
   saveViewOnce,
@@ -89,12 +90,22 @@ module.exports = {
       case 'last':
       case 'latest':
       case 'retrieve': {
-        // ── CASE A: Admin replied to a view-once message — save & show it NOW ──
+        // ── CASE A: Admin replied to a view-once message — find it in saved media ──
         var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         var quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
         var stanzaId = msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
 
         if (quotedMsg) {
+          // PRIORITY 1: Look up already-saved media by the original message ID
+          // The bot auto-saves view-once media on arrival, so this is the most reliable method
+          if (stanzaId) {
+            var savedByMsgId = findByMessageId(stanzaId);
+            if (savedByMsgId && fs.existsSync(savedByMsgId.filePath)) {
+              await sendMediaItem(sock, sender, savedByMsgId);
+              return;
+            }
+          }
+
           // Reconstruct the quoted message as a full Baileys message object
           var reconstructed = {
             key: {
@@ -110,22 +121,20 @@ module.exports = {
           // Check if the quoted message is a view-once
           var isVO = detectViewOnce(reconstructed);
           if (isVO) {
-            await sock.sendMessage(sender, { text: '📥 Detected view-once in reply — downloading now...' });
+            // PRIORITY 2: Try to save & retrieve from the quoted message data
+            await sock.sendMessage(sender, { text: '📥 Detected view-once in reply — attempting to retrieve...' });
             try {
               var saveResult = await saveViewOnce(sock, reconstructed);
               if (saveResult && saveResult.success) {
-                // Now retrieve and send
                 var savedItem = getSavedMedia(saveResult.id);
                 if (savedItem && fs.existsSync(savedItem.filePath)) {
                   await sendMediaItem(sock, sender, savedItem);
                   return;
                 }
-              } else if (saveResult && saveResult.error) {
-                // Fall through to try direct buffer extraction from quoted message
               }
             } catch (e) {}
 
-            // Fallback: try direct buffer extraction from quoted message content
+            // PRIORITY 3: Try direct buffer extraction from quoted message content
             var extracted = getViewOnceContent(reconstructed);
             if (extracted) {
               try {
@@ -139,21 +148,8 @@ module.exports = {
               } catch (e2) {}
             }
 
-            // Try a completely different approach - send the quoted msg raw
-            try {
-              var innerContent = getViewOnceContent(reconstructed);
-              if (innerContent) {
-                var fallbackBuf = await sock.downloadMediaMessage(reconstructed);
-                if (fallbackBuf && fallbackBuf.length > 0) {
-                  var fallbackType = innerContent.innerType.replace('Message', '').toLowerCase();
-                  await sendBuffer(sock, sender, fallbackBuf, fallbackType, '📸 View-Once Media retrieved from reply');
-                  return;
-                }
-              }
-            } catch (e3) {}
-
             return sock.sendMessage(sender, {
-              text: '⚠️ Could not retrieve view-once from reply.\n\nThe media may have expired from WhatsApp servers, or the view-once was already opened.\n\n💡 Bot auto-saves view-once media as soon as it arrives. Use `!viewonce list` to see all saved view-once media.',
+              text: '⚠️ Could not retrieve view-once from reply.\n\nThis usually means the media was not auto-saved when it first arrived.\n\n💡 The bot automatically saves view-once media as soon as it arrives. Use `!viewonce list` to see all saved view-once media, or `!viewonce show` to see the most recent one.',
             });
           }
 

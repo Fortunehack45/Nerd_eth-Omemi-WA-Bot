@@ -8,7 +8,8 @@
  *  4. Add to persistent blocked bot database
  */
 
-const { banAccount, parseJid } = require('../services/antiBotService');
+const { banAccount } = require('../services/antiBotService');
+const { parseJid } = require('../utils/helpers');
 
 const HELP = `*🔨 Account Ban & Counter-Attack* (Admin Only)
 

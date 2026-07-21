@@ -60,12 +60,19 @@ module.exports = {
     var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
     var callerNum = parseJid(senderId || '');
 
+    // Separate bot admin check from caller admin check
     var botParticipant = participants.find(p => {
       var pNum = parseJid(p.id);
-      return pNum && (pNum === botNum || pNum === callerNum);
+      return pNum && (pNum === botNum);
+    });
+
+    var callerParticipant = participants.find(p => {
+      var pNum = parseJid(p.id);
+      return pNum && (pNum === callerNum);
     });
 
     var isBotAdmin = botParticipant?.admin === 'admin' || botParticipant?.admin === 'superadmin';
+    var isCallerGroupAdmin = callerParticipant?.admin === 'admin' || callerParticipant?.admin === 'superadmin';
     var userDisplayNum = botNum || callerNum || 'your phone number';
 
     // ── 1. NUKE / PURGE / MASS KICK ALL ──────────────────────────────────────

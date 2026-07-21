@@ -111,9 +111,12 @@ async function saveViewOnce(sock, msg) {
     var size = buffer.length;
     var caption = extracted.inner?.[innerType]?.caption || '';
 
+    var messageId = msg.key?.id || '';
+
     var index = getIndex();
     index.push({
       id: timestamp,
+      messageId: messageId,
       fileName: fileName,
       filePath: filePath,
       mediaType: mediaType,
@@ -152,6 +155,13 @@ function getLastSavedMedia() {
   return index[index.length - 1];
 }
 
+// Look up a saved view-once by the original WhatsApp message ID (stanzaId from a reply)
+function findByMessageId(messageId) {
+  if (!messageId) return null;
+  var index = getIndex();
+  return index.find(function(i) { return i.messageId && i.messageId === messageId; }) || null;
+}
+
 function deleteSavedMedia(id) {
   var index = getIndex();
   var idx = index.findIndex(function(i) { return i.id === parseInt(id) || i.id === id || String(i.id) === String(id); });
@@ -178,6 +188,7 @@ module.exports = {
   listSavedMedia,
   getSavedMedia,
   getLastSavedMedia,
+  findByMessageId,
   deleteSavedMedia,
   getStorageStats,
 };
