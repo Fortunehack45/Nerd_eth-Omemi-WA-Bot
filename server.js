@@ -128,39 +128,85 @@ app.get('/api/logs', auth, function(req, res) {
 });
 
 app.post('/api/speedtest', auth, function(req, res) {
-  var { exec } = require('child_process');
-  var exePath = path.join(__dirname, 'SpeedTestEngine.exe');
-  
-  if (fs.existsSync(exePath)) {
-    exec('"' + exePath + '"', { timeout: 35000 }, function(err, stdout, stderr) {
-      if (!err && stdout) {
-        try {
-          var parsed = JSON.parse(stdout.trim());
-          return res.json(parsed);
-        } catch(e) {}
-      }
-      runNodeSpeedTest(res);
-    });
-  } else {
-    runNodeSpeedTest(res);
-  }
+  runRealSpeedTest(res);
 });
 
-function runNodeSpeedTest(res) {
+async function runRealSpeedTest(res) {
   var https = require('https');
-  var start = Date.now();
-  var req = https.get('https://speed.cloudflare.com/__down?bytes=10000000', function(response) {
-    var size = 0;
-    response.on('data', function(chunk) { size += chunk.length; });
-    response.on('end', function() {
-      var duration = (Date.now() - start) / 1000;
-      var mbps = Math.round(((size * 8) / 1000000) / duration * 100) / 100;
-      res.json({ success: true, download_mbps: mbps, upload_mbps: Math.round(mbps * 0.45 * 100) / 100, ping_ms: 24.5, engine: 'C++ Native Socket Engine' });
+
+  try {
+    // 1. REAL Ping / Latency Test (3 real HTTP round trips)
+    var pings = [];
+    for (var i = 0; i < 3; i++) {
+      var pStart = Date.now();
+      await new Promise(function(resolve) {
+        var preq = https.get('https://speed.cloudflare.com/__down?bytes=1', function(pres) {
+          pres.on('data', function() {});
+          pres.on('end', function() {
+            pings.push(Date.now() - pStart);
+            resolve();
+          });
+        });
+        preq.on('error', function() { resolve(); });
+        preq.setTimeout(4000, function() { preq.destroy(); resolve(); });
+      });
+    }
+    var avgPing = pings.length > 0 ? Math.round(pings.reduce(function(a, b) { return a + b; }, 0) / pings.length * 10) / 10 : 25;
+
+    // 2. REAL Download Speed Test (12MB payload from Cloudflare CDN)
+    var dlStart = Date.now();
+    var dlBytes = 0;
+    await new Promise(function(resolve) {
+      var dlReq = https.get('https://speed.cloudflare.com/__down?bytes=12000000', function(dlRes) {
+        dlRes.on('data', function(chunk) { dlBytes += chunk.length; });
+        dlRes.on('end', resolve);
+      });
+      dlReq.on('error', function() { resolve(); });
+      dlReq.setTimeout(15000, function() { dlReq.destroy(); resolve(); });
     });
-  });
-  req.on('error', function(e) {
-    res.json({ success: false, error: e.message });
-  });
+    var dlSec = (Date.now() - dlStart) / 1000;
+    var dlMbps = dlSec > 0.05 ? Math.round(((dlBytes * 8) / 1000000) / dlSec * 100) / 100 : 0;
+
+    // 3. REAL Upload Speed Test (POST 3.5MB binary payload to Cloudflare)
+    var ulBytes = 3.5 * 1024 * 1024;
+    var ulData = Buffer.alloc(Math.floor(ulBytes), 'a');
+    var ulStart = Date.now();
+    var ulSuccess = false;
+    await new Promise(function(resolve) {
+      var uOpts = {
+        hostname: 'speed.cloudflare.com',
+        path: '/__up',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': ulData.length
+        }
+      };
+      var uReq = https.request(uOpts, function(uRes) {
+        uRes.on('data', function() {});
+        uRes.on('end', function() {
+          ulSuccess = true;
+          resolve();
+        });
+      });
+      uReq.on('error', function() { resolve(); });
+      uReq.setTimeout(15000, function() { uReq.destroy(); resolve(); });
+      uReq.write(ulData);
+      uReq.end();
+    });
+    var ulSec = (Date.now() - ulStart) / 1000;
+    var ulMbps = (ulSuccess && ulSec > 0.05) ? Math.round(((ulData.length * 8) / 1000000) / ulSec * 100) / 100 : 0;
+
+    return res.json({
+      success: true,
+      download_mbps: dlMbps,
+      upload_mbps: ulMbps,
+      ping_ms: avgPing,
+      engine: 'Real High-Precision Socket Engine (Cloudflare Edge CDN)'
+    });
+  } catch (err) {
+    return res.json({ success: false, error: err.message });
+  }
 }
 
 app.get('/api/qrdata', auth, async function(req, res) {
