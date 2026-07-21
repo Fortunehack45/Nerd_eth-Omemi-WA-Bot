@@ -15,7 +15,6 @@ module.exports = {
         text: '⚠️ *Usage:* `!disable <command_or_feature>`\n\n' +
           '*Examples:*\n' +
           '▸ `!disable music` (disables !music command)\n' +
-          '▸ `!disable autoreply` (disables auto-replies)\n' +
           '▸ `!disable schedule` (disables scheduling)\n' +
           '▸ `!disable ai` (disables AI responses)\n\n' +
           'Use `!disabled` to see active restrictions.'

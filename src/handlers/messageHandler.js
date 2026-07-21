@@ -19,17 +19,6 @@ function isCommand(text) {
   return text && text.startsWith(config.prefix);
 }
 
-function getAutoReply(messageText) {
-  var replies = loadJson(path.join(__dirname, '..', '..', 'storage', 'autoreply.json'), {});
-  var lower = messageText.toLowerCase();
-  for (var keyword in replies) {
-    if (lower.includes(keyword)) {
-      return replies[keyword];
-    }
-  }
-  return null;
-}
-
 function isMentioned(messageText, botName) {
   var lower = messageText.toLowerCase();
   var names = [botName.toLowerCase(), 'bot', 'chatbot', 'assistant'];
@@ -155,19 +144,6 @@ async function handleMessage(sock, msg) {
     await new Promise(function(r) { setTimeout(r, randomBetween(300, 800)); });
     await sock.sendMessage(sender, { text: learningText });
     return;
-  }
-
-  if (!isFeatureDisabled('autoreply')) {
-    var autoReplyText = getAutoReply(messageText);
-    if (autoReplyText) {
-      await sock.sendPresenceUpdate('composing', sender);
-      await new Promise(function(r) { setTimeout(r, randomBetween(500, 1500)); });
-      await sock.sendMessage(sender, { text: autoReplyText });
-      if (config.memory.enabled && isPrivate) {
-        addToConversation(sender, 'assistant', autoReplyText);
-      }
-      return;
-    }
   }
 
   if (isPrivate && !isFeatureDisabled('ai')) {

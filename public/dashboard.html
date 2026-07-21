@@ -728,7 +728,7 @@ function loadFeaturesStatus() {
     var box = document.getElementById('featureStatusRes');
     if (!box) return;
     var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">';
-    var coreFeats = ['autoreply', 'schedule', 'proactive', 'ai', 'status', 'viewonce'];
+    var coreFeats = ['schedule', 'proactive', 'ai', 'status', 'viewonce'];
     coreFeats.forEach(function(f) {
       var isDis = (d.disabledFeatures || []).includes(f);
       html += '<div style="background:#070a1e;padding:18px;border-radius:14px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';

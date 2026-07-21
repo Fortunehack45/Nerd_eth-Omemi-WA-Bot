@@ -10,11 +10,11 @@ Enable or disable specific commands or bot features dynamically.
   \`!toggle list\`             List all currently disabled items
 
 *Supported Features:*
-  \`autoreply\`, \`schedule\`, \`proactive\`, \`ai\`, \`status\`, \`viewonce\` or any command name (e.g. \`music\`, \`movie\`, \`download\`, \`nuke\`)
+  \`schedule\`, \`proactive\`, \`ai\`, \`status\`, \`viewonce\` or any command name (e.g. \`music\`, \`movie\`, \`download\`, \`nuke\`)
 
 *Examples:*
   \`!disable music\`
-  \`!disable autoreply\`
+  \`!disable schedule\`
   \`!enable music\`
   \`!toggle list\``;
 

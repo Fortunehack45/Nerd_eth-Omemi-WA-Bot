@@ -15,7 +15,6 @@ module.exports = {
         text: '⚠️ *Usage:* `!enable <command_or_feature>`\n\n' +
           '*Examples:*\n' +
           '▸ `!enable music`\n' +
-          '▸ `!enable autoreply`\n' +
           '▸ `!enable schedule`\n' +
           '▸ `!enable ai`\n\n' +
           'Use `!disabled` to see active restrictions.'
