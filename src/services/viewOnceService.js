@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeMessageContent, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { saveJson, loadJson, sanitizeFileName } = require('../utils/helpers');
 const config = require('../../config');
 
@@ -27,6 +28,18 @@ function detectViewOnce(msg) {
   if (m.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
 
   if (m.viewOnceMessage || m.viewOnceMessageV2 || m.viewOnceMessageV2Extension) return true;
+
+  var norm = normalizeMessageContent(m);
+  if (norm) {
+    var mediaKeys = ['imageMessage', 'videoMessage', 'audioMessage', 'voiceMessage', 'documentMessage'];
+    for (var i = 0; i < mediaKeys.length; i++) {
+      var k = mediaKeys[i];
+      if (norm[k] && (norm[k].viewOnce || norm[k].viewOnceMessage || norm[k].viewOnceMessageV2)) {
+        return true;
+      }
+    }
+  }
+
   if (m.imageMessage?.viewOnce || m.videoMessage?.viewOnce || m.audioMessage?.viewOnce || m.voiceMessage?.viewOnce) return true;
 
   return false;
@@ -36,21 +49,14 @@ function detectViewOnce(msg) {
 function getViewOnceContent(msg) {
   if (!msg || !msg.message) return null;
   var m = msg.message;
-  if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message;
-  if (m.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
+  var norm = normalizeMessageContent(m);
 
-  var inner =
-    m.viewOnceMessage?.message ||
-    m.viewOnceMessageV2?.message ||
-    m.viewOnceMessageV2Extension?.message ||
-    m;
-
-  if (!inner) return null;
-
+  var target = norm || m;
   var innerType = null;
   var mediaKeys = ['imageMessage', 'videoMessage', 'audioMessage', 'voiceMessage', 'documentMessage'];
+
   for (var i = 0; i < mediaKeys.length; i++) {
-    if (inner[mediaKeys[i]]) {
+    if (target[mediaKeys[i]]) {
       innerType = mediaKeys[i];
       break;
     }
@@ -58,8 +64,8 @@ function getViewOnceContent(msg) {
 
   if (!innerType) return null;
 
-  var mediaMsg = { key: msg.key, message: inner };
-  return { msg: mediaMsg, innerType: innerType, inner: inner };
+  var mediaMsg = { key: msg.key, message: target };
+  return { msg: mediaMsg, innerType: innerType, inner: target };
 }
 
 function getMediaType(innerType) {
@@ -73,7 +79,6 @@ function getMediaType(innerType) {
 
 async function saveViewOnce(sock, msg) {
   if (!config.viewOnce.enabled) return null;
-  if (msg.key?.fromMe) return null;
 
   var extracted = getViewOnceContent(msg);
   if (!extracted) return null;
@@ -87,14 +92,41 @@ async function saveViewOnce(sock, msg) {
 
   try {
     var buffer = null;
+
+    // 1. Try downloading with original msg object (best for Baileys reupload handling)
     try {
-      buffer = await sock.downloadMediaMessage(innerMsg);
+      buffer = await downloadMediaMessage(
+        msg,
+        'buffer',
+        {},
+        { logger: console, reuploadRequest: sock?.updateMediaMessage }
+      );
     } catch (e1) {
+      // 2. Fallback to innerMsg
       try {
-        buffer = await sock.downloadMediaMessage(msg);
+        buffer = await downloadMediaMessage(
+          innerMsg,
+          'buffer',
+          {},
+          { logger: console, reuploadRequest: sock?.updateMediaMessage }
+        );
       } catch (e2) {
-        console.error('[ViewOnce] Download error:', e2.message);
-        return { error: 'Media download failed: ' + e2.message };
+        // 3. Fallback to sock.downloadMediaMessage if bound
+        if (sock && typeof sock.downloadMediaMessage === 'function') {
+          try {
+            buffer = await sock.downloadMediaMessage(msg);
+          } catch (e3) {
+            try {
+              buffer = await sock.downloadMediaMessage(innerMsg);
+            } catch (e4) {
+              console.error('[ViewOnce] Download error:', e4.message);
+              return { error: 'Media download failed: ' + e4.message };
+            }
+          }
+        } else {
+          console.error('[ViewOnce] Download error:', e2.message);
+          return { error: 'Media download failed: ' + e2.message };
+        }
       }
     }
 
@@ -162,6 +194,18 @@ function findByMessageId(messageId) {
   return index.find(function(i) { return i.messageId && i.messageId === messageId; }) || null;
 }
 
+// Smart fallback: find recent saved viewonce by chat or sender
+function findRecentByChatOrSender(chatId, sender) {
+  var index = getIndex();
+  if (!index || index.length === 0) return null;
+  for (var i = index.length - 1; i >= 0; i--) {
+    var item = index[i];
+    if (chatId && item.chatId === chatId) return item;
+    if (sender && item.sender === sender) return item;
+  }
+  return null;
+}
+
 function deleteSavedMedia(id) {
   var index = getIndex();
   var idx = index.findIndex(function(i) { return i.id === parseInt(id) || i.id === id || String(i.id) === String(id); });
@@ -189,6 +233,7 @@ module.exports = {
   getSavedMedia,
   getLastSavedMedia,
   findByMessageId,
+  findRecentByChatOrSender,
   deleteSavedMedia,
   getStorageStats,
 };

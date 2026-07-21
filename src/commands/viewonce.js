@@ -4,6 +4,7 @@ var {
   getSavedMedia,
   getLastSavedMedia,
   findByMessageId,
+  findRecentByChatOrSender,
   deleteSavedMedia,
   getStorageStats,
   saveViewOnce,
@@ -25,14 +26,14 @@ var HELP = [
   '  `!viewonce stats`          → Shows storage usage & statistics',
   '',
   '*💡 Quick Tip:*',
-  '  Reply to any view-once message with `!viewonce show` to instantly retrieve it.',
+  '  Reply to any view-once message with `!vv` or `!rvo` or `!viewonce show` to instantly retrieve it.',
   '',
-  '*Aliases:* `!vo`, `!saved`',
+  '*Aliases:* `!vo`, `!saved`, `!vv`, `!rvo`, `!readviewonce`, `!reveal`, `!getvo`',
 ].join('\n');
 
 module.exports = {
   name: 'viewonce',
-  alias: ['vo', 'saved'],
+  alias: ['vo', 'saved', 'rvo', 'readviewonce', 'vv', 'reveal', 'getvo'],
   description: 'Manage and retrieve saved view-once media (admin only)',
   usage: '!viewonce [show|list|delete|stats] [id]',
   adminOnly: true,
@@ -45,16 +46,29 @@ module.exports = {
 
     var parts = args ? args.trim().split(/\s+/) : [];
     var sub = parts[0] ? parts[0].toLowerCase() : 'show';
-    var flags = {};
-    var rest = parts.slice(1);
 
-    for (var i = 0; i < rest.length; i++) {
-      if (rest[i] === '--type' || rest[i] === '-t') {
-        flags.type = rest[++i];
-      } else if (rest[i] === '--limit' || rest[i] === '-l') {
-        flags.limit = parseInt(rest[++i]);
+    // Handle when user types `!vv` or `!rvo` directly without subcommands
+    if (sub !== 'show' && sub !== 'list' && sub !== 'ls' && sub !== 'all' && sub !== 'delete' && sub !== 'del' && sub !== 'remove' && sub !== 'stats' && sub !== 'info' && sub !== 'get' && sub !== 'view' && sub !== 'last' && sub !== 'latest' && sub !== 'retrieve') {
+      // User passed an ID directly e.g. `!vv 1721550000` or just `!vv`
+      if (/^\d+$/.test(sub)) {
+        rest = [sub];
+        sub = 'show';
+      } else if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        sub = 'show';
       }
     }
+
+    var flags = {};
+
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i] === '--type' || parts[i] === '-t') {
+        flags.type = parts[++i];
+      } else if (parts[i] === '--limit' || parts[i] === '-l') {
+        flags.limit = parseInt(parts[++i]);
+      }
+    }
+
+    var rest = parts.slice(sub === 'show' || sub === 'list' || sub === 'delete' || sub === 'stats' ? 1 : 0);
 
     switch (sub) {
       // ── LIST ─────────────────────────────────────────────────────────────────
@@ -94,10 +108,10 @@ module.exports = {
         var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         var quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
         var stanzaId = msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
+        var chatId = msg.key?.remoteJid;
 
         if (quotedMsg) {
           // PRIORITY 1: Look up already-saved media by the original message ID
-          // The bot auto-saves view-once media on arrival, so this is the most reliable method
           if (stanzaId) {
             var savedByMsgId = findByMessageId(stanzaId);
             if (savedByMsgId && fs.existsSync(savedByMsgId.filePath)) {
@@ -106,10 +120,17 @@ module.exports = {
             }
           }
 
-          // Reconstruct the quoted message as a full Baileys message object
+          // PRIORITY 2: Look up recent saved media by sender or chat
+          var recentSaved = findRecentByChatOrSender(chatId, quotedParticipant);
+          if (recentSaved && fs.existsSync(recentSaved.filePath)) {
+            await sendMediaItem(sock, sender, recentSaved);
+            return;
+          }
+
+          // PRIORITY 3: Reconstruct the quoted message as a full Baileys message object
           var reconstructed = {
             key: {
-              remoteJid: sender,
+              remoteJid: chatId || sender,
               fromMe: false,
               id: stanzaId || ('QUOTED_' + Date.now()),
               participant: quotedParticipant || '',
@@ -118,10 +139,8 @@ module.exports = {
             pushName: msg.message?.extendedTextMessage?.contextInfo?.pushName || 'Unknown',
           };
 
-          // Check if the quoted message is a view-once
           var isVO = detectViewOnce(reconstructed);
           if (isVO) {
-            // PRIORITY 2: Try to save & retrieve from the quoted message data
             await sock.sendMessage(sender, { text: '📥 Detected view-once in reply — attempting to retrieve...' });
             try {
               var saveResult = await saveViewOnce(sock, reconstructed);
@@ -134,7 +153,6 @@ module.exports = {
               }
             } catch (e) {}
 
-            // PRIORITY 3: Try direct buffer extraction from quoted message content
             var extracted = getViewOnceContent(reconstructed);
             if (extracted) {
               try {
@@ -147,13 +165,18 @@ module.exports = {
                 }
               } catch (e2) {}
             }
-
-            return sock.sendMessage(sender, {
-              text: '⚠️ Could not retrieve view-once from reply.\n\nThis usually means the media was not auto-saved when it first arrived.\n\n💡 The bot automatically saves view-once media as soon as it arrives. Use `!viewonce list` to see all saved view-once media, or `!viewonce show` to see the most recent one.',
-            });
           }
 
-          // If quoted msg is NOT view-once, try treating it as if the ID is provided
+          // PRIORITY 4: Fallback to the latest saved item overall
+          var lastFallback = getLastSavedMedia();
+          if (lastFallback && fs.existsSync(lastFallback.filePath)) {
+            await sendMediaItem(sock, sender, lastFallback);
+            return;
+          }
+
+          return sock.sendMessage(sender, {
+            text: '⚠️ Could not retrieve view-once from reply.\n\n💡 The bot automatically saves view-once media as soon as it arrives in any chat. Use `!viewonce list` to see all saved media.',
+          });
         }
 
         // ── CASE B: No reply — show latest saved or a specific ID ──
