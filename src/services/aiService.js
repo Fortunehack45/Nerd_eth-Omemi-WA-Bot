@@ -30,7 +30,7 @@ function initAI() {
     }
   }
 
-  // 2. Groq (free, fast — default if key set)
+  // 2. Groq (free, fast — default if set in .env or config)
   var groqKey = runtimeKeys.groq || config.groq?.apiKey || process.env.GROQ_API_KEY;
   if (groqKey && groqKey !== 'gsk-demo-key' && groqKey !== 'gsk-your-groq-api-key' && !groqKey.startsWith('gsk-your') && Groq) {
     aiClient = new Groq({ apiKey: groqKey });
