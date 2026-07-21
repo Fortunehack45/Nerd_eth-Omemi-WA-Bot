@@ -220,7 +220,7 @@ async function cmdPlay(sock, sender, args, flags) {
 
   // First try yt-search to find the best match and show user what we found
   var previewSent = false;
-  if (typeof ytSearch !== 'undefined') {
+  if (typeof ytSearch === 'function') {
     try {
       var sr = await ytSearch({ query: query, pageStart: 1, pageEnd: 1 });
       var v = sr.videos && sr.videos[0];
@@ -390,9 +390,9 @@ async function cmdPlaylist(sock, sender, subArgs, flags) {
 
 module.exports = {
   name: 'music',
-  alias: ['song', 'audio', 'songs', 'tune'],
+  alias: ['song', 'audio', 'songs', 'tune', 'play', 'yt', 'yta', 'ytmp3', 'sing'],
   description: 'Music search, playlist management, and discovery \u2014 GitHub-style CLI',
-  usage: '!music <subcommand> [args] [flags]',
+  usage: '!music <subcommand> [args] [flags] or !song <query>',
   execute: async (sock, msg, args, ctx) => {
     const sender = ctx.sender;
 
@@ -472,7 +472,8 @@ module.exports = {
         await cmdPlaylist(sock, sender, parsedArgs.slice(1), flags);
         break;
       default:
-        await sock.sendMessage(sender, { text: 'Unknown subcommand: `' + sub + '`. Use `!music --help` to see all available subcommands.' });
+        // Default to playing the full query if sub is not a recognized management subcommand
+        await cmdPlay(sock, sender, args, flags);
     }
   },
 };
