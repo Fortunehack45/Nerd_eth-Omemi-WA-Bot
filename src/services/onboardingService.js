@@ -62,7 +62,7 @@ async function startOnboarding(sock) {
     steps.push('*🎉 Welcome to Nerd-eth Bot!*\n');
     steps.push('I\'m your new WhatsApp assistant built for multi-purpose automation, AI, and media management!\n');
     steps.push('*👨‍💻 About the Creator:*');
-    steps.push('Created with ❤️ by *Fortune Adebayo (AKA: Nerd_eth)* — Full-Stack & AI Software Engineer.');
+    steps.push('Built by *Fortune Adebayo (AKA: Nerd_eth)* — Full-Stack & AI Software Engineer.');
     steps.push('🌐 *Portfolio:* https://fortuneadebayo.space/');
     steps.push('📲 *WhatsApp:* +234 916 768 9200');
     steps.push('𝕏 *Follow:* @OnNerd_eth\n');

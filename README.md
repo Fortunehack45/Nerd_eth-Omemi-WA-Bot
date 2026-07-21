@@ -836,12 +836,33 @@ If this project helped you, please star it on GitHub! It helps others discover i
 
 ---
 
-## 📜 License
+## 📜 Terms, Privacy Policy & Legal Disclaimer
+
+> [!IMPORTANT]
+> **Agreement of Use:** By deploying, installing, or interacting with this bot, you explicitly agree that you have read, understood, and accepted the terms, privacy policy, and disclaimers below.
+
+### 📜 Terms & Conditions
+- **User Responsibility:** You are solely responsible for all messages, media, commands, and actions executed through your bot deployment.
+- **Platform Compliance:** You agree to use this bot in compliance with WhatsApp's Terms of Service and Anti-Spam policies. Automated messaging must be limited to authorized groups and consensual contacts.
+- **Prohibited Conduct:** Using this bot for bulk unsolicited spamming, harassment, illegal content distribution, or harmful automation is strictly forbidden.
+
+### 🔒 Privacy Policy
+- **100% Local Data Ownership:** All authentication tokens, session credentials, database logs, and memory files are saved strictly on your local host/server deployment.
+- **No Data Harvesting:** Zero chat logs, phone numbers, or user data are collected, harvested, or transmitted to any centralized third-party servers.
+- **External AI Providers:** When optional AI features are active, message prompts are processed securely via provider APIs (Groq / OpenAI) solely to generate requested responses.
+
+### ⚠️ Caution & Legal Disclaimer
+- **Provided "AS IS":** **Nerd-eth WA Bot** is an independent open-source utility provided without warranty of any kind, express or implied.
+- **Account Safety & Liability Notice:** The creator (**Fortune Adebayo / @OnNerd_eth**) and project contributors accept no responsibility or liability for any WhatsApp account bans, suspensions, data loss, group conflicts, or misapplication of automated stealth or recovery features. Use responsibly.
+
+---
+
+## 📄 License
 
 Distributed under the **MIT License**. Free for personal and commercial use.
 
 ```
-MIT License — Copyright (c) 2025 @OnNerd_eth
+MIT License — Copyright (c) 2025 Fortune Adebayo (AKA: Nerd_eth)
 ```
 
 See [LICENSE](LICENSE) for full text.
@@ -850,11 +871,13 @@ See [LICENSE](LICENSE) for full text.
 
 <div align="center">
 
-**Built with ❤️ by [@OnNerd_eth](https://x.com/OnNerd_eth)**
+**Built by Fortune Adebayo (AKA: Nerd_eth)**
 
-📲 WhatsApp: [+234 916 768 9200](https://wa.me/2349167689200)
+🌐 [Portfolio](https://fortuneadebayo.space/)
 &nbsp;|&nbsp;
-𝕏 Twitter: [@OnNerd_eth](https://x.com/OnNerd_eth)
+📲 [WhatsApp Support](https://wa.me/2349167689200)
+&nbsp;|&nbsp;
+𝕏 Twitter [@OnNerd_eth](https://x.com/OnNerd_eth)
 &nbsp;|&nbsp;
 ⭐ [Star on GitHub](https://github.com/Fortunehack45/Nerd_eth-Omemi-WA-Bot)
 
