@@ -388,6 +388,10 @@ input:checked + .slider:before{transform:translateX(24px);background-color:#fff}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
       Show QR Code
     </div>
+    <div class="tool-chip" onclick="showTab('terms')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Terms & Disclaimer
+    </div>
     <div class="tool-chip" onclick="refreshAll()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
       Refresh Data
@@ -801,19 +805,25 @@ function logout() {
 }
 
 function showTab(name) {
-  var tabs = ['dashboard', 'keys', 'features', 'connect', 'users', 'logs'];
-  tabs.forEach(function(t) {
+  var allTabs = ['dashboard', 'keys', 'features', 'connect', 'users', 'logs', 'terms'];
+  allTabs.forEach(function(t) {
     var el = document.getElementById('tab-' + t);
     if (el) el.style.display = (t === name) ? 'block' : 'none';
   });
-  document.querySelectorAll('.nav-item').forEach(function(btn, idx) {
-    btn.classList.toggle('active', tabs[idx] === name);
+
+  document.querySelectorAll('.nav-item').forEach(function(btn) {
+    var onclickAttr = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', onclickAttr.includes("'" + name + "'"));
   });
-  document.querySelectorAll('.mobile-nav-item').forEach(function(btn, idx) {
-    btn.classList.toggle('active', tabs[idx] === name);
+
+  document.querySelectorAll('.mobile-nav-item').forEach(function(btn) {
+    var onclickAttr = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', onclickAttr.includes("'" + name + "'"));
   });
+
   if (name === 'keys') loadKeysStatus();
   if (name === 'features') loadFeaturesStatus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function refreshAll() {
