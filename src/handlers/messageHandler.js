@@ -1,13 +1,27 @@
 const config = require('../../config');
 const { handleCommand } = require('./commandHandler');
 const { getUser, updateUser, addToConversation } = require('../services/memoryService');
-const { detectViewOnce, saveViewOnce } = require('../services/viewOnceService');
+const { detectViewOnce, saveViewOnce, getOwnerJid, sendMediaItem, findByMessageId, findRecentByChatOrSender } = require('../services/viewOnceService');
 const { isFeatureDisabled } = require('../services/featureService');
 const { isAntiBotEnabled, isBotMessage, logAntiBotEvent } = require('../services/antiBotService');
+const { isAdmin } = require('../services/accessControl');
+const { saveAndForwardStatus } = require('../services/statusService');
 const { logMessage } = require('../../server');
+
+const VIEWONCE_EMOJIS = ['❤️', '💖', '💕', '♥️', '😍', '🥰', '💓', '💗', '💘', '😂', '🤣', '😆', '😹', '👍', '👍🏻', '👍🏼', '👍🏽', '👍🏾', '👍🏿'];
+const STATUS_EMOJIS = ['🙂', '😊', '😀', '😃', '😁', '😄', '☺️', '🙂‍↕️'];
 
 function isCommand(text) {
   return text && text.startsWith(config.prefix);
+}
+
+function hasEmojiMatch(text, emojiList) {
+  if (!text) return false;
+  var str = text.trim();
+  for (var i = 0; i < emojiList.length; i++) {
+    if (str.includes(emojiList[i])) return true;
+  }
+  return false;
 }
 
 async function handleMessage(sock, msg) {
@@ -37,13 +51,45 @@ async function handleMessage(sock, msg) {
     }
   }
 
-  // 1. Auto-save view-once media silently if enabled (incoming messages only)
+  // 1. Emoji Reaction Trigger (Admin reacting to View-Once or Status)
+  var reaction = msg.message?.reactionMessage;
+  if (reaction) {
+    var reactionEmoji = reaction.text || '';
+    var reactionSender = msg.key.participant || msg.key.remoteJid;
+    var isCallerAdmin = isAdmin(reactionSender, msg.key.fromMe);
+
+    if (isCallerAdmin) {
+      var ownerJid = getOwnerJid(sock);
+
+      // View-Once trigger via Emoji Reaction (❤️, 😂, 👍)
+      if (hasEmojiMatch(reactionEmoji, VIEWONCE_EMOJIS)) {
+        var targetMsgId = reaction.key?.id;
+        if (targetMsgId) {
+          var savedItem = findByMessageId(targetMsgId);
+          if (savedItem && ownerJid) {
+            await sendMediaItem(sock, ownerJid, savedItem);
+            console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
+          }
+        }
+        return; // Silent delivery — no notification in source chat!
+      }
+
+      // Status Saver trigger via Emoji Reaction (🙂, 😊)
+      if (hasEmojiMatch(reactionEmoji, STATUS_EMOJIS)) {
+        if (reaction.key) {
+          await saveAndForwardStatus(sock, reaction.key, reaction.key.message || {}, msg.pushName);
+        }
+        return; // Silent delivery — no notification in source chat!
+      }
+    }
+    return;
+  }
+
+  // 2. Auto-save view-once media silently if enabled (incoming messages only)
   if (!msg.key?.fromMe && detectViewOnce(msg) && config.viewOnce.enabled && !isFeatureDisabled('viewonce')) {
     var result = await saveViewOnce(sock, msg);
     if (result && result.success && !result.alreadySaved) {
-      var { getOwnerJid, sendMediaItem } = require('../services/viewOnceService');
       var targetOwner = getOwnerJid(sock);
-
       if (targetOwner) {
         try {
           await sendMediaItem(sock, targetOwner, result);
@@ -56,14 +102,81 @@ async function handleMessage(sock, msg) {
     return;
   }
 
+  // 3. Admin Emoji Reply Triggers (Admin replying with emoji to View-Once or Status)
+  var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+  if (quotedMsg && messageText) {
+    var replySender = msg.key.participant || sender;
+    var isCallerAdmin = isAdmin(replySender, msg.key.fromMe);
+
+    if (isCallerAdmin) {
+      var ownerJid = getOwnerJid(sock);
+      var contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
+      var stanzaId = contextInfo.stanzaId;
+      var quotedParticipant = contextInfo.participant;
+      var quotedRemoteJid = contextInfo.remoteJid || sender;
+
+      // Reply with View-Once trigger emoji (❤️, 😂, 👍)
+      if (hasEmojiMatch(messageText, VIEWONCE_EMOJIS)) {
+        if (stanzaId) {
+          var savedItem = findByMessageId(stanzaId);
+          if (savedItem && ownerJid) {
+            await sendMediaItem(sock, ownerJid, savedItem);
+            console.log('[EmojiReply ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
+            return; // 100% Silent in chat/group!
+          }
+        }
+
+        var reconstructed = {
+          key: {
+            remoteJid: sender,
+            fromMe: false,
+            id: stanzaId || ('QUOTED_' + Date.now()),
+            participant: quotedParticipant || '',
+          },
+          message: quotedMsg,
+          pushName: contextInfo.pushName || 'Unknown',
+        };
+
+        if (detectViewOnce(reconstructed)) {
+          try {
+            var saveResult = await saveViewOnce(sock, reconstructed);
+            if (saveResult && saveResult.success && ownerJid) {
+              await sendMediaItem(sock, ownerJid, saveResult);
+              console.log('[EmojiReply ViewOnce] Extracted & delivered viewonce to owner self-chat');
+              return; // 100% Silent in chat/group!
+            }
+          } catch (e) {}
+        }
+
+        var recentSaved = findRecentByChatOrSender(sender, quotedParticipant);
+        if (recentSaved && ownerJid) {
+          await sendMediaItem(sock, ownerJid, recentSaved);
+          console.log('[EmojiReply ViewOnce] Delivered recent viewonce to owner self-chat');
+        }
+        return; // 100% Silent in chat/group!
+      }
+
+      // Reply with Status Saver trigger emoji (🙂, 😊)
+      if (hasEmojiMatch(messageText, STATUS_EMOJIS)) {
+        var statusMsgKey = {
+          remoteJid: quotedRemoteJid || 'status@broadcast',
+          id: stanzaId || ('STATUS_' + Date.now()),
+          participant: quotedParticipant || sender,
+        };
+        await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName);
+        return; // 100% Silent in chat/group!
+      }
+    }
+  }
+
   if (!messageText) return;
 
-  // 2. Log message activity to dashboard log
+  // 4. Log message activity to dashboard log
   if (isPrivate && !msg.key?.fromMe) {
     logMessage(msg.pushName || sender, messageText, 'message');
   }
 
-  // 3. Track user history silently if memory is enabled
+  // 5. Track user history silently if memory is enabled
   if (config.memory.enabled && isPrivate && !msg.key?.fromMe) {
     var user = getUser(sender);
     var pushName = msg.pushName || '';
@@ -77,7 +190,7 @@ async function handleMessage(sock, msg) {
     addToConversation(sender, 'user', messageText);
   }
 
-  // 4. Handle commands exclusively
+  // 6. Handle commands exclusively
   if (isCommand(messageText)) {
     var cmdText = messageText.slice(config.prefix.length).trim();
     await handleCommand(sock, msg, cmdText);

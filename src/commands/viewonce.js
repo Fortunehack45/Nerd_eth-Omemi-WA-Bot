@@ -114,13 +114,6 @@ module.exports = {
         var quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
         var stanzaId = msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
 
-        // If in a group chat, post a confirmation that media is sent to personal chat
-        if (isGroup) {
-          try {
-            await sock.sendMessage(chatId, { text: '📥 Revealed view-once media sent directly to your personal self-chat!' });
-          } catch (e) {}
-        }
-
         if (quotedMsg) {
           // PRIORITY 1: Look up already-saved media by the exact original message ID
           if (stanzaId) {
