@@ -130,6 +130,12 @@ function getSavedMedia(id) {
   return index.find(function(i) { return i.id === parseInt(id) || i.id === id || String(i.id) === String(id); });
 }
 
+function getLastSavedMedia() {
+  var index = getIndex();
+  if (!index || index.length === 0) return null;
+  return index[index.length - 1];
+}
+
 function deleteSavedMedia(id) {
   var index = getIndex();
   var idx = index.findIndex(function(i) { return i.id === parseInt(id) || i.id === id || String(i.id) === String(id); });
@@ -150,5 +156,11 @@ function getStorageStats() {
 }
 
 module.exports = {
-  detectViewOnce, saveViewOnce, listSavedMedia, getSavedMedia, deleteSavedMedia, getStorageStats,
+  detectViewOnce,
+  saveViewOnce,
+  listSavedMedia,
+  getSavedMedia,
+  getLastSavedMedia,
+  deleteSavedMedia,
+  getStorageStats,
 };

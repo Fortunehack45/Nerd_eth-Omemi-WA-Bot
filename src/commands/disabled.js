@@ -2,7 +2,7 @@ const { getFeatureConfig } = require('../services/featureService');
 
 module.exports = {
   name: 'disabled',
-  alias: ['features', 'disabledlist'],
+  alias: ['features', 'disabledlist', 'featurelist'],
   description: 'List all currently disabled features and commands (Admin Only)',
   usage: '!disabled',
   adminOnly: true,

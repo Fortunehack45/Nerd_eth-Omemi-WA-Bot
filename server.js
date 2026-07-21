@@ -267,6 +267,7 @@ app.post('/api/features/toggle', auth, function(req, res) {
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   var result = (action === 'disable') ? featSvc.disableItem(name) : featSvc.enableItem(name);
+  if (!result.success) return res.status(400).json(result);
   res.json(result);
 });
 

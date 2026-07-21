@@ -8,18 +8,28 @@ module.exports = {
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
-    var input = args ? args.trim().toLowerCase() : '';
+    var input = args ? args.trim() : '';
 
     if (!input) {
       return sock.sendMessage(sender, {
-        text: '⚠️ *Usage:* `!disable <command_or_feature>`\n\n*Examples:*\n▸ `!disable music` (disables !music command)\n▸ `!disable autoreply` (disables auto-replies)\n▸ `!disable schedule` (disables scheduling)\n▸ `!disable ai` (disables AI responses)'
+        text: '⚠️ *Usage:* `!disable <command_or_feature>`\n\n' +
+          '*Examples:*\n' +
+          '▸ `!disable music` (disables !music command)\n' +
+          '▸ `!disable autoreply` (disables auto-replies)\n' +
+          '▸ `!disable schedule` (disables scheduling)\n' +
+          '▸ `!disable ai` (disables AI responses)\n\n' +
+          'Use `!disabled` to see active restrictions.'
       });
     }
 
     var res = disableItem(input);
-    var label = res.isFeature ? 'feature' : 'command';
+    if (!res.success) {
+      return sock.sendMessage(sender, { text: res.error || 'Failed to disable item.' });
+    }
+
+    var label = res.isFeature ? 'feature & command' : 'command';
     return sock.sendMessage(sender, {
-      text: '🚫 *Disabled ' + label + ':* `' + input + '`\nThis ' + label + ' can no longer be triggered by users until re-enabled with `!enable ' + input + '`.'
+      text: '🚫 *Disabled ' + label + ':* `' + res.target + '`\nThis item can no longer be used or triggered until re-enabled with `!enable ' + res.target + '`.'
     });
   },
 };

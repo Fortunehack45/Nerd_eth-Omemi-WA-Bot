@@ -171,6 +171,9 @@ async function executeSchedule(schedule) {
 }
 
 async function checkSchedules() {
+  var { isFeatureDisabled } = require('./featureService');
+  if (isFeatureDisabled('schedule')) return;
+
   var schedules = getSchedules();
   var now = Date.now();
   for (var s of schedules) {

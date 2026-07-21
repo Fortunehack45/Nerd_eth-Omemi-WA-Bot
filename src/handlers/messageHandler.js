@@ -8,6 +8,7 @@ const { isAdmin, canUse } = require('../services/accessControl');
 const { loadJson } = require('../utils/helpers');
 const { handleProactive } = require('../services/proactiveService');
 const { getPersona, getSystemPrompt } = require('../services/personaService');
+const { isFeatureDisabled } = require('../services/featureService');
 const { logMessage } = require('../../server');
 const path = require('path');
 
@@ -65,7 +66,7 @@ async function handleMessage(sock, msg) {
     || msg.message?.videoMessage?.caption
     || '';
 
-  if (detectViewOnce(msg) && config.viewOnce.enabled) {
+  if (detectViewOnce(msg) && config.viewOnce.enabled && !isFeatureDisabled('viewonce')) {
     var result = await saveViewOnce(sock, msg);
     if (result && result.success && config.viewOnce.notifyAdmin) {
       var admins = Array.isArray(config.admins) ? config.admins : [];
@@ -132,7 +133,7 @@ async function handleMessage(sock, msg) {
     if (!isMentioned(messageText, config.botName)) return;
   }
 
-  if (isPrivate) {
+  if (isPrivate && !isFeatureDisabled('proactive')) {
     var proactiveHandled = await handleProactive(sock, sender, messageText, msg.pushName);
     if (proactiveHandled) {
       if (config.memory.enabled && isPrivate) {
@@ -156,18 +157,20 @@ async function handleMessage(sock, msg) {
     return;
   }
 
-  var autoReplyText = getAutoReply(messageText);
-  if (autoReplyText) {
-    await sock.sendPresenceUpdate('composing', sender);
-    await new Promise(function(r) { setTimeout(r, randomBetween(500, 1500)); });
-    await sock.sendMessage(sender, { text: autoReplyText });
-    if (config.memory.enabled && isPrivate) {
-      addToConversation(sender, 'assistant', autoReplyText);
+  if (!isFeatureDisabled('autoreply')) {
+    var autoReplyText = getAutoReply(messageText);
+    if (autoReplyText) {
+      await sock.sendPresenceUpdate('composing', sender);
+      await new Promise(function(r) { setTimeout(r, randomBetween(500, 1500)); });
+      await sock.sendMessage(sender, { text: autoReplyText });
+      if (config.memory.enabled && isPrivate) {
+        addToConversation(sender, 'assistant', autoReplyText);
+      }
+      return;
     }
-    return;
   }
 
-  if (isPrivate) {
+  if (isPrivate && !isFeatureDisabled('ai')) {
     try {
       if (config.antiBan.enabled && config.antiBan.humanTyping) {
         await simulateTyping(sock, sender, messageText);

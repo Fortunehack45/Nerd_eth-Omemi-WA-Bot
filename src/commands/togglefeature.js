@@ -2,7 +2,7 @@ const { disableItem, enableItem, getFeatureConfig } = require('../services/featu
 
 const HELP = `*⚡ Feature & Command Switcher* (Admin Only)
 
-Enable or disable specific commands, subcommands, or bot features dynamically.
+Enable or disable specific commands or bot features dynamically.
 
 *Commands:*
   \`!disable <cmd|feature>\`   Disable a command or feature
@@ -19,21 +19,22 @@ Enable or disable specific commands, subcommands, or bot features dynamically.
   \`!toggle list\``;
 
 module.exports = {
-  name: 'disable',
-  alias: ['enable', 'toggle', 'feature', 'togglefeature'],
+  name: 'togglefeature',
+  alias: ['toggle', 'feature'],
   description: 'Enable or disable specific commands and bot features',
-  usage: '!disable <command|feature> | !enable <command|feature>',
+  usage: '!toggle <disable|enable|list> [name]',
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
-    var command = ctx.command.toLowerCase();
-    var input = args ? args.trim().toLowerCase() : '';
+    var parts = args ? args.trim().split(/\s+/) : [];
+    var action = parts[0] ? parts[0].toLowerCase() : '';
+    var input = parts.slice(1).join(' ').trim();
 
-    if (!input || input === '--help' || input === '-h') {
+    if (!action || action === '--help' || action === '-h') {
       return sock.sendMessage(sender, { text: HELP });
     }
 
-    if (input === 'list' || input === 'status') {
+    if (action === 'list' || action === 'status' || action === 'disabled') {
       var cfg = getFeatureConfig();
       var text = '*⚙️ Feature & Command Status*\n\n';
       text += '*Disabled Features:* ' + ((cfg.disabledFeatures && cfg.disabledFeatures.length) ? cfg.disabledFeatures.join(', ') : 'None') + '\n';
@@ -41,17 +42,21 @@ module.exports = {
       return sock.sendMessage(sender, { text: text });
     }
 
-    if (command === 'disable' || command === 'feature' || command === 'togglefeature') {
+    if (action === 'disable' || action === 'off') {
+      if (!input) return sock.sendMessage(sender, { text: '⚠️ Usage: `!toggle disable <name>`' });
       var res = disableItem(input);
+      if (!res.success) return sock.sendMessage(sender, { text: res.error || 'Failed to disable item.' });
       return sock.sendMessage(sender, {
-        text: '🚫 Disabled **' + input + '** successfully!\nUsers will not be able to trigger this until re-enabled.'
+        text: '🚫 Disabled **' + (res.target || input) + '** successfully!\nUsers will not be able to trigger this until re-enabled.'
       });
     }
 
-    if (command === 'enable') {
+    if (action === 'enable' || action === 'on') {
+      if (!input) return sock.sendMessage(sender, { text: '⚠️ Usage: `!toggle enable <name>`' });
       var res2 = enableItem(input);
+      if (!res2.success) return sock.sendMessage(sender, { text: res2.error || 'Failed to enable item.' });
       return sock.sendMessage(sender, {
-        text: '✅ Enabled **' + input + '** successfully!'
+        text: '✅ Enabled **' + (res2.target || input) + '** successfully!'
       });
     }
 

@@ -1,13 +1,13 @@
 var fs = require('fs');
-var { listSavedMedia, getSavedMedia, deleteSavedMedia, getStorageStats } = require('../services/viewOnceService');
+var { listSavedMedia, getSavedMedia, getLastSavedMedia, deleteSavedMedia, getStorageStats } = require('../services/viewOnceService');
 
-var HELP = '*📸 View-Once Media*\n\nView, list, and manage saved view-once media (images, videos, voice notes).\n\n*Usage:* `!viewonce <subcommand>`\n\n*Subcommands:*\n  `list`              List all saved media\n  `show <id>`         View a specific media file\n  `delete <id>`       Delete a saved media\n  `stats`             Show storage statistics\n\n*Flags:*\n  `--type`, `-t` image|video|audio  Filter by type\n  `--limit`, `-l` N                 Number of results (default: 20)\n\n*Examples:*\n  `!viewonce list`\n  `!viewonce list --type image`\n  `!viewonce show 1712345678000`\n  `!viewonce delete 1712345678000`\n  `!viewonce stats`';
+var HELP = '*📸 View-Once Media*\n\nView, list, and manage saved view-once media (images, videos, voice notes).\n\n*Usage:* `!viewonce <subcommand>`\n\n*Subcommands:*\n  `show [id]`         View the last saved media or a specific ID\n  `list`              List all saved media\n  `delete <id>`       Delete a saved media\n  `stats`             Show storage statistics\n\n*Flags:*\n  `--type`, `-t` image|video|audio  Filter by type\n  `--limit`, `-l` N                 Number of results (default: 20)\n\n*Examples:*\n  `!viewonce show`              (shows most recent view-once)\n  `!viewonce show 1712345678000` (shows specific ID)\n  `!viewonce list`              (lists all saved media)\n  `!viewonce stats`             (shows storage usage)';
 
 module.exports = {
   name: 'viewonce',
-  alias: ['vo', 'viewonce', 'saved'],
+  alias: ['vo', 'saved'],
   description: 'Manage saved view-once media (admin only)',
-  usage: '!viewonce list | show <id> | delete <id> | stats',
+  usage: '!viewonce [show|list|delete|stats] [id]',
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
@@ -16,7 +16,7 @@ module.exports = {
       return sock.sendMessage(sender, { text: HELP });
     }
 
-    var parts = args.split(/\s+/);
+    var parts = args.trim().split(/\s+/);
     var sub = parts[0].toLowerCase();
     var flags = {};
     var rest = parts.slice(1);
@@ -45,7 +45,7 @@ module.exports = {
         items.forEach(function(item) {
           var date = new Date(item.timestamp).toLocaleString();
           var size = item.size > 1024 * 1024 ? (item.size / 1024 / 1024).toFixed(1) + 'MB' : (item.size / 1024).toFixed(1) + 'KB';
-          text += '▸ *ID:* ' + item.id + '\n';
+          text += '▸ *ID:* `' + item.id + '`\n';
           text += '   Type: ' + item.mediaType + ' | Size: ' + size + '\n';
           text += '   From: ' + item.senderName + ' | ' + date + '\n';
           text += '   Use: `!viewonce show ' + item.id + '`\n\n';
@@ -57,15 +57,35 @@ module.exports = {
 
       case 'show':
       case 'get':
-      case 'view': {
+      case 'view':
+      case 'last':
+      case 'latest': {
         var id = rest[0];
-        if (!id) return sock.sendMessage(sender, { text: 'Usage: `!viewonce show <id>`\nGet the ID from `!viewonce list`' });
-        var item = getSavedMedia(id);
-        if (!item) return sock.sendMessage(sender, { text: 'Media with ID "' + id + '" not found.' });
-        if (!fs.existsSync(item.filePath)) return sock.sendMessage(sender, { text: 'File no longer exists on disk.' });
+        var item = null;
+
+        if (!id || id.toLowerCase() === 'last' || id.toLowerCase() === 'latest') {
+          item = getLastSavedMedia();
+          if (!item) {
+            return sock.sendMessage(sender, { text: '⚠️ No saved view-once media found.' });
+          }
+        } else {
+          item = getSavedMedia(id);
+          if (!item) {
+            return sock.sendMessage(sender, { text: '⚠️ Media with ID "' + id + '" not found. Use `!viewonce list` to view saved IDs.' });
+          }
+        }
+
+        if (!fs.existsSync(item.filePath)) {
+          return sock.sendMessage(sender, { text: '⚠️ File no longer exists on disk.' });
+        }
 
         var buffer = fs.readFileSync(item.filePath);
-        var msgOptions = { caption: '📸 View-once from ' + item.senderName + '\n' + new Date(item.timestamp).toLocaleString() };
+        var captionText = '📸 *View-Once Media*\n▸ From: ' + item.senderName + '\n▸ ID: `' + item.id + '`\n▸ Saved: ' + new Date(item.timestamp).toLocaleString();
+        if (item.caption) {
+          captionText += '\n▸ Caption: ' + item.caption;
+        }
+
+        var msgOptions = { caption: captionText };
 
         try {
           if (item.mediaType === 'image') {
@@ -75,8 +95,15 @@ module.exports = {
             msgOptions.video = buffer;
             await sock.sendMessage(sender, msgOptions);
           } else if (item.mediaType === 'audio' || item.mediaType === 'voice') {
-            msgOptions.audio = buffer;
-            msgOptions.mimetype = 'audio/ogg; codecs=opus';
+            await sock.sendMessage(sender, {
+              audio: buffer,
+              mimetype: 'audio/ogg; codecs=opus',
+              ptt: (item.mediaType === 'voice'),
+            });
+            await sock.sendMessage(sender, { text: captionText });
+          } else if (item.mediaType === 'document') {
+            msgOptions.document = buffer;
+            msgOptions.fileName = item.fileName || 'document.bin';
             await sock.sendMessage(sender, msgOptions);
           } else {
             await sock.sendMessage(sender, { text: 'Unknown media type: ' + item.mediaType + '\nFile: ' + item.filePath });
