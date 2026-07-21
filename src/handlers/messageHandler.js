@@ -125,9 +125,18 @@ async function handleMessage(sock, msg) {
     return;
   }
 
-  // 3. Admin Emoji Reply Triggers (Admin replying with emoji to View-Once or Status)
-  var quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-  if (quotedMsg && messageText) {
+  // 3. Admin Emoji & Keyword Triggers (with or without '!' prefix, standalone or reply)
+  var cleanText = messageText.trim();
+  var cleanCmdKey = cleanText.toLowerCase().replace(/^!/, '');
+  var isViewOnceKeyword = ['vv', 'rvo', 'viewonce', 'reveal', 'getvo'].includes(cleanCmdKey);
+  var isStatusKeyword = ['sw', 'save', 'savestatus', 'savestory', 'getstatus', 'swdl'].includes(cleanCmdKey);
+
+  var isEmojiOrKeywordTrigger = hasEmojiMatch(cleanText, VIEWONCE_EMOJIS_NORM)
+    || hasEmojiMatch(cleanText, STATUS_EMOJIS_NORM)
+    || isViewOnceKeyword
+    || isStatusKeyword;
+
+  if (isEmojiOrKeywordTrigger) {
     var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
@@ -136,57 +145,78 @@ async function handleMessage(sock, msg) {
       var stanzaId = contextInfo.stanzaId;
       var quotedParticipant = contextInfo.participant;
       var quotedRemoteJid = contextInfo.remoteJid || sender;
+      var quotedMsg = contextInfo.quotedMessage;
 
-      // Reply with View-Once trigger emoji (❤️, 😂, 👍)
-      if (hasEmojiMatch(messageText, VIEWONCE_EMOJIS_NORM)) {
+      // --- VIEW-ONCE HANDLER (❤️, 😂, 👍, vv, rvo, viewonce) ---
+      if (hasEmojiMatch(cleanText, VIEWONCE_EMOJIS_NORM) || isViewOnceKeyword) {
+        // 1. If replying to a saved message by stanzaId
         if (stanzaId) {
           var savedItem = findByMessageId(stanzaId);
           if (savedItem && ownerJid) {
             await sendMediaItem(sock, ownerJid, savedItem);
-            console.log('[EmojiReply ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
-            return; // 100% Silent in chat/group!
+            console.log('[Emoji/Keyword Trigger] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat');
+            return;
           }
         }
 
-        var reconstructed = {
-          key: {
-            remoteJid: sender,
-            fromMe: false,
-            id: stanzaId || ('QUOTED_' + Date.now()),
-            participant: quotedParticipant || '',
-          },
-          message: quotedMsg,
-          pushName: contextInfo.pushName || 'Unknown',
-        };
+        // 2. If replying to a viewonce message, reconstruct & decrypt
+        if (quotedMsg) {
+          var reconstructed = {
+            key: {
+              remoteJid: sender,
+              fromMe: false,
+              id: stanzaId || ('QUOTED_' + Date.now()),
+              participant: quotedParticipant || '',
+            },
+            message: quotedMsg,
+            pushName: contextInfo.pushName || 'Unknown',
+          };
 
-        if (detectViewOnce(reconstructed)) {
-          try {
-            var saveResult = await saveViewOnce(sock, reconstructed);
-            if (saveResult && saveResult.success && ownerJid) {
-              await sendMediaItem(sock, ownerJid, saveResult);
-              console.log('[EmojiReply ViewOnce] Extracted & delivered viewonce to owner self-chat');
-              return; // 100% Silent in chat/group!
-            }
-          } catch (e) {}
+          if (detectViewOnce(reconstructed)) {
+            try {
+              var saveResult = await saveViewOnce(sock, reconstructed);
+              if (saveResult && saveResult.success && ownerJid) {
+                await sendMediaItem(sock, ownerJid, saveResult);
+                console.log('[Emoji/Keyword Trigger] Extracted & delivered viewonce to owner self-chat');
+                return;
+              }
+            } catch (e) {}
+          }
         }
 
+        // 3. Fallback: Find recent saved viewonce by chat/sender or get latest saved
         var recentSaved = findRecentByChatOrSender(sender, quotedParticipant);
+        if (!recentSaved) {
+          recentSaved = getLastSavedMedia();
+        }
+
         if (recentSaved && ownerJid) {
           await sendMediaItem(sock, ownerJid, recentSaved);
-          console.log('[EmojiReply ViewOnce] Delivered recent viewonce to owner self-chat');
+          console.log('[Emoji/Keyword Trigger] Delivered recent viewonce ' + recentSaved.id + ' to owner self-chat');
+        } else {
+          await sock.sendMessage(ownerJid, { text: '⚠️ No saved view-once media found in storage.' });
         }
-        return; // 100% Silent in chat/group!
+        return; // 100% Silent in source chat!
       }
 
-      // Reply with Status Saver trigger emoji (🙂, 😊)
-      if (hasEmojiMatch(messageText, STATUS_EMOJIS_NORM)) {
-        var statusMsgKey = {
-          remoteJid: quotedRemoteJid || 'status@broadcast',
-          id: stanzaId || ('STATUS_' + Date.now()),
-          participant: quotedParticipant || sender,
-        };
-        await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName);
-        return; // 100% Silent in chat/group!
+      // --- STATUS SAVER HANDLER (🙂, 😊, sw, save, savestatus) ---
+      if (hasEmojiMatch(cleanText, STATUS_EMOJIS_NORM) || isStatusKeyword) {
+        if (quotedMsg) {
+          var statusMsgKey = {
+            remoteJid: quotedRemoteJid || 'status@broadcast',
+            id: stanzaId || ('STATUS_' + Date.now()),
+            participant: quotedParticipant || sender,
+          };
+          await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName, sender);
+        } else {
+          var statusMsgKey = {
+            remoteJid: 'status@broadcast',
+            id: 'STATUS_' + Date.now(),
+            participant: sender,
+          };
+          await saveAndForwardStatus(sock, statusMsgKey, {}, msg.pushName, sender);
+        }
+        return; // 100% Silent in source chat!
       }
     }
   }
