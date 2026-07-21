@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { downloadMediaMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
+const { downloadMediaMessage, downloadContentFromMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
 const { saveJson, loadJson, sanitizeFileName, parseJid } = require('../utils/helpers');
-const { getOwnerJid } = require('./viewOnceService');
 
 const SAVE_DIR = path.join(__dirname, '..', '..', 'storage', 'status');
 const INDEX_FILE = path.join(SAVE_DIR, 'index.json');
@@ -20,34 +19,111 @@ function saveIndex(index) {
   saveJson(INDEX_FILE, index);
 }
 
+function getOwnerJid(sock) {
+  var config = require('../../config');
+  var raw = sock?.user?.id || sock?.user?.jid || (config.admins && config.admins[0]) || config.ownerNumber || '';
+  var clean = parseJid(raw);
+  return clean ? (clean + '@s.whatsapp.net') : null;
+}
+
+async function downloadStatusBuffer(sock, targetMsgKey, content) {
+  if (!content) return null;
+
+  var norm = normalizeMessageContent(content) || content;
+  if (norm.ephemeralMessage?.message) norm = normalizeMessageContent(norm.ephemeralMessage.message) || norm.ephemeralMessage.message;
+  if (norm.viewOnceMessage?.message) norm = normalizeMessageContent(norm.viewOnceMessage.message) || norm.viewOnceMessage.message;
+  if (norm.viewOnceMessageV2?.message) norm = normalizeMessageContent(norm.viewOnceMessageV2.message) || norm.viewOnceMessageV2.message;
+  if (norm.documentWithCaptionMessage?.message) norm = normalizeMessageContent(norm.documentWithCaptionMessage.message) || norm.documentWithCaptionMessage.message;
+
+  var mediaObj = norm.imageMessage || norm.videoMessage || norm.audioMessage || norm.documentMessage;
+  if (!mediaObj) return null;
+
+  var mediaTypeKey = norm.imageMessage ? 'imageMessage' : (norm.videoMessage ? 'videoMessage' : (norm.audioMessage ? 'audioMessage' : 'documentMessage'));
+  var singleMsg = {};
+  singleMsg[mediaTypeKey] = mediaObj;
+
+  // Attempt 1: Standard downloadMediaMessage
+  try {
+    var buf1 = await downloadMediaMessage(
+      { key: targetMsgKey, message: norm },
+      'buffer',
+      {},
+      { logger: console, reuploadRequest: sock?.updateMediaMessage }
+    );
+    if (buf1 && buf1.length > 0) return buf1;
+  } catch (e1) {}
+
+  // Attempt 2: downloadMediaMessage with singleMsg container
+  try {
+    var buf2 = await downloadMediaMessage(
+      { key: targetMsgKey, message: singleMsg },
+      'buffer',
+      {},
+      { logger: console, reuploadRequest: sock?.updateMediaMessage }
+    );
+    if (buf2 && buf2.length > 0) return buf2;
+  } catch (e2) {}
+
+  // Attempt 3: sock.downloadMediaMessage
+  if (sock && typeof sock.downloadMediaMessage === 'function') {
+    try {
+      var buf3 = await sock.downloadMediaMessage({ key: targetMsgKey, message: norm });
+      if (buf3 && buf3.length > 0) return buf3;
+    } catch (e3) {}
+    try {
+      var buf4 = await sock.downloadMediaMessage({ key: targetMsgKey, message: singleMsg });
+      if (buf4 && buf4.length > 0) return buf4;
+    } catch (e4) {}
+  }
+
+  // Attempt 4: Low-level downloadContentFromMessage stream decoding
+  try {
+    var rawType = mediaTypeKey.replace('Message', '');
+    var stream = await downloadContentFromMessage(mediaObj, rawType);
+    var chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    var buf5 = Buffer.concat(chunks);
+    if (buf5 && buf5.length > 0) return buf5;
+  } catch (e5) {
+    console.error('[StatusSaver Stream Error]', e5.message);
+  }
+
+  return null;
+}
+
 async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
   try {
     ensureDirs();
-    var norm = normalizeMessageContent(quotedMsg);
-    var content = norm || quotedMsg;
-    if (!content) return false;
+    var norm = normalizeMessageContent(quotedMsg) || quotedMsg;
+    if (norm.ephemeralMessage?.message) norm = normalizeMessageContent(norm.ephemeralMessage.message) || norm.ephemeralMessage.message;
+    if (norm.viewOnceMessage?.message) norm = normalizeMessageContent(norm.viewOnceMessage.message) || norm.viewOnceMessage.message;
+    if (norm.viewOnceMessageV2?.message) norm = normalizeMessageContent(norm.viewOnceMessageV2.message) || norm.viewOnceMessageV2.message;
+
+    if (!norm) return false;
 
     var mediaType = 'text';
     var inner = null;
 
-    if (content.imageMessage) {
+    if (norm.imageMessage) {
       mediaType = 'image';
-      inner = content.imageMessage;
-    } else if (content.videoMessage) {
+      inner = norm.imageMessage;
+    } else if (norm.videoMessage) {
       mediaType = 'video';
-      inner = content.videoMessage;
-    } else if (content.audioMessage) {
+      inner = norm.videoMessage;
+    } else if (norm.audioMessage) {
       mediaType = 'audio';
-      inner = content.audioMessage;
-    } else if (content.conversation || content.extendedTextMessage) {
+      inner = norm.audioMessage;
+    } else if (norm.conversation || norm.extendedTextMessage) {
       mediaType = 'text';
-      inner = content;
+      inner = norm;
     }
 
     var senderJid = targetMsgKey?.participant || targetMsgKey?.remoteJid || 'Unknown';
     var cleanSender = parseJid(senderJid);
     var senderName = pushName || cleanSender;
-    var caption = inner?.caption || content?.extendedTextMessage?.text || content?.conversation || '';
+    var caption = inner?.caption || norm?.extendedTextMessage?.text || norm?.conversation || '';
 
     var ownerJid = getOwnerJid(sock);
     if (!ownerJid) return false;
@@ -70,29 +146,13 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
       return true;
     }
 
-    // Media Status (Image, Video, Audio)
-    var buffer = null;
-    var mediaContainer = { key: targetMsgKey, message: content };
+    // Download Media Status (Image, Video, Audio)
+    var buffer = await downloadStatusBuffer(sock, targetMsgKey, norm);
 
-    try {
-      buffer = await downloadMediaMessage(
-        mediaContainer,
-        'buffer',
-        {},
-        { logger: console, reuploadRequest: sock?.updateMediaMessage }
-      );
-    } catch (e1) {
-      try {
-        if (sock && typeof sock.downloadMediaMessage === 'function') {
-          buffer = await sock.downloadMediaMessage(mediaContainer);
-        }
-      } catch (e2) {
-        console.error('[StatusSaver Download Error]', e2.message);
-        return false;
-      }
+    if (!buffer || buffer.length === 0) {
+      console.error('[StatusSaver Error] Failed to download media buffer for status');
+      return false;
     }
-
-    if (!buffer || buffer.length === 0) return false;
 
     var extMap = { image: '.jpg', video: '.mp4', audio: '.ogg' };
     var ext = extMap[mediaType] || '.bin';
@@ -142,4 +202,5 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
 
 module.exports = {
   saveAndForwardStatus,
+  downloadStatusBuffer,
 };

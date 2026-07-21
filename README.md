@@ -309,23 +309,41 @@ Direct contact buttons for bug reports, feature requests, or questions:
 
 ### 📸 View-Once Media Vault
 
-The bot **automatically saves all view-once messages** as they arrive — whether opened or not. No manual trigger needed.
+The bot **automatically saves all view-once messages** (images, videos, voice notes, audio, documents) as they arrive — whether opened or not. Delivered 100% privately to your owner self-chat.
 
-| Command | Access | Description | Example |
-|---------|--------|-------------|---------|
+| Command / Trigger | Access | Description | Example |
+|---|---|---|---|
 | `!viewonce show` | Admin | Show most recently saved view-once | `!viewonce show` |
 | `!viewonce show <id>` | Admin | Show a specific view-once by ID | `!viewonce show 1721534678000` |
+| `!vv` / `!rvo` | Admin | Quick reply to retrieve view-once | Reply to view-once with `!vv` |
+| `!reveal` / `!getvo` | Admin | Shortcut aliases for view-once reveal | `!reveal` |
 | `!viewonce list` | Admin | List all saved view-once media | `!viewonce list` |
-| `!viewonce list --type image` | Admin | Filter by media type | `!viewonce list --type video` |
+| `!viewonce list --type image` | Admin | Filter list by media type | `!viewonce list --type video` |
 | `!viewonce delete <id>` | Admin | Delete a saved entry | `!viewonce delete 1721534678000` |
 | `!viewonce stats` | Admin | Show storage usage & totals | `!viewonce stats` |
-| `!vo` | Admin | Shortcut alias for `!viewonce` | `!vo show` |
-| `!saved` | Admin | Alias for `!viewonce list` | `!saved` |
+| ❤️ / 😂 / 👍 (Emoji Reaction/Reply) | Admin | React or reply to view-once with Love, Laughing, or Thumbs Up emoji | React to view-once with `❤️` or `😂` or `👍` |
 
-**💡 Reply-to Shortcut:**
-> Reply to **any view-once message** with `!viewonce show` and the bot will instantly decrypt and send you the media — even if it's already been "opened".
+**💡 Reply & Emoji Reaction Shortcuts:**
+> - Reply to **any view-once message** with `!vv` or `!rvo` or `!viewonce show`.
+> - Or **react / reply with an emoji** (Love `❤️`, Laughing `😂`, or Thumbs Up `👍`) to silently decrypt and receive the media directly in your personal self-chat.
 
-**Supported Media Types:** Images, Videos, Voice Notes, Audio Files, Documents
+---
+
+### 📱 WhatsApp Status Saver
+
+Save people's WhatsApp statuses (images, videos, audio, or text statuses) directly into your owner self-chat with zero notifications in the source chat.
+
+| Command / Trigger | Access | Description | Example |
+|---|---|---|---|
+| `!savestatus` | Admin | Save quoted status to owner self-chat | Reply to status with `!savestatus` |
+| `!sw` / `!save` | Admin | Shortcut aliases for status saver | Reply to status with `!sw` or `!save` |
+| `!savestory` / `!getstatus` | Admin | Additional technical aliases | `!savestory` |
+| 🙂 / 😊 (Emoji Reaction/Reply) | Admin | React or reply to status with slightly smiling face emoji | React to status with `🙂` or `😊` |
+
+**💡 How to Save Statuses:**
+> 1. **Emoji Trigger:** React or reply to any WhatsApp status update with a slightly smiling face emoji (`🙂` or `😊`).
+> 2. **Technical Command:** Reply to any status update with `!savestatus`, `!sw`, or `!save`.
+> 3. All saved status files are stored in `storage/status/` and delivered privately into your personal self-chat.
 
 ---
 
