@@ -42,7 +42,7 @@ async function sendFile(sock, sender, filePath, opts) {
 
 module.exports = {
   name: 'download',
-  alias: ['dl', 'save', 'get'],
+  alias: ['dl', 'save', 'get', 'yt', 'ytdl', 'ytmp4', 'ytmp3', 'ig', 'insta', 'instagram', 'tiktok', 'tt'],
   description: 'Download media from YouTube, TikTok, Instagram, Spotify in HD',
   usage: '!download <link> [--audio] [--info]',
   execute: async (sock, msg, args, ctx) => {
@@ -56,13 +56,24 @@ module.exports = {
     var url = (parsed.positional.join(' ') || args).trim();
     var flags = parsed.flags;
 
-    if (!url || !url.match(/https?:\/\//)) {
-      return sock.sendMessage(sender, { text: '❌ Please provide a valid URL.\n\n' + HELP });
+    // If no URL scheme found but text was provided, search audio or movie download
+    if (!url.match(/https?:\/\//i)) {
+      if (flags.audio || flags.a || ctx.command === 'ytmp3' || ctx.command === 'song' || ctx.command === 'play') {
+        var { searchYouTubeAndDownloadAudio } = require('../services/downloadService');
+        await sock.sendMessage(sender, { text: '🔍 Searching audio for "' + url.substring(0, 60) + '"...' });
+        var musicRes = await searchYouTubeAndDownloadAudio(url);
+        if (musicRes.error) return sock.sendMessage(sender, { text: '❌ Error: ' + musicRes.error });
+        if (musicRes.filePath && fs.existsSync(musicRes.filePath)) {
+          await sendFile(sock, sender, musicRes.filePath, { title: musicRes.title, type: 'audio' });
+        }
+        return;
+      }
+      return sock.sendMessage(sender, { text: '❌ Please provide a valid URL (YouTube, TikTok, Instagram, Spotify) or use `!music play <song>` or `!movie download <title>`.' });
     }
 
     var platform = detectPlatform(url);
     if (platform === 'unknown') {
-      return sock.sendMessage(sender, { text: '❌ Unsupported platform.\n\n*Supported:* YouTube, TikTok, Instagram, Spotify' });
+      return sock.sendMessage(sender, { text: '❌ Unsupported platform.\n\n*Supported:* YouTube, TikTok, Instagram, Spotify, Twitter, Facebook' });
     }
 
     // ── INFO MODE ────────────────────────────────────────────────────────────

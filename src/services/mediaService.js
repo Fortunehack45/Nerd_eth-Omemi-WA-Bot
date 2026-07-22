@@ -25,6 +25,10 @@ const OMDB_KEYS = [
   'b9bd48a6',
   '302b11ff',
   '3430a5e8',
+  '72bc447a',
+  '61329ff',
+  'a39a7935',
+  '8a32a68',
 ].filter(Boolean);
 
 async function fetchOmdb(queryParams) {

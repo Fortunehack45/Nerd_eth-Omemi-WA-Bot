@@ -110,10 +110,14 @@ function runYtDlp(args, timeout) {
 // ─── Cobalt API Helper (v10 & v7 format fallback) ────────────────────────────
 
 var COBALT_INSTANCES = [
-  'https://api.cobalt.tools',
+  'https://cobalt.tools',
   'https://cobalt-api.kwiatekmiki.com',
   'https://cobalt.api.timelessnesses.me',
-  'https://co.wuk.sh',
+  'https://cobalt.v07.io',
+  'https://cobalt.qewertyy.dev',
+  'https://cobalt.stream',
+  'https://co.eik.sh',
+  'https://api.cobalt.tools',
 ];
 
 async function cobaltRequest(url, isAudioOnly, customOpts) {
@@ -136,35 +140,41 @@ async function cobaltRequest(url, isAudioOnly, customOpts) {
 
   for (var i = 0; i < COBALT_INSTANCES.length; i++) {
     var instance = COBALT_INSTANCES[i];
-    try {
-      log('Cobalt — trying ' + instance + '...');
-      var targetUrl = instance.endsWith('/api/json') ? instance : (instance.replace(/\/$/, '') + '/api/json');
-      var resp = await axios.post(targetUrl, body, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        timeout: 25000,
-      });
+    // Try both root v10 endpoint and /api/json v7 endpoint
+    var endpoints = [
+      instance.replace(/\/$/, '') + '/',
+      instance.endsWith('/api/json') ? instance : (instance.replace(/\/$/, '') + '/api/json'),
+    ];
 
-      var data = resp.data;
-      if (!data) continue;
+    for (var j = 0; j < endpoints.length; j++) {
+      var targetUrl = endpoints[j];
+      try {
+        log('Cobalt — trying ' + targetUrl + '...');
+        var resp = await axios.post(targetUrl, body, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          timeout: 2500,
+        });
 
-      if (data.url) {
-        return { success: true, url: data.url, filename: data.filename || null };
-      }
+        var data = resp.data;
+        if (!data) continue;
 
-      if (data.picker && data.picker.length > 0) {
-        var picked = data.picker[0];
-        if (picked.url) {
-          return { success: true, url: picked.url, filename: picked.filename || null };
+        if (data.url) {
+          return { success: true, url: data.url, filename: data.filename || null };
         }
-      }
 
-    } catch (e) {
-      lastErr = e;
-      log('Cobalt instance ' + instance + ' failed: ' + (e.response?.data?.error?.code || e.message));
+        if (data.picker && data.picker.length > 0) {
+          var picked = data.picker[0];
+          if (picked.url) {
+            return { success: true, url: picked.url, filename: picked.filename || null };
+          }
+        }
+      } catch (e) {
+        lastErr = e;
+      }
     }
   }
 
@@ -429,21 +439,106 @@ async function downloadTikTokVideo(url) {
 
 // ─── INSTAGRAM ────────────────────────────────────────────────────────────────
 
+// ─── INSTAGRAM ────────────────────────────────────────────────────────────────
+
 async function downloadInstagramMedia(url) {
   var tempDir = ensureTempDir();
   var ts = Date.now();
+  var fpCob = path.join(tempDir, 'instagram_cobalt_' + ts + '.mp4');
+  var fpSnap = path.join(tempDir, 'instagram_snap_' + ts + '.mp4');
   var outPattern = path.join(tempDir, 'instagram_' + ts + '.%(ext)s');
   var expectedMp4 = path.join(tempDir, 'instagram_' + ts + '.mp4');
 
-  // Engine 1: yt-dlp with Chrome User-Agent
+  // Engine 1: Cobalt v10 / v7 API
   try {
-    log('Instagram — trying yt-dlp...');
+    log('Instagram — trying Cobalt...');
+    var cobalt = await cobaltRequest(url, false);
+    if (cobalt.success && cobalt.url) {
+      var isVideo = !cobalt.url.match(/\.(jpg|jpeg|png|webp)/i);
+      var targetFp = isVideo ? fpCob : path.join(tempDir, 'instagram_cobalt_' + ts + '.jpg');
+      var stC = await downloadStream(cobalt.url, targetFp);
+      if (stC.size > 3000) {
+        log('Instagram — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: targetFp, title: 'Instagram Media', size: stC.size, author: 'Instagram' };
+      }
+    }
+  } catch (e) { log('Instagram Cobalt fail: ' + e.message); }
+
+  // Engine 2: SnapSave API Scraper
+  try {
+    log('Instagram — trying SnapSave...');
+    var snapResp = await axios.post('https://snapsave.app/action.php', 
+      'url=' + encodeURIComponent(url), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Origin': 'https://snapsave.app',
+        'Referer': 'https://snapsave.app/'
+      },
+      timeout: 10000,
+    });
+
+    if (snapResp.data) {
+      var scriptData = snapResp.data;
+      var match = scriptData.match(/}\s*\(\s*("[\s\S]+?")\s*,\s*(\d+)\s*,\s*("[\s\S]+?")\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+      if (match) {
+        var _h = JSON.parse(match[1]);
+        var _u = parseInt(match[2]);
+        var _n = JSON.parse(match[3]);
+        var _t = parseInt(match[4]);
+        var _e = parseInt(match[5]);
+        var _r = parseInt(match[6]);
+
+        var _0xc17e = ["", "split", "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/", "slice", "indexOf", "", "", ".", "pow", "reduce", "reverse", "0"];
+        var decodeFunc = function(d, ev, f) {
+          var g = _0xc17e[2][_0xc17e[1]](_0xc17e[0]);
+          var h = g[_0xc17e[3]](0, ev);
+          var i = g[_0xc17e[3]](0, f);
+          var j = d[_0xc17e[1]](_0xc17e[0])[_0xc17e[10]]()[_0xc17e[9]](function(a, b, c) {
+            if (h[_0xc17e[4]](b) !== -1) return a += h[_0xc17e[4]](b) * (Math[_0xc17e[8]](ev, c));
+          }, 0);
+          var k = _0xc17e[0];
+          while (j > 0) { k = i[j % f] + k; j = (j - (j % f)) / f; }
+          return k || _0xc17e[11];
+        };
+
+        var htmlDecoded = (function(h, u, n, t, e, r) {
+          var resStr = "";
+          for (var idx = 0, len = h.length; idx < len; idx++) {
+            var s = "";
+            while (h[idx] !== n[e]) { s += h[idx]; idx++; }
+            for (var j = 0; j < n.length; j++) s = s.replace(new RegExp(n[j], "g"), j);
+            resStr += String.fromCharCode(decodeFunc(s, e, 10) - t);
+          }
+          return decodeURIComponent(escape(resStr));
+        })(_h, _u, _n, _t, _e, _r);
+
+        if (htmlDecoded) {
+          var links = [...htmlDecoded.matchAll(/href="([^"]+)"/g)].map(m => m[1]).filter(u => u.startsWith('http'));
+          if (links.length > 0) {
+            var dlUrl = links[0];
+            var isVid = !dlUrl.match(/\.(jpg|jpeg|png|webp)/i);
+            var snapFile = isVid ? fpSnap : path.join(tempDir, 'instagram_snap_' + ts + '.jpg');
+            var stSnap = await downloadStream(dlUrl, snapFile);
+            if (stSnap.size > 3000) {
+              log('Instagram — SnapSave success (' + (stSnap.size / 1024 / 1024).toFixed(1) + 'MB)');
+              return { success: true, filePath: snapFile, title: 'Instagram Media', size: stSnap.size, author: 'Instagram' };
+            }
+          }
+        }
+      }
+    }
+  } catch (e) { log('Instagram SnapSave fail: ' + e.message); }
+
+  // Engine 3: Short-timeout yt-dlp fallback (5 seconds timeout)
+  try {
+    log('Instagram — trying yt-dlp fallback (short timeout)...');
     var res = await runYtDlp([
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       '-o', outPattern,
       '--no-warnings',
       url
-    ], 60000);
+    ], 5000);
 
     if (fs.existsSync(expectedMp4)) {
       var st0 = fs.statSync(expectedMp4);
@@ -464,58 +559,8 @@ async function downloadInstagramMedia(url) {
     }
   } catch (e) { log('Instagram yt-dlp fail: ' + e.message); }
 
-  // Engine 2: ddinstagram OpenGraph metadata scraper (fast, lightweight, highly reliable)
-  var fpDd = path.join(tempDir, 'instagram_dd_' + ts + '.mp4');
-  try {
-    log('Instagram — trying ddinstagram proxy...');
-    var ddUrl = url.replace(/(www\.)?instagram\.com/, 'ddinstagram.com');
-    var ddResp = await axios.get(ddUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-      timeout: 15000,
-    });
-
-    if (ddResp.data) {
-      var $ = require('cheerio').load(ddResp.data);
-      var ogVideo = $('meta[property="og:video"]').attr('content') || $('meta[property="og:video:secure_url"]').attr('content');
-      var ogImage = $('meta[property="og:image"]').attr('content');
-
-      if (ogVideo) {
-        log('Instagram — ddinstagram found video stream: ' + ogVideo.substring(0, 60) + '...');
-        var stDd = await downloadStream(ogVideo, fpDd);
-        if (stDd.size > 5000) {
-          log('Instagram — ddinstagram video success (' + (stDd.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fpDd, title: 'Instagram Video', size: stDd.size, author: 'Instagram' };
-        }
-      } else if (ogImage) {
-        var fpImg = path.join(tempDir, 'instagram_dd_' + ts + '.jpg');
-        var stImg = await downloadStream(ogImage, fpImg);
-        if (stImg.size > 5000) {
-          log('Instagram — ddinstagram image success (' + (stImg.size / 1024).toFixed(0) + 'KB)');
-          return { success: true, filePath: fpImg, title: 'Instagram Photo', size: stImg.size, author: 'Instagram' };
-        }
-      }
-    }
-  } catch (e) { log('Instagram ddinstagram fail: ' + e.message); }
-
-  // Engine 3: Cobalt
-  var fpCob = path.join(tempDir, 'instagram_cobalt_' + ts + '.mp4');
-  try {
-    log('Instagram — trying Cobalt...');
-    var cobalt = await cobaltRequest(url, false);
-    if (cobalt.success && cobalt.url) {
-      var stC = await downloadStream(cobalt.url, fpCob);
-      if (stC.size > 5000) {
-        log('Instagram — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpCob, title: 'Instagram Post', size: stC.size, author: 'Instagram' };
-      }
-    }
-  } catch (e) { log('Instagram Cobalt fail: ' + e.message); }
-
   safeUnlink(expectedMp4);
-  safeUnlink(fpDd);
+  safeUnlink(fpSnap);
   safeUnlink(fpCob);
   return { error: 'Instagram download failed. Ensure the post/reel is public and try again.' };
 }

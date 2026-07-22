@@ -370,7 +370,7 @@ async function cmdDownload(sock, sender, args, flags) {
 
 module.exports = {
   name: 'movie',
-  alias: ['film', 'movies', 'films', 'cinema'],
+  alias: ['film', 'movies', 'films', 'cinema', 'moviedl'],
   description: 'Movie search, discovery, details, and recommendations \u2014 GitHub-style CLI',
   usage: '!movie <subcommand> [args] [flags]',
   execute: async (sock, msg, args, ctx) => {
@@ -462,7 +462,12 @@ module.exports = {
         await cmdDownload(sock, sender, parsedArgs.slice(1), flags);
         break;
       default:
-        await sock.sendMessage(sender, { text: 'Unknown subcommand: `' + sub + '`. Use `!movie --help` to see all available subcommands.' });
+        // Default to movie download if query provided without explicit subcommand
+        if (ctx.command === 'moviedl' || parsedArgs.length > 0) {
+          await cmdDownload(sock, sender, parsedArgs, flags);
+        } else {
+          await sock.sendMessage(sender, { text: 'Unknown subcommand: `' + sub + '`. Use `!movie --help` to see all available subcommands.' });
+        }
     }
   },
 };
