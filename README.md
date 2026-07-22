@@ -888,7 +888,7 @@ If this project helped you, please star it on GitHub! It helps others discover i
 Distributed under the **MIT License**. Free for personal and commercial use.
 
 ```
-MIT License — Copyright (c) 2025 Fortune Adebayo (AKA: Nerd_eth)
+MIT License — Copyright (c) 2026 Fortune Adebayo (AKA: Nerd_eth)
 ```
 
 See [LICENSE](LICENSE) for full text.
