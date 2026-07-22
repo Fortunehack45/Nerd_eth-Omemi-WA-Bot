@@ -7,6 +7,11 @@ var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Inst
 
 async function sendFile(sock, sender, filePath, opts) {
   try {
+    if (!fs.existsSync(filePath)) {
+      await sock.sendMessage(sender, { text: '❌ Downloaded file not found.' });
+      return;
+    }
+
     var ext = filePath.split('.').pop().toLowerCase();
 
     if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'opus'].includes(ext)) {
@@ -18,11 +23,12 @@ async function sendFile(sock, sender, filePath, opts) {
     if (['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
       var caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
       if (opts.quality) caption += '\n📺 Quality: ' + opts.quality;
-      await sock.sendMessage(sender, { video: buf, caption: caption });
-      return;
-    }
-    } catch (e1) {
-      console.warn('[DOWNLOAD] Primary media send failed, falling back to document mode:', e1.message);
+      try {
+        await sock.sendMessage(sender, { video: buf, caption: caption });
+        return;
+      } catch (e1) {
+        console.warn('[DOWNLOAD] Primary video send failed, falling back to document mode:', e1.message);
+      }
     }
 
     // Fallback: Send as document
@@ -34,6 +40,7 @@ async function sendFile(sock, sender, filePath, opts) {
       caption: '📄 ' + (opts.title || 'Downloaded Media')
     });
   } catch (err) {
+    console.error('[DOWNLOAD] sendFile error:', err);
     await sock.sendMessage(sender, { text: '❌ Failed to send file: ' + err.message });
   } finally {
     try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}

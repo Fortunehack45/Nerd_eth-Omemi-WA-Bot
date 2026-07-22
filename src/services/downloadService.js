@@ -530,7 +530,24 @@ async function downloadInstagramMedia(url) {
     }
   } catch (e) { log('Instagram SnapSave fail: ' + e.message); }
 
-  // Engine 3: Short-timeout yt-dlp fallback (5 seconds timeout)
+  // Engine 3: wf-instagram-url-direct API Scraper
+  try {
+    log('Instagram — trying wf-instagram-url-direct...');
+    var { instagramGetUrl } = require('wf-instagram-url-direct');
+    var igRes = await instagramGetUrl(url);
+    if (igRes && igRes.url_list && igRes.url_list.length > 0) {
+      var directIgUrl = igRes.url_list[0];
+      var isDirectVid = !directIgUrl.match(/\.(jpg|jpeg|png|webp)/i);
+      var fpIg = isDirectVid ? path.join(tempDir, 'instagram_direct_' + ts + '.mp4') : path.join(tempDir, 'instagram_direct_' + ts + '.jpg');
+      var stIg = await downloadStream(directIgUrl, fpIg);
+      if (stIg.size > 3000) {
+        log('Instagram — wf-instagram-url-direct success (' + (stIg.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpIg, title: 'Instagram Media', size: stIg.size, author: 'Instagram' };
+      }
+    }
+  } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
+
+  // Engine 4: Short-timeout yt-dlp fallback (5 seconds timeout)
   try {
     log('Instagram — trying yt-dlp fallback (short timeout)...');
     var res = await runYtDlp([

@@ -53,7 +53,7 @@ function fl(n, d, s) {
 }
 
 async function cmdSearch(sock, sender, args, flags) {
-  const query = args.join(' ');
+  const query = Array.isArray(args) ? args.join(' ') : (typeof args === 'string' ? args : '');
   if (!query) {
     return sock.sendMessage(sender, {
       text: usg('!music search <query> [--limit N] [--type song|video|channel|playlist] [--sort relevance|date|views]',
@@ -106,7 +106,7 @@ async function cmdSearch(sock, sender, args, flags) {
 }
 
 async function cmdInfo(sock, sender, args, flags) {
-  const query = args.join(' ');
+  const query = Array.isArray(args) ? args.join(' ') : (typeof args === 'string' ? args : '');
   if (!query) {
     return sock.sendMessage(sender, { text: '*Usage:* `!music info <url | title>`\n\nGet detailed information about a specific track including duration, upload date, description, and more.' });
   }
@@ -150,7 +150,7 @@ async function cmdTrending(sock, sender, args, flags) {
 
 async function cmdLyrics(sock, sender, args, flags) {
   const artist = flags.artist || flags.a;
-  const song = args.join(' ');
+  const song = Array.isArray(args) ? args.join(' ') : (typeof args === 'string' ? args : '');
   if (!song) {
     return sock.sendMessage(sender, { text: '*Usage:* `!music lyrics <song> [--artist, -a <name>]`\n\nFind lyrics for a song.\n\n*Examples:*\n  `!music lyrics lovelier`\n  `!music lyrics alone --artist burna boy`' });
   }
@@ -167,7 +167,7 @@ async function cmdLyrics(sock, sender, args, flags) {
 }
 
 async function cmdPlay(sock, sender, args, flags) {
-  var query = args.join(' ');
+  var query = Array.isArray(args) ? args.join(' ') : (typeof args === 'string' ? args : '');
   if (!query) {
     return sock.sendMessage(sender, {
       text: '*Usage:* `!music play <query | url>`\n\nDownload and send a track as audio.\n\n*Supported:*\n  • Any search query (e.g. _Burna Boy Last Last_)\n  • YouTube URL\n  • Spotify track URL (https://open.spotify.com/track/...)\n\n*Examples:*\n  `!music play Davido Fall`\n  `!music play https://youtu.be/abc123`\n  `!music play https://open.spotify.com/track/abc`',
