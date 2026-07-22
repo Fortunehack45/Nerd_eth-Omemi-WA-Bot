@@ -193,7 +193,22 @@ async function getYouTubeAudio(url) {
     } catch (e) {}
   }
 
-  // Engine 1: Python / Executable yt-dlp (fast & best audio quality)
+  // Engine 1: btch-downloader direct YouTube API
+  try {
+    log('YT Audio — trying btch-downloader...');
+    var { youtube: btchYt } = require('btch-downloader');
+    var ytRes = await btchYt(url);
+    if (ytRes && ytRes.status && ytRes.mp3) {
+      var fpBtch = path.join(tempDir, 'yt_btch_' + ts + '.mp3');
+      var stBtch = await downloadStream(ytRes.mp3, fpBtch);
+      if (stBtch.size > 10000) {
+        log('YT Audio — btch-downloader success (' + (stBtch.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: fpBtch, title: ytRes.title || title, size: stBtch.size };
+      }
+    }
+  } catch (e) { log('YT Audio btch-downloader fail: ' + e.message); }
+
+  // Engine 2: Python / Executable yt-dlp (fast & best audio quality)
   try {
     log('YT Audio — trying yt-dlp...');
     var res = await runYtDlp([
@@ -322,7 +337,22 @@ async function getYouTubeVideo(url) {
     } catch (e) {}
   }
 
-  // Engine 1: yt-dlp
+  // Engine 1: btch-downloader direct YouTube Video API
+  try {
+    log('YT Video — trying btch-downloader...');
+    var { youtube: btchYtV } = require('btch-downloader');
+    var ytVRes = await btchYtV(url);
+    if (ytVRes && ytVRes.status && ytVRes.mp4) {
+      var fpBtchV = path.join(tempDir, 'yt_video_btch_' + ts + '.mp4');
+      var stBtchV = await downloadStream(ytVRes.mp4, fpBtchV);
+      if (stBtchV.size > 20000) {
+        log('YT Video — btch-downloader success (' + (stBtchV.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpBtchV, title: ytVRes.title || title, size: stBtchV.size, quality: 'HD' };
+      }
+    }
+  } catch (e) { log('YT Video btch-downloader fail: ' + e.message); }
+
+  // Engine 2: yt-dlp
   try {
     log('YT Video — trying yt-dlp...');
     var res = await runYtDlp([
@@ -375,7 +405,21 @@ async function downloadTikTokVideo(url) {
   var tempDir = ensureTempDir();
   var fp = path.join(tempDir, 'tiktok_' + Date.now() + '.mp4');
 
-  // API 1: tikwm.com (fast & reliable)
+  // Engine 1: btch-downloader TikTok API (Watermark-free)
+  try {
+    log('TikTok — trying btch-downloader...');
+    var { ttdl: btchTt } = require('btch-downloader');
+    var ttRes = await btchTt(url);
+    if (ttRes && ttRes.status && ttRes.video && ttRes.video.length > 0) {
+      var stBtchTt = await downloadStream(ttRes.video[0], fp);
+      if (stBtchTt.size > 10000) {
+        log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fp, title: ttRes.title || 'TikTok Video', size: stBtchTt.size, author: 'TikTok' };
+      }
+    }
+  } catch (e) { log('TikTok btch-downloader fail: ' + e.message); }
+
+  // API 2: tikwm.com (fast & reliable)
   try {
     log('TikTok — trying tikwm.com...');
     var r1 = await axios.get('https://www.tikwm.com/api/', {
@@ -585,6 +629,22 @@ async function downloadSpotifyAudio(url) {
   var fp = path.join(tempDir, 'spotify_' + ts + '.mp3');
   var trackTitle = 'Spotify Track';
   var artistName = 'Unknown Artist';
+
+  // Engine 1: btch-downloader direct 320kbps Spotify API
+  try {
+    log('Spotify — trying btch-downloader...');
+    var { spotify: btchSpotify } = require('btch-downloader');
+    var spRes = await btchSpotify(cleanUrl);
+    if (spRes && spRes.status && spRes.result && spRes.result.formats && spRes.result.formats.length > 0) {
+      var directMp3 = spRes.result.formats[0].url;
+      var titleSp = spRes.result.title || trackTitle;
+      var stBtch = await downloadStream(directMp3, fp);
+      if (stBtch.size > 10000) {
+        log('Spotify — btch-downloader success (' + (stBtch.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: fp, title: titleSp, size: stBtch.size, author: artistName };
+      }
+    }
+  } catch (e) { log('Spotify btch-downloader fail: ' + e.message); }
 
   // Extract metadata via Spotify OEmbed API
   try {
