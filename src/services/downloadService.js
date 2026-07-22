@@ -111,12 +111,6 @@ function runYtDlp(args, timeout) {
 
 var COBALT_INSTANCES = [
   'https://cobalt.tools',
-  'https://cobalt-api.kwiatekmiki.com',
-  'https://cobalt.api.timelessnesses.me',
-  'https://cobalt.v07.io',
-  'https://cobalt.qewertyy.dev',
-  'https://cobalt.stream',
-  'https://co.eik.sh',
   'https://api.cobalt.tools',
 ];
 
@@ -449,20 +443,22 @@ async function downloadInstagramMedia(url) {
   var outPattern = path.join(tempDir, 'instagram_' + ts + '.%(ext)s');
   var expectedMp4 = path.join(tempDir, 'instagram_' + ts + '.mp4');
 
-  // Engine 1: Cobalt v10 / v7 API
+  // Engine 1: wf-instagram-url-direct API Scraper (High Speed)
   try {
-    log('Instagram — trying Cobalt...');
-    var cobalt = await cobaltRequest(url, false);
-    if (cobalt.success && cobalt.url) {
-      var isVideo = !cobalt.url.match(/\.(jpg|jpeg|png|webp)/i);
-      var targetFp = isVideo ? fpCob : path.join(tempDir, 'instagram_cobalt_' + ts + '.jpg');
-      var stC = await downloadStream(cobalt.url, targetFp);
-      if (stC.size > 3000) {
-        log('Instagram — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: targetFp, title: 'Instagram Media', size: stC.size, author: 'Instagram' };
+    log('Instagram — trying wf-instagram-url-direct...');
+    var { instagramGetUrl } = require('wf-instagram-url-direct');
+    var igRes = await instagramGetUrl(url);
+    if (igRes && igRes.url_list && igRes.url_list.length > 0) {
+      var directIgUrl = igRes.url_list[0];
+      var isDirectVid = !directIgUrl.match(/\.(jpg|jpeg|png|webp)/i);
+      var fpIg = isDirectVid ? path.join(tempDir, 'instagram_direct_' + ts + '.mp4') : path.join(tempDir, 'instagram_direct_' + ts + '.jpg');
+      var stIg = await downloadStream(directIgUrl, fpIg);
+      if (stIg.size > 3000) {
+        log('Instagram — wf-instagram-url-direct success (' + (stIg.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpIg, title: 'Instagram Media', size: stIg.size, author: 'Instagram' };
       }
     }
-  } catch (e) { log('Instagram Cobalt fail: ' + e.message); }
+  } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
 
   // Engine 2: SnapSave API Scraper
   try {
@@ -530,22 +526,20 @@ async function downloadInstagramMedia(url) {
     }
   } catch (e) { log('Instagram SnapSave fail: ' + e.message); }
 
-  // Engine 3: wf-instagram-url-direct API Scraper
+  // Engine 3: Cobalt v10 / v7 API
   try {
-    log('Instagram — trying wf-instagram-url-direct...');
-    var { instagramGetUrl } = require('wf-instagram-url-direct');
-    var igRes = await instagramGetUrl(url);
-    if (igRes && igRes.url_list && igRes.url_list.length > 0) {
-      var directIgUrl = igRes.url_list[0];
-      var isDirectVid = !directIgUrl.match(/\.(jpg|jpeg|png|webp)/i);
-      var fpIg = isDirectVid ? path.join(tempDir, 'instagram_direct_' + ts + '.mp4') : path.join(tempDir, 'instagram_direct_' + ts + '.jpg');
-      var stIg = await downloadStream(directIgUrl, fpIg);
-      if (stIg.size > 3000) {
-        log('Instagram — wf-instagram-url-direct success (' + (stIg.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpIg, title: 'Instagram Media', size: stIg.size, author: 'Instagram' };
+    log('Instagram — trying Cobalt...');
+    var cobalt = await cobaltRequest(url, false);
+    if (cobalt.success && cobalt.url) {
+      var isVideo = !cobalt.url.match(/\.(jpg|jpeg|png|webp)/i);
+      var targetFp = isVideo ? fpCob : path.join(tempDir, 'instagram_cobalt_' + ts + '.jpg');
+      var stC = await downloadStream(cobalt.url, targetFp);
+      if (stC.size > 3000) {
+        log('Instagram — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: targetFp, title: 'Instagram Media', size: stC.size, author: 'Instagram' };
       }
     }
-  } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
+  } catch (e) { log('Instagram Cobalt fail: ' + e.message); }
 
   // Engine 4: Short-timeout yt-dlp fallback (5 seconds timeout)
   try {
