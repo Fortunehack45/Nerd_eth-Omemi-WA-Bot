@@ -179,44 +179,30 @@ async function cmdPlay(sock, sender, args, flags) {
 
   // ── Spotify URL ──────────────────────────────────────────────────────────
   if (query.includes('spotify.com/track/')) {
-    await sock.sendMessage(sender, { text: '🎵 Downloading Spotify track...\n_Searching YouTube match, please wait up to 60s..._' });
+    await sock.sendMessage(sender, { text: '🎵 Downloading Spotify track...\n_Searching YouTube match, please wait..._' });
     var spResult = await downloadSpotifyAudio(query);
     if (spResult.error) return sock.sendMessage(sender, { text: '❌ ' + spResult.error });
     if (spResult.filePath && fs2.existsSync(spResult.filePath)) {
-      var buf = fs2.readFileSync(spResult.filePath);
-      await sock.sendMessage(sender, {
-        audio: buf,
-        mimetype: 'audio/mpeg',
-        fileName: (spResult.title || 'track').replace(/[<>:"/\\|?*]/g, '_').substring(0, 80) + '.mp3',
-        ptt: false,
-      });
-      try { fs2.unlinkSync(spResult.filePath); } catch (e) {}
-      await sock.sendMessage(sender, { text: '✅ *' + (spResult.title || 'Track') + '*\n👤 ' + (spResult.author || 'Spotify') });
+      var { sendAudioMessage } = require('../utils/helpers');
+      await sendAudioMessage(sock, sender, spResult.filePath, spResult.title || 'Spotify Track', spResult.author || 'Spotify');
     }
     return;
   }
 
   // ── YouTube URL ──────────────────────────────────────────────────────────
   if (query.includes('youtube.com/') || query.includes('youtu.be/')) {
-    await sock.sendMessage(sender, { text: '🎵 Downloading YouTube audio...\n_Please wait up to 60 seconds..._' });
+    await sock.sendMessage(sender, { text: '🎵 Downloading YouTube audio...\n_Please wait..._' });
     var ytResult = await getYouTubeAudio(query);
     if (ytResult.error) return sock.sendMessage(sender, { text: '❌ ' + ytResult.error });
     if (ytResult.filePath && fs2.existsSync(ytResult.filePath)) {
-      var buf2 = fs2.readFileSync(ytResult.filePath);
-      await sock.sendMessage(sender, {
-        audio: buf2,
-        mimetype: 'audio/mpeg',
-        fileName: (ytResult.title || 'audio').replace(/[<>:"/\\|?*]/g, '_').substring(0, 80) + '.mp3',
-        ptt: false,
-      });
-      try { fs2.unlinkSync(ytResult.filePath); } catch (e) {}
-      await sock.sendMessage(sender, { text: '✅ *' + (ytResult.title || 'Audio') + '*' });
+      var { sendAudioMessage } = require('../utils/helpers');
+      await sendAudioMessage(sock, sender, ytResult.filePath, ytResult.title || 'YouTube Audio', 'YouTube');
     }
     return;
   }
 
   // ── Search Query ─────────────────────────────────────────────────────────
-  await sock.sendMessage(sender, { text: '🔍 Searching for "' + query.substring(0, 60) + '"...\n_Downloading audio, please wait up to 60 seconds..._' });
+  await sock.sendMessage(sender, { text: '🔍 Searching for "' + query.substring(0, 60) + '"...\n_Downloading audio, please wait..._' });
 
   // First try yt-search to find the best match and show user what we found
   var previewSent = false;
@@ -225,7 +211,7 @@ async function cmdPlay(sock, sender, args, flags) {
       var sr = await ytSearch({ query: query, pageStart: 1, pageEnd: 1 });
       var v = sr.videos && sr.videos[0];
       if (v) {
-        await sock.sendMessage(sender, { text: '🎵 Found: *' + v.title + '*\n👤 ' + v.author.name + ' | ⏱ ' + v.timestamp + '\n_Downloading..._' });
+        await sock.sendMessage(sender, { text: '🎵 Found: *' + v.title + '*\n👤 ' + v.author.name + ' | ⏱ ' + v.timestamp + '\n_Downloading audio..._' });
         previewSent = true;
       }
     } catch (e) {}
@@ -235,22 +221,14 @@ async function cmdPlay(sock, sender, args, flags) {
   if (searchResult.error) return sock.sendMessage(sender, { text: '❌ ' + searchResult.error });
 
   if (searchResult.filePath && fs2.existsSync(searchResult.filePath)) {
-    var buf3 = fs2.readFileSync(searchResult.filePath);
-    var sizeMB = (buf3.length / 1024 / 1024).toFixed(1);
-    if (buf3.length > 100 * 1024 * 1024) {
+    var statRes = fs2.statSync(searchResult.filePath);
+    var sizeMB = (statRes.size / 1024 / 1024).toFixed(1);
+    if (statRes.size > 100 * 1024 * 1024) {
       try { fs2.unlinkSync(searchResult.filePath); } catch (e) {}
       return sock.sendMessage(sender, { text: '⚠️ File too large (' + sizeMB + 'MB). Try a shorter track.' });
     }
-    await sock.sendMessage(sender, {
-      audio: buf3,
-      mimetype: 'audio/mpeg',
-      fileName: (searchResult.title || query).replace(/[<>:"/\\|?*]/g, '_').substring(0, 80) + '.mp3',
-      ptt: false,
-    });
-    try { fs2.unlinkSync(searchResult.filePath); } catch (e) {}
-    if (!previewSent) {
-      await sock.sendMessage(sender, { text: '✅ *' + (searchResult.title || query) + '*' });
-    }
+    var { sendAudioMessage } = require('../utils/helpers');
+    await sendAudioMessage(sock, sender, searchResult.filePath, searchResult.title || query, 'YouTube');
   } else {
     await sock.sendMessage(sender, { text: '❌ Download failed. Please try again or use a direct YouTube link.' });
   }

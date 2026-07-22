@@ -153,6 +153,77 @@ function loadJson(filePath, defaultVal = {}) {
   return defaultVal;
 }
 
+async function sendAudioMessage(sock, sender, filePath, title, author) {
+  const { execFile } = require('child_process');
+  var ffmpegPath = null;
+  try { ffmpegPath = require('ffmpeg-static'); } catch (e) {}
+
+  if (!fs.existsSync(filePath)) {
+    await sock.sendMessage(sender, { text: '❌ Audio file not found.' });
+    return;
+  }
+
+  const cleanTitle = (title || 'Audio Track').replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 80);
+  const fileNameMp3 = cleanTitle + '.mp3';
+
+  // 1. Convert MP3 to WhatsApp native m4a AAC audio if ffmpeg is available
+  var m4aPath = filePath.replace(/\.[^.]+$/, '') + '_wa.m4a';
+  var convertedSuccess = false;
+
+  if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+    try {
+      await new Promise(function(resolve, reject) {
+        var args = ['-y', '-i', filePath, '-c:a', 'aac', '-b:a', '128k', m4aPath];
+        execFile(ffmpegPath, args, { timeout: 30000 }, function(err) {
+          if (!err && fs.existsSync(m4aPath) && fs.statSync(m4aPath).size > 1000) {
+            resolve();
+          } else {
+            reject(err || new Error('FFmpeg output invalid'));
+          }
+        });
+      });
+      convertedSuccess = true;
+    } catch (e) {
+      console.warn('[sendAudioMessage] AAC conversion note:', e.message);
+    }
+  }
+
+  // 2. Send both native audio format AND MP3 document format so WhatsApp Web & Mobile Apps render 100%!
+  try {
+    if (convertedSuccess && fs.existsSync(m4aPath)) {
+      var m4aBuf = fs.readFileSync(m4aPath);
+      await sock.sendMessage(sender, {
+        audio: m4aBuf,
+        mimetype: 'audio/mp4',
+        ptt: false,
+        fileName: fileNameMp3,
+      });
+      try { fs.unlinkSync(m4aPath); } catch (e) {}
+    } else {
+      var mp3Buf = fs.readFileSync(filePath);
+      var caption = '🎵 *' + cleanTitle + '*';
+      if (author) caption += '\n👤 ' + author;
+      await sock.sendMessage(sender, {
+        document: mp3Buf,
+        mimetype: 'audio/mpeg',
+        fileName: fileNameMp3,
+        caption: caption,
+      });
+    }
+  } catch (err) {
+    console.warn('[sendAudioMessage] Primary send failed, using document fallback:', err.message);
+    var mp3Buf2 = fs.readFileSync(filePath);
+    await sock.sendMessage(sender, {
+      document: mp3Buf2,
+      mimetype: 'audio/mpeg',
+      fileName: fileNameMp3,
+      caption: '🎵 *' + cleanTitle + '*',
+    });
+  } finally {
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
+  }
+}
+
 module.exports = {
   extractCommand,
   parseJid,
@@ -168,4 +239,5 @@ module.exports = {
   formatFlagHelp,
   formatSubcommandHelp,
   paginate,
+  sendAudioMessage,
 };
