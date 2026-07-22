@@ -81,8 +81,8 @@ module.exports = {
       return sock.sendMessage(sender, { text: t.substring(0, 4000) });
     }
 
-    // ── AUDIO MODE ───────────────────────────────────────────────────────────
-    if (flags.audio || flags.a) {
+    // ── AUDIO MODE (or Spotify default) ──────────────────────────────────────
+    if (flags.audio || flags.a || platform === 'spotify') {
       await sock.sendMessage(sender, { text: '🎵 Downloading audio from *' + platform + '*...' });
 
       var audioResult;

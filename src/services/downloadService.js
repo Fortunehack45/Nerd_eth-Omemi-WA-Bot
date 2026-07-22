@@ -2,10 +2,9 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const config = require('../../config');
-
 const { execFile } = require('child_process');
 
-// Try loading ytdl
+// Try loading ytdl-core
 var ytdl = null;
 try { ytdl = require('@distube/ytdl-core'); } catch (e) {
   try { ytdl = require('ytdl-core'); } catch (e2) {}
@@ -84,23 +83,37 @@ function runYtDlp(args, timeout) {
     }
     fullArgs.push.apply(fullArgs, args);
 
+    // Try python -m yt_dlp first
     execFile('python', fullArgs, { timeout: timeout || 180000, maxBuffer: 10 * 1024 * 1024 }, function(err, stdout, stderr) {
-      if (err) {
-        log('yt-dlp log: ' + (err.message || stderr || '').substring(0, 150));
-        return resolve({ success: false, error: err.message || stderr, stdout: stdout, stderr: stderr });
+      if (!err) {
+        return resolve({ success: true, stdout: stdout, stderr: stderr });
       }
-      resolve({ success: true, stdout: stdout, stderr: stderr });
+
+      // Fallback: try standalone yt-dlp executable
+      var execArgs = [];
+      if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+        execArgs.push('--ffmpeg-location', ffmpegPath);
+      }
+      execArgs.push.apply(execArgs, args);
+
+      execFile('yt-dlp', execArgs, { timeout: timeout || 180000, maxBuffer: 10 * 1024 * 1024 }, function(err2, stdout2, stderr2) {
+        if (!err2) {
+          return resolve({ success: true, stdout: stdout2, stderr: stderr2 });
+        }
+        log('yt-dlp log: ' + (err.message || stderr || err2.message || '').substring(0, 150));
+        resolve({ success: false, error: err.message || stderr, stdout: stdout, stderr: stderr });
+      });
     });
   });
 }
 
-// ─── Cobalt API Helper (v10 format) ──────────────────────────────────────────
-// Tries multiple community-hosted Cobalt instances for reliability
+// ─── Cobalt API Helper (v10 & v7 format fallback) ────────────────────────────
 
 var COBALT_INSTANCES = [
   'https://api.cobalt.tools',
   'https://cobalt-api.kwiatekmiki.com',
   'https://cobalt.api.timelessnesses.me',
+  'https://co.wuk.sh',
 ];
 
 async function cobaltRequest(url, isAudioOnly, customOpts) {
@@ -125,13 +138,14 @@ async function cobaltRequest(url, isAudioOnly, customOpts) {
     var instance = COBALT_INSTANCES[i];
     try {
       log('Cobalt — trying ' + instance + '...');
-      var resp = await axios.post(instance, body, {
+      var targetUrl = instance.endsWith('/api/json') ? instance : (instance.replace(/\/$/, '') + '/api/json');
+      var resp = await axios.post(targetUrl, body, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        timeout: 30000,
+        timeout: 25000,
       });
 
       var data = resp.data;
@@ -175,7 +189,7 @@ async function getYouTubeAudio(url) {
     } catch (e) {}
   }
 
-  // Engine 1: Python yt-dlp (fast, reliable, formats automatically)
+  // Engine 1: Python / Executable yt-dlp (fast & best audio quality)
   try {
     log('YT Audio — trying yt-dlp...');
     var res = await runYtDlp([
@@ -260,7 +274,7 @@ async function getYouTubeAudio(url) {
     }
   } catch (e) { log('YT Audio Cobalt fail: ' + e.message); }
 
-  // Engine 3: ytdl-core stream fallback
+  // Engine 4: ytdl-core stream fallback
   if (ytdl) {
     try {
       log('YT Audio — trying ytdl-core stream...');
@@ -357,7 +371,7 @@ async function downloadTikTokVideo(url) {
   var tempDir = ensureTempDir();
   var fp = path.join(tempDir, 'tiktok_' + Date.now() + '.mp4');
 
-  // API 1: tikwm.com (fast & reliable — still working)
+  // API 1: tikwm.com (fast & reliable)
   try {
     log('TikTok — trying tikwm.com...');
     var r1 = await axios.get('https://www.tikwm.com/api/', {
@@ -417,126 +431,139 @@ async function downloadTikTokVideo(url) {
 
 async function downloadInstagramMedia(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'instagram_' + Date.now() + '.mp4');
+  var ts = Date.now();
+  var outPattern = path.join(tempDir, 'instagram_' + ts + '.%(ext)s');
+  var expectedMp4 = path.join(tempDir, 'instagram_' + ts + '.mp4');
 
-  // API 1: Cobalt (best for Instagram reels and posts)
+  // Engine 1: yt-dlp with Chrome User-Agent
+  try {
+    log('Instagram — trying yt-dlp...');
+    var res = await runYtDlp([
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      '-o', outPattern,
+      '--no-warnings',
+      url
+    ], 60000);
+
+    if (fs.existsSync(expectedMp4)) {
+      var st0 = fs.statSync(expectedMp4);
+      if (st0.size > 5000) {
+        log('Instagram — yt-dlp success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: expectedMp4, title: 'Instagram Media', size: st0.size, author: 'Instagram' };
+      }
+    }
+
+    var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('instagram_' + ts); });
+    if (files.length > 0) {
+      var fp0 = path.join(tempDir, files[0]);
+      var st1 = fs.statSync(fp0);
+      if (st1.size > 5000) {
+        log('Instagram — yt-dlp file success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fp0, title: 'Instagram Media', size: st1.size, author: 'Instagram' };
+      }
+    }
+  } catch (e) { log('Instagram yt-dlp fail: ' + e.message); }
+
+  // Engine 2: ddinstagram OpenGraph metadata scraper (fast, lightweight, highly reliable)
+  var fpDd = path.join(tempDir, 'instagram_dd_' + ts + '.mp4');
+  try {
+    log('Instagram — trying ddinstagram proxy...');
+    var ddUrl = url.replace(/(www\.)?instagram\.com/, 'ddinstagram.com');
+    var ddResp = await axios.get(ddUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      timeout: 15000,
+    });
+
+    if (ddResp.data) {
+      var $ = require('cheerio').load(ddResp.data);
+      var ogVideo = $('meta[property="og:video"]').attr('content') || $('meta[property="og:video:secure_url"]').attr('content');
+      var ogImage = $('meta[property="og:image"]').attr('content');
+
+      if (ogVideo) {
+        log('Instagram — ddinstagram found video stream: ' + ogVideo.substring(0, 60) + '...');
+        var stDd = await downloadStream(ogVideo, fpDd);
+        if (stDd.size > 5000) {
+          log('Instagram — ddinstagram video success (' + (stDd.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fpDd, title: 'Instagram Video', size: stDd.size, author: 'Instagram' };
+        }
+      } else if (ogImage) {
+        var fpImg = path.join(tempDir, 'instagram_dd_' + ts + '.jpg');
+        var stImg = await downloadStream(ogImage, fpImg);
+        if (stImg.size > 5000) {
+          log('Instagram — ddinstagram image success (' + (stImg.size / 1024).toFixed(0) + 'KB)');
+          return { success: true, filePath: fpImg, title: 'Instagram Photo', size: stImg.size, author: 'Instagram' };
+        }
+      }
+    }
+  } catch (e) { log('Instagram ddinstagram fail: ' + e.message); }
+
+  // Engine 3: Cobalt
+  var fpCob = path.join(tempDir, 'instagram_cobalt_' + ts + '.mp4');
   try {
     log('Instagram — trying Cobalt...');
     var cobalt = await cobaltRequest(url, false);
     if (cobalt.success && cobalt.url) {
-      var stC = await downloadStream(cobalt.url, fp);
+      var stC = await downloadStream(cobalt.url, fpCob);
       if (stC.size > 5000) {
         log('Instagram — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp, title: 'Instagram Post', size: stC.size, author: 'Instagram' };
+        return { success: true, filePath: fpCob, title: 'Instagram Post', size: stC.size, author: 'Instagram' };
       }
     }
   } catch (e) { log('Instagram Cobalt fail: ' + e.message); }
 
-  // API 2: igdownloader.app (scraper)
-  try {
-    log('Instagram — trying igdownloader scraper...');
-    var r2 = await axios.post('https://igdownloader.app/api/v1/post', { url: url }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0',
-        'Origin': 'https://igdownloader.app',
-        'Referer': 'https://igdownloader.app/',
-      },
-      timeout: 20000,
-    });
-    if (r2.data && r2.data.media && r2.data.media.length > 0) {
-      var media = r2.data.media[0];
-      var dlUrl = media.url || media.videoUrl || media.imageUrl;
-      if (dlUrl) {
-        var st2 = await downloadStream(dlUrl, fp);
-        if (st2.size > 5000) {
-          log('Instagram — igdownloader success (' + (st2.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fp, title: 'Instagram Post', size: st2.size, author: 'Instagram' };
-        }
-      }
-    }
-  } catch (e) { log('Instagram igdownloader fail: ' + e.message); }
-
-  // API 3: snapinsta.app
-  try {
-    log('Instagram — trying snapinsta...');
-    var r3 = await axios.post('https://snapinsta.app/api/ajaxSearch', 'q=' + encodeURIComponent(url) + '&t=media&lang=en', {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0',
-        'Origin': 'https://snapinsta.app',
-        'Referer': 'https://snapinsta.app/',
-      },
-      timeout: 20000,
-    });
-    if (r3.data && r3.data.data) {
-      var $ = require('cheerio').load(r3.data.data);
-      var videoSrc = $('a.download-media').first().attr('href') || $('a[href*=".mp4"]').first().attr('href');
-      if (!videoSrc) {
-        // Try image
-        videoSrc = $('a.download-media').first().attr('href') || $('img.download-media').first().attr('src');
-      }
-      if (videoSrc && videoSrc.startsWith('http')) {
-        var st3 = await downloadStream(videoSrc, fp);
-        if (st3.size > 5000) {
-          log('Instagram — snapinsta success');
-          return { success: true, filePath: fp, title: 'Instagram Post', size: st3.size, author: 'Instagram' };
-        }
-      }
-    }
-  } catch (e) { log('Instagram snapinsta fail: ' + e.message); }
-
-  safeUnlink(fp);
+  safeUnlink(expectedMp4);
+  safeUnlink(fpDd);
+  safeUnlink(fpCob);
   return { error: 'Instagram download failed. Ensure the post/reel is public and try again.' };
 }
 
 // ─── SPOTIFY ──────────────────────────────────────────────────────────────────
 
 async function downloadSpotifyAudio(url) {
-  var match = url.match(/\/track\/([a-zA-Z0-9]+)/);
-  if (!match) return { error: 'Invalid Spotify track URL. Must be: https://open.spotify.com/track/...' };
-  var trackId = match[1];
+  var cleanUrl = (url || '').trim();
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'spotify_' + Date.now() + '.mp3');
+  var ts = Date.now();
+  var fp = path.join(tempDir, 'spotify_' + ts + '.mp3');
   var trackTitle = 'Spotify Track';
   var artistName = 'Unknown Artist';
 
-  // Get metadata from Spotify's oembed
+  // Extract metadata via Spotify OEmbed API
   try {
-    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(url), { timeout: 8000 });
+    log('Spotify — fetching track metadata via Spotify OEmbed...');
+    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(cleanUrl), { timeout: 8000 });
     if (metaR.data) {
-      trackTitle = metaR.data.title || trackTitle;
-      artistName = metaR.data.author_name || artistName;
+      if (metaR.data.title) trackTitle = metaR.data.title;
+      if (metaR.data.author_name) artistName = metaR.data.author_name;
     }
-  } catch (e) {}
+  } catch (e) { log('Spotify OEmbed metadata note: ' + e.message); }
 
-  log('Spotify — track: "' + trackTitle + '" by ' + artistName);
+  log('Spotify — searching audio for: "' + trackTitle + '" by ' + artistName);
 
-  // PRIMARY METHOD: YouTube search + download (most reliable for Spotify)
-  // Search YouTube for the exact song and download the audio
+  // PRIMARY METHOD: YouTube search + download (Matches Spotify song to high-res YouTube audio)
   try {
-    log('Spotify — searching YouTube for matching audio...');
-    if (ytSearch) {
-      var q = artistName + ' ' + trackTitle + ' audio';
-      var ytRes = await ytSearch({ query: q, pageStart: 1, pageEnd: 2 });
-      var video = ytRes.videos && ytRes.videos[0];
-      if (video) {
-        log('Spotify — found YT match: ' + video.title);
-        var ytAudio = await getYouTubeAudio(video.url);
-        if (ytAudio.success) {
-          // Rename to Spotify path
-          var spFp = path.join(tempDir, 'spotify_yt_' + Date.now() + '.mp3');
-          fs.renameSync(ytAudio.filePath, spFp);
-          return { success: true, filePath: spFp, title: trackTitle, size: ytAudio.size, author: artistName };
-        }
-      }
-    }
-  } catch (e) { log('Spotify YT search fail: ' + e.message); }
+    var searchQuery = artistName !== 'Unknown Artist'
+      ? (artistName + ' ' + trackTitle + ' official audio')
+      : (trackTitle + ' audio');
 
-  // FALLBACK: Cobalt with Spotify URL directly
+    log('Spotify — searching YouTube: "' + searchQuery + '"...');
+
+    var searchRes = await searchYouTubeAndDownloadAudio(searchQuery);
+    if (searchRes.success && searchRes.filePath && fs.existsSync(searchRes.filePath)) {
+      var spFp = path.join(tempDir, 'spotify_yt_' + ts + '.mp3');
+      fs.renameSync(searchRes.filePath, spFp);
+      var stSp = fs.statSync(spFp);
+      log('Spotify — YouTube match success (' + (stSp.size / 1024).toFixed(0) + 'KB)');
+      return { success: true, filePath: spFp, title: trackTitle, size: stSp.size, author: artistName };
+    }
+  } catch (e) { log('Spotify YouTube search fail: ' + e.message); }
+
+  // FALLBACK 1: Cobalt direct Spotify request
   try {
     log('Spotify — trying Cobalt directly...');
-    var cobalt = await cobaltRequest(url, true);
+    var cobalt = await cobaltRequest(cleanUrl, true);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
@@ -546,28 +573,31 @@ async function downloadSpotifyAudio(url) {
     }
   } catch (e) { log('Spotify Cobalt fail: ' + e.message); }
 
-  // FALLBACK 2: spotifydown.com
-  try {
-    log('Spotify — trying spotifydown.com...');
-    var r1 = await axios.get('https://api.spotifydown.com/download/' + trackId, {
-      headers: {
-        'Referer': 'https://spotifydown.com/',
-        'User-Agent': 'Mozilla/5.0',
-        'Origin': 'https://spotifydown.com',
-      },
-      timeout: 20000,
-    });
-    if (r1.data && r1.data.link) {
-      var st1 = await downloadStream(r1.data.link, fp);
-      if (st1.size > 10000) {
-        log('Spotify — spotifydown success (' + (st1.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: r1.data.metadata?.title || trackTitle, size: st1.size, author: artistName };
+  // FALLBACK 2: spotifydown API
+  var trackMatch = cleanUrl.match(/\/track\/([a-zA-Z0-9]+)/);
+  if (trackMatch && trackMatch[1]) {
+    try {
+      log('Spotify — trying spotifydown API...');
+      var r1 = await axios.get('https://api.spotifydown.com/download/' + trackMatch[1], {
+        headers: {
+          'Referer': 'https://spotifydown.com/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Origin': 'https://spotifydown.com',
+        },
+        timeout: 20000,
+      });
+      if (r1.data && r1.data.link) {
+        var st1 = await downloadStream(r1.data.link, fp);
+        if (st1.size > 10000) {
+          log('Spotify — spotifydown success (' + (st1.size / 1024).toFixed(0) + 'KB)');
+          return { success: true, filePath: fp, title: r1.data.metadata?.title || trackTitle, size: st1.size, author: artistName };
+        }
       }
-    }
-  } catch (e) { log('Spotify spotifydown fail: ' + e.message); }
+    } catch (e) { log('Spotify spotifydown fail: ' + e.message); }
+  }
 
   safeUnlink(fp);
-  return { error: 'Spotify download failed. All servers are currently busy. Try again in a few minutes.' };
+  return { error: 'Spotify track download failed. Please verify the link or try searching by title.' };
 }
 
 // ─── TWITTER/X ────────────────────────────────────────────────────────────────
@@ -671,12 +701,12 @@ async function searchYouTubeAndDownloadAudio(query) {
   var tempDir = ensureTempDir();
   var ts = Date.now();
   var outPattern = path.join(tempDir, 'yt_search_' + ts + '.%(ext)s');
-  var expectedMp3 = path.join(tempDir, 'yt_search_' + ts + '.mp3');
 
-  log('YT Search Audio — trying yt-dlp search for "' + query + '"...');
+  log('YT Search Audio — search query: "' + query + '"...');
 
   var searchQuery = query.startsWith('http') ? query : ('ytsearch1:' + query);
 
+  // Engine 1: yt-dlp search
   try {
     var res = await runYtDlp([
       '-x',
@@ -706,11 +736,12 @@ async function searchYouTubeAndDownloadAudio(query) {
     }
   } catch (e) { log('YT Search Audio yt-dlp fail: ' + e.message); }
 
+  // Engine 2: ytSearch + getYouTubeAudio
   if (ytSearch) {
     try {
       var results = await ytSearch({ query: query, pageStart: 1, pageEnd: 2 });
       var video = results.videos && results.videos[0];
-      if (!video) return { error: 'No YouTube results for: ' + query };
+      if (!video) return { error: 'No YouTube results found for: ' + query };
       return await getYouTubeAudio(video.url);
     } catch (e) {
       return { error: 'Search failed: ' + e.message };

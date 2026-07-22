@@ -18,6 +18,29 @@ function formatNumber(n) {
   return String(n);
 }
 
+// Open / public OMDB API key fallbacks
+const OMDB_KEYS = [
+  process.env.OMDB_API_KEY,
+  'trilogy',
+  'b9bd48a6',
+  '302b11ff',
+  '3430a5e8',
+].filter(Boolean);
+
+async function fetchOmdb(queryParams) {
+  for (var i = 0; i < OMDB_KEYS.length; i++) {
+    try {
+      var k = OMDB_KEYS[i];
+      var url = 'https://www.omdbapi.com/?apikey=' + k + '&' + queryParams;
+      var resp = await axios.get(url, { timeout: 8000 });
+      if (resp.data && resp.data.Response === 'True') {
+        return resp.data;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
 async function searchMusic(query, limit = 10, type = 'all') {
   try {
     const searchQuery = type === 'video' ? query : `${query} audio`;
@@ -119,26 +142,24 @@ async function searchLyrics(song, artist) {
 async function searchMovie(query, opts = {}) {
   const { year, type, limit = 10 } = opts;
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
-    if (omdbKey) {
-      let q = query;
-      if (year) q += `&y=${year}`;
-      if (type) q += `&type=${type}`;
-      const { data } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&s=${encodeURIComponent(q)}`, { timeout: 8000 });
-      if (data.Response === 'True') {
-        return data.Search.slice(0, limit).map(m => ({
-          title: m.Title,
-          year: m.Year,
-          type: m.Type,
-          imdbID: m.imdbID,
-          poster: m.Poster !== 'N/A' ? m.Poster : null,
-        }));
-      }
+    let q = query;
+    if (year) q += `&y=${year}`;
+    if (type) q += `&type=${type}`;
+    var omdbData = await fetchOmdb('s=' + encodeURIComponent(q));
+    if (omdbData && omdbData.Search) {
+      return omdbData.Search.slice(0, limit).map(m => ({
+        title: m.Title,
+        year: m.Year,
+        type: m.Type,
+        imdbID: m.imdbID,
+        poster: m.Poster !== 'N/A' ? m.Poster : null,
+      }));
     }
-    let q = `${query} movie`;
-    if (year) q += ` ${year}`;
-    if (type === 'series') q += ' tv series';
-    const results = await ytSearch({ query: q, hl: 'en', gl: 'US' });
+
+    let ytQ = `${query} movie`;
+    if (year) ytQ += ` ${year}`;
+    if (type === 'series') ytQ += ' tv series';
+    const results = await ytSearch({ query: ytQ, hl: 'en', gl: 'US' });
     return (results.videos || []).slice(0, limit).map(v => ({
       title: v.title,
       url: v.url,
@@ -154,37 +175,35 @@ async function searchMovie(query, opts = {}) {
 
 async function getMovieInfo(query) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
-    if (omdbKey) {
-      const isId = query.startsWith('tt') && /^tt\d+$/.test(query);
-      const param = isId ? `i=${query}` : `t=${encodeURIComponent(query)}`;
-      const { data } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&${param}&plot=full`, { timeout: 8000 });
-      if (data.Response === 'True') {
-        return {
-          title: data.Title,
-          year: data.Year,
-          rated: data.Rated,
-          released: data.Released,
-          runtime: data.Runtime,
-          genre: data.Genre,
-          director: data.Director,
-          writer: data.Writer,
-          actors: data.Actors,
-          plot: data.Plot,
-          language: data.Language,
-          country: data.Country,
-          awards: data.Awards,
-          ratings: data.Ratings || [],
-          imdbRating: data.imdbRating,
-          imdbID: data.imdbID,
-          poster: data.Poster !== 'N/A' ? data.Poster : null,
-          type: data.Type,
-          totalSeasons: data.totalSeasons,
-          boxOffice: data.BoxOffice,
-          production: data.Production,
-        };
-      }
+    const isId = query.startsWith('tt') && /^tt\d+$/.test(query);
+    const param = isId ? `i=${query}` : `t=${encodeURIComponent(query)}`;
+    var omdbData = await fetchOmdb(param + '&plot=full');
+    if (omdbData) {
+      return {
+        title: omdbData.Title,
+        year: omdbData.Year,
+        rated: omdbData.Rated,
+        released: omdbData.Released,
+        runtime: omdbData.Runtime,
+        genre: omdbData.Genre,
+        director: omdbData.Director,
+        writer: omdbData.Writer,
+        actors: omdbData.Actors,
+        plot: omdbData.Plot,
+        language: omdbData.Language,
+        country: omdbData.Country,
+        awards: omdbData.Awards,
+        ratings: omdbData.Ratings || [],
+        imdbRating: omdbData.imdbRating,
+        imdbID: omdbData.imdbID,
+        poster: omdbData.Poster !== 'N/A' ? omdbData.Poster : null,
+        type: omdbData.Type,
+        totalSeasons: omdbData.totalSeasons,
+        boxOffice: omdbData.BoxOffice,
+        production: omdbData.Production,
+      };
     }
+
     const results = await ytSearch({ query: `${query} movie trailer`, hl: 'en', gl: 'US' });
     const v = results.videos?.[0];
     if (!v) return { error: 'Movie not found.' };
@@ -203,19 +222,17 @@ async function getMovieInfo(query) {
 
 async function getTrendingMovies(region = 'US', limit = 10) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
-    if (omdbKey) {
-      const { data } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&s=2024&type=movie`, { timeout: 8000 });
-      if (data.Response === 'True') {
-        return data.Search.slice(0, limit).map((m, i) => ({
-          rank: i + 1,
-          title: m.Title,
-          year: m.Year,
-          imdbID: m.imdbID,
-          poster: m.Poster !== 'N/A' ? m.Poster : null,
-        }));
-      }
+    var omdbData = await fetchOmdb('s=2024&type=movie');
+    if (omdbData && omdbData.Search) {
+      return omdbData.Search.slice(0, limit).map((m, i) => ({
+        rank: i + 1,
+        title: m.Title,
+        year: m.Year,
+        imdbID: m.imdbID,
+        poster: m.Poster !== 'N/A' ? m.Poster : null,
+      }));
     }
+
     const results = await ytSearch({ query: 'trending movies 2024', hl: 'en', gl: region });
     return (results.videos || []).slice(0, limit).map((v, i) => ({
       rank: i + 1,
@@ -231,22 +248,20 @@ async function getTrendingMovies(region = 'US', limit = 10) {
 
 async function getSimilarMovies(title, limit = 10) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
-    if (omdbKey) {
-      const { data: search } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&t=${encodeURIComponent(title)}`, { timeout: 8000 });
-      if (search.Response === 'True' && search.Genre) {
-        const genres = search.Genre.split(', ').slice(0, 2).join(', ');
-        const { data } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&s=${encodeURIComponent(genres)}&type=movie`, { timeout: 8000 });
-        if (data.Response === 'True') {
-          return data.Search.slice(0, limit).filter(m => m.imdbID !== search.imdbID).map(m => ({
-            title: m.Title,
-            year: m.Year,
-            imdbID: m.imdbID,
-            poster: m.Poster !== 'N/A' ? m.Poster : null,
-          }));
-        }
+    var search = await fetchOmdb('t=' + encodeURIComponent(title));
+    if (search && search.Genre) {
+      const genres = search.Genre.split(', ').slice(0, 2).join(', ');
+      var omdbList = await fetchOmdb('s=' + encodeURIComponent(genres) + '&type=movie');
+      if (omdbList && omdbList.Search) {
+        return omdbList.Search.slice(0, limit).filter(m => m.imdbID !== search.imdbID).map(m => ({
+          title: m.Title,
+          year: m.Year,
+          imdbID: m.imdbID,
+          poster: m.Poster !== 'N/A' ? m.Poster : null,
+        }));
       }
     }
+
     const q = `movies similar to ${title}`;
     const results = await ytSearch({ query: q, hl: 'en', gl: 'US' });
     return (results.videos || []).slice(0, limit).map(v => ({
@@ -261,7 +276,7 @@ async function getSimilarMovies(title, limit = 10) {
 
 async function getUpcomingMovies(region = 'US', limit = 10) {
   try {
-    const results = await ytSearch({ query: 'upcoming movies 2024 2025 trailer', hl: 'en', gl: region });
+    const results = await ytSearch({ query: 'upcoming movies 2025 2026 trailer', hl: 'en', gl: region });
     return (results.videos || []).slice(0, limit).map((v, i) => ({
       rank: i + 1,
       title: v.title,
@@ -340,6 +355,7 @@ function deletePlaylist(name) {
 }
 
 // ─── Movie Direct Download via YTS API + Direct Stream Links ───────────────────
+
 async function getMovieDownload(query) {
   try {
     var searchQuery = query.trim();
@@ -349,16 +365,12 @@ async function getMovieDownload(query) {
     var omdbDetails = null;
 
     if (!searchQuery.match(/^tt\d+$/)) {
-      var omdbKey = process.env.OMDB_API_KEY || 'trilogy';
-      try {
-        var { data: omdbData } = await axios.get('https://www.omdbapi.com/?apikey=' + omdbKey + '&t=' + encodeURIComponent(searchQuery) + '&type=movie', { timeout: 8000 });
-        if (omdbData.Response === 'True') {
-          imdbId = omdbData.imdbID;
-          movieTitle = omdbData.Title;
-          movieYear = omdbData.Year;
-          omdbDetails = omdbData;
-        }
-      } catch (e) {}
+      omdbDetails = await fetchOmdb('t=' + encodeURIComponent(searchQuery) + '&type=movie');
+      if (omdbDetails) {
+        imdbId = omdbDetails.imdbID;
+        movieTitle = omdbDetails.Title;
+        movieYear = omdbDetails.Year;
+      }
     } else {
       imdbId = searchQuery;
     }
@@ -368,6 +380,8 @@ async function getMovieDownload(query) {
       'https://yts.mx/api/v2/',
       'https://yts.lt/api/v2/',
       'https://yts.am/api/v2/',
+      'https://yts.do/api/v2/',
+      'https://yts.rs/api/v2/',
     ];
 
     var movie = null;
@@ -381,7 +395,7 @@ async function getMovieDownload(query) {
           : base + 'list_movies.json?query_term=' + encodeURIComponent(movieTitle) + '&limit=5';
 
         var { data: res } = await axios.get(endpoint, {
-          timeout: 10000,
+          timeout: 8000,
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
         });
 
@@ -402,8 +416,10 @@ async function getMovieDownload(query) {
     var code = imdbId || movie?.imdb_code;
     if (code) {
       watchLinks.push({ provider: 'VidSrc HD Stream', url: 'https://vidsrc.me/embed/movie?imdb=' + code });
+      watchLinks.push({ provider: 'VidSrc CC Player', url: 'https://vidsrc.cc/v2/embed/movie/' + code });
       watchLinks.push({ provider: '2Embed HD Player', url: 'https://www.2embed.cc/embed/' + code });
       watchLinks.push({ provider: 'AutoEmbed Direct', url: 'https://player.autoembed.cc/embed/movie/' + code });
+      watchLinks.push({ provider: 'VidSrc TO Player', url: 'https://vidsrc.to/embed/movie/' + code });
     }
 
     if (!movie && !omdbDetails) {
@@ -416,13 +432,22 @@ async function getMovieDownload(query) {
     var summary = movie?.summary || omdbDetails?.Plot || '';
 
     var sortedTorrents = torrents.map(function(t) {
+      var dn = encodeURIComponent(title + ' (' + year + ') [' + t.quality + ']');
+      var trackers = [
+        'udp://tracker.opentrackr.org:1337/announce',
+        'udp://open.demonii.com:1337/announce',
+        'udp://tracker.openbittorrent.com:80',
+        'udp://open.stealth.si:80/announce',
+        'udp://tracker.coppersurfer.tk:6969/announce',
+      ].map(tr => '&tr=' + encodeURIComponent(tr)).join('');
+
       return {
         quality: t.quality,
         size: t.size,
         type: t.type || 'bluray',
         seeds: t.seeds || 0,
         peers: t.peers || 0,
-        magnetUrl: 'magnet:?xt=urn:btih:' + t.hash + '&dn=' + encodeURIComponent(title + ' (' + year + ')') + '&tr=udp://open.demonii.com:1337/announce&tr=udp://tracker.openbittorrent.com:80',
+        magnetUrl: 'magnet:?xt=urn:btih:' + t.hash + '&dn=' + dn + trackers,
         torrentUrl: t.url,
       };
     });
@@ -462,4 +487,3 @@ module.exports = {
   formatDuration,
   formatNumber,
 };
-
