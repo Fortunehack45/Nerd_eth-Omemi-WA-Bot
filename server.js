@@ -210,6 +210,42 @@ app.post('/api/features/toggle', auth, function(req, res) {
   res.json(result);
 });
 
+// Access Control Management Endpoints
+app.get('/api/access', auth, function(req, res) {
+  var acSvc = require('./src/services/accessControl');
+  res.json({ enabled: config.access ? config.access.enabled : false, users: acSvc.listUsers() });
+});
+
+app.post('/api/access/add', auth, function(req, res) {
+  var acSvc = require('./src/services/accessControl');
+  var number = req.body.number;
+  var name = req.body.name;
+  var features = req.body.features;
+  if (!number) return res.status(400).json({ error: 'Phone number is required' });
+  var result = acSvc.addUser(number, features, name);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post('/api/access/remove', auth, function(req, res) {
+  var acSvc = require('./src/services/accessControl');
+  var number = req.body.number;
+  if (!number) return res.status(400).json({ error: 'Phone number is required' });
+  var result = acSvc.removeUser(number);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post('/api/access/toggle-feature', auth, function(req, res) {
+  var acSvc = require('./src/services/accessControl');
+  var number = req.body.number;
+  var feature = req.body.feature;
+  if (!number || !feature) return res.status(400).json({ error: 'Number and feature are required' });
+  var result = acSvc.toggleFeature(number, feature);
+  if (result.error) return res.status(400).json(result);
+  res.json(result);
+});
+
 app.post('/api/keys', auth, function(req, res) {
   var aiSvc = require('./src/services/aiService');
   var groq = req.body.groq;

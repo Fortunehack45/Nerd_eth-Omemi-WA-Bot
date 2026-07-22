@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Nerd-eth Bot Pro — Admin Dashboard</title>
+<title>Nerd-eth Bot Pro — Billion-Dollar Admin Dashboard</title>
 <link rel="icon" type="image/png" href="https://iili.io/Cwvlxwv.png">
 <link rel="apple-touch-icon" href="https://iili.io/Cwvlxwv.png">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ── Reset & Master Theme Tokens ────────────────────────────────────────── */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -18,12 +19,13 @@
 
 :root {
   --bg-dark: #030712;
-  --bg-card: rgba(15, 23, 42, 0.75);
+  --bg-card: rgba(15, 23, 42, 0.72);
   --bg-card-border: rgba(255, 255, 255, 0.08);
   --bg-card-hover: rgba(30, 41, 59, 0.85);
-  --sidebar-bg: rgba(8, 12, 28, 0.95);
+  --sidebar-bg: rgba(8, 12, 28, 0.94);
   
   --accent-indigo: #6366f1;
+  --accent-indigo-bright: #818cf8;
   --accent-purple: #a855f7;
   --accent-pink: #ec4899;
   --accent-cyan: #06b6d4;
@@ -35,6 +37,7 @@
   --glow-purple: rgba(168, 85, 247, 0.35);
   --glow-emerald: rgba(16, 185, 129, 0.35);
   --glow-cyan: rgba(6, 182, 212, 0.35);
+  --glow-rose: rgba(244, 63, 94, 0.35);
 
   --text-main: #f8fafc;
   --text-sub: #94a3b8;
@@ -56,12 +59,12 @@ body {
 }
 
 /* Custom Scrollbars */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: rgba(3, 7, 18, 0.8); }
-::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.35); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-indigo); }
 
-/* SVG Utilities */
+/* SVG Utility Reset */
 svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 
 /* Status Badges */
@@ -69,11 +72,12 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
-  border-radius: 8px;
-  font-size: 0.76rem;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.3px;
+  line-height: 1;
 }
 .badge-success {
   background: rgba(16, 185, 129, 0.15);
@@ -95,52 +99,77 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   color: #a5b4fc;
   border: 1px solid rgba(99, 102, 241, 0.35);
 }
+.badge-cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #67e8f9;
+  border: 1px solid rgba(6, 182, 212, 0.35);
+}
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
 
-/* Ambient Background Lights */
+/* Ambient Floating Mesh Orbs */
 .ambient-orb-1 {
   position: fixed;
-  top: -15%;
-  left: 10%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(168, 85, 247, 0.06) 45%, rgba(0, 0, 0, 0) 70%);
+  top: -20%;
+  left: 15%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, rgba(168, 85, 247, 0.08) 45%, rgba(0, 0, 0, 0) 70%);
   pointer-events: none;
   z-index: 0;
-  animation: orbFloat1 18s infinite ease-in-out;
+  animation: orbFloat1 20s infinite ease-in-out;
 }
 .ambient-orb-2 {
   position: fixed;
-  bottom: -15%;
-  right: 5%;
-  width: 550px;
-  height: 550px;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(99, 102, 241, 0.05) 45%, rgba(0, 0, 0, 0) 70%);
+  bottom: -20%;
+  right: 10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.14) 0%, rgba(99, 102, 241, 0.06) 45%, rgba(0, 0, 0, 0) 70%);
   pointer-events: none;
   z-index: 0;
-  animation: orbFloat2 22s infinite ease-in-out;
+  animation: orbFloat2 24s infinite ease-in-out;
+}
+.ambient-orb-3 {
+  position: fixed;
+  top: 40%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(6, 182, 212, 0.04) 50%, rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat1 28s infinite ease-in-out reverse;
 }
 
 @keyframes orbFloat1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(30px, -30px) scale(1.1); }
+  50% { transform: translate(40px, -40px) scale(1.12); }
 }
 @keyframes orbFloat2 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-30px, 30px) scale(1.15); }
+  50% { transform: translate(-40px, 40px) scale(1.18); }
 }
 
 @keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.995); }
+  from { opacity: 0; transform: translateY(12px) scale(0.99); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes pulseDot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .tab-content {
-  animation: tabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: tabFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .pulse-dot {
   width: 9px;
@@ -154,12 +183,12 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 /* Toast System */
 #toastContainer {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 24px;
+  right: 24px;
   z-index: 100000;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   pointer-events: none;
 }
 .toast {
@@ -167,52 +196,60 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 27, 75, 0.95));
   border: 1px solid var(--accent-indigo);
   color: #fff;
-  padding: 12px 20px;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--glow-indigo);
+  padding: 14px 22px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.65), 0 0 25px var(--glow-indigo);
   font-size: 0.88rem;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   animation: tabFadeIn 0.25s ease;
-  backdrop-filter: blur(16px);
-  max-width: 90vw;
+  backdrop-filter: blur(20px);
+  max-width: 92vw;
 }
 
-/* Login Modal Overlay */
+/* Modal Overlay System */
 #loginModal {
   display: flex;
   position: fixed;
   inset: 0;
   background: rgba(3, 7, 18, 0.96);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
   z-index: 99999;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 20px;
 }
 .login-card {
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(8, 12, 28, 0.95));
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 28px;
-  padding: 36px 28px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(8, 12, 28, 0.96));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 32px;
+  padding: 42px 32px;
   width: 100%;
-  max-width: 440px;
+  max-width: 450px;
   text-align: center;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 60px var(--glow-indigo);
+  box-shadow: 0 35px 90px rgba(0, 0, 0, 0.95), 0 0 70px var(--glow-indigo);
+  position: relative;
+  overflow: hidden;
+}
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #06b6d4);
 }
 .login-card img {
-  width: 80px;
-  height: 80px;
-  border-radius: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 35px var(--glow-indigo);
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  width: 88px;
+  height: 88px;
+  border-radius: 26px;
+  margin-bottom: 22px;
+  box-shadow: 0 0 40px var(--glow-indigo);
+  border: 2px solid rgba(255, 255, 255, 0.18);
 }
 .login-card h2 {
-  font-size: 1.8rem;
+  font-size: 1.9rem;
   font-weight: 800;
   color: #fff;
   margin-bottom: 6px;
@@ -223,33 +260,33 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 }
 .login-card p {
   color: var(--text-sub);
-  font-size: 0.9rem;
-  margin-bottom: 24px;
+  font-size: 0.92rem;
+  margin-bottom: 26px;
 }
 
 .input-field {
   width: 100%;
   padding: 14px 18px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background: rgba(3, 7, 18, 0.7);
+  background: rgba(3, 7, 18, 0.75);
   color: #fff;
   font-size: 0.95rem;
   margin-bottom: 16px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.22s ease;
 }
 .input-field:focus {
   border-color: var(--accent-indigo);
-  box-shadow: 0 0 20px var(--glow-indigo);
-  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 24px var(--glow-indigo);
+  background: rgba(15, 23, 42, 0.95);
 }
 
-/* Button UI Components */
+/* Button Component Framework */
 .btn-primary {
   width: 100%;
   padding: 14px 24px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: none;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
@@ -260,8 +297,8 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
+  gap: 10px;
+  transition: all 0.22s ease;
 }
 .btn-primary:hover {
   transform: translateY(-2px);
@@ -272,7 +309,7 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 
 .btn-secondary {
   padding: 11px 20px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: rgba(99, 102, 241, 0.12);
   color: #fff;
@@ -282,21 +319,41 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.22s ease;
 }
 .btn-secondary:hover {
   background: var(--accent-indigo);
   border-color: var(--accent-indigo);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px var(--glow-indigo);
+  box-shadow: 0 8px 22px var(--glow-indigo);
+}
+
+.btn-danger {
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.btn-danger:hover {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 4px 15px var(--glow-rose);
 }
 
 /* Desktop Sidebar */
 .sidebar {
-  width: 260px;
+  width: 270px;
   background: var(--sidebar-bg);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 28px 20px;
+  padding: 30px 22px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -304,28 +361,29 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   top: 0;
   left: 0;
   z-index: 100;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 .brand {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 36px;
+  margin-bottom: 38px;
 }
 .brand img {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  box-shadow: 0 0 25px var(--glow-indigo);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  box-shadow: 0 0 28px var(--glow-indigo);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .brand-badge {
   background: linear-gradient(135deg, #6366f1, #a855f7);
-  padding: 3px 8px;
-  border-radius: 8px;
+  padding: 4px 9px;
+  border-radius: 10px;
   font-size: 0.7rem;
   color: #fff;
   font-weight: 800;
@@ -339,56 +397,56 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   gap: 8px;
 }
 .nav-item {
-  padding: 12px 18px;
-  border-radius: 14px;
+  padding: 13px 18px;
+  border-radius: 16px;
   color: var(--text-sub);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
-  transition: all 0.2s ease;
+  gap: 14px;
+  transition: all 0.22s ease;
 }
 .nav-item:hover {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(99, 102, 241, 0.14);
   color: #c7d2fe;
 }
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(168, 85, 247, 0.22));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.38), rgba(168, 85, 247, 0.25));
   color: #fff;
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.48);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.28);
 }
 
 /* Main Content Workspace */
 .main-content {
-  margin-left: 260px;
+  margin-left: 270px;
   flex: 1;
-  padding: 32px 36px 60px 36px;
-  width: calc(100% - 260px);
+  padding: 36px 40px 60px 40px;
+  width: calc(100% - 270px);
   position: relative;
   z-index: 1;
 }
 
-/* Header Top Bar */
+/* Top Bar Header */
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 .greeting h1 {
-  font-size: 1.8rem;
+  font-size: 1.85rem;
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .greeting p {
   color: var(--text-sub);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   margin-top: 4px;
 }
 .top-actions {
@@ -397,13 +455,13 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   gap: 14px;
 }
 .status-tag {
-  padding: 7px 18px;
-  border-radius: 20px;
-  font-size: 0.84rem;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   border: 1px solid var(--border);
 }
 .status-tag.online {
@@ -417,106 +475,103 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
   border-color: rgba(239, 68, 68, 0.4);
 }
 
-/* Quick Tool Chips */
+/* Quick Tool Chips Toolbar */
 .quick-toolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 28px;
+  gap: 12px;
+  margin-bottom: 30px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 6px;
 }
 .quick-toolbar::-webkit-scrollbar { display: none; }
 .tool-chip {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 18px;
+  border-radius: 16px;
+  padding: 11px 20px;
   color: #c7d2fe;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   white-space: nowrap;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(12px);
+  transition: all 0.22s ease;
+  backdrop-filter: blur(14px);
 }
 .tool-chip:hover {
   background: var(--accent-indigo);
   color: #fff;
   border-color: var(--accent-indigo);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--glow-indigo);
+  box-shadow: 0 8px 22px var(--glow-indigo);
 }
 
 /* Metric Cards Grid */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 28px;
+  gap: 22px;
+  margin-bottom: 30px;
 }
 .metric-card {
   background: var(--bg-card);
   border: 1px solid var(--bg-card-border);
-  border-radius: 22px;
-  padding: 22px;
-  backdrop-filter: blur(16px);
+  border-radius: 24px;
+  padding: 24px;
+  backdrop-filter: blur(18px);
   position: relative;
   overflow: hidden;
-  transition: all 0.25s ease;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: all 0.28s ease;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
 }
 .metric-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px var(--glow-indigo);
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px var(--glow-indigo);
 }
 .metric-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
+  top: 0; left: 0; right: 0; height: 3px;
   background: linear-gradient(90deg, var(--accent-indigo), var(--accent-purple));
 }
 .metric-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .metric-title {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-sub);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.9px;
 }
 .metric-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   background: rgba(99, 102, 241, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.28);
 }
 .metric-value {
-  font-size: 2.2rem;
+  font-size: 2.3rem;
   font-weight: 800;
   color: #fff;
   line-height: 1.1;
 }
 .metric-sub {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -526,119 +581,120 @@ svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 .panel-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 22px;
-  margin-bottom: 28px;
+  gap: 24px;
+  margin-bottom: 30px;
 }
 .card-box {
   background: var(--bg-card);
   border: 1px solid var(--bg-card-border);
-  border-radius: 24px;
-  padding: 28px;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+  border-radius: 26px;
+  padding: 30px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
 }
 .card-box h3 {
-  font-size: 1.18rem;
+  font-size: 1.22rem;
   font-weight: 800;
   color: #fff;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 /* Terminal Console Box */
 .terminal-box {
   background: #060914;
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(99, 102, 241, 0.28);
   color: #a5b4fc;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.84rem;
-  max-height: 440px;
+  font-size: 0.85rem;
+  max-height: 480px;
   overflow-y: auto;
-  line-height: 1.65;
+  line-height: 1.68;
   word-break: break-all;
   white-space: pre-wrap;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.85);
 }
 
-/* Custom Table Responsive Container */
+/* Custom Responsive Table Container */
 .table-container {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid var(--bg-card-border);
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
-  min-width: 500px;
+  font-size: 0.92rem;
+  min-width: 550px;
 }
 th {
   text-align: left;
-  padding: 14px 16px;
+  padding: 16px 18px;
   color: var(--text-sub);
   font-weight: 700;
   border-bottom: 1px solid var(--bg-card-border);
-  background: rgba(8, 12, 28, 0.9);
+  background: rgba(8, 12, 28, 0.94);
 }
 td {
-  padding: 16px;
+  padding: 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: #cbd5e1;
 }
 tr:hover td { background: rgba(99, 102, 241, 0.08); }
 
-/* Form Controls */
-.form-group { margin-bottom: 20px; }
+/* Form Controls & Switches */
+.form-group { margin-bottom: 22px; }
 .form-group label {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #a5b4fc;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 
-/* Custom iOS Toggle Switch */
-.switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+/* Custom iOS Glass Switch */
+.switch { position: relative; display: inline-block; width: 50px; height: 28px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
   position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
   background-color: #1e293b; transition: .3s; border-radius: 34px; border: 1px solid var(--border);
 }
 .slider:before {
-  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px;
   background-color: #94a3b8; transition: .3s; border-radius: 50%;
 }
 input:checked + .slider { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-color: var(--accent-indigo); }
 input:checked + .slider:before { transform: translateX(22px); background-color: #fff; }
 
-/* Speed Cards Grid */
+/* Speed Engine Benchmark Cards */
 .speed-card {
   text-align: center;
-  padding: 18px 14px;
-  border-radius: 18px;
+  padding: 22px 16px;
+  border-radius: 20px;
   border: 1px solid var(--border);
-  background: rgba(5, 7, 24, 0.7);
-  transition: all 0.25s ease;
+  background: rgba(5, 7, 24, 0.75);
+  transition: all 0.28s ease;
 }
-.speed-card.download { border-color: rgba(52, 211, 153, 0.35); background: rgba(16, 185, 129, 0.07); }
-.speed-card.upload { border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.07); }
-.speed-card.ping { border-color: rgba(192, 132, 252, 0.35); background: rgba(168, 85, 247, 0.07); }
-.speed-val { font-size: 2.2rem; font-weight: 800; margin-top: 6px; }
+.speed-card.download { border-color: rgba(52, 211, 153, 0.35); background: rgba(16, 185, 129, 0.08); }
+.speed-card.upload { border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.08); }
+.speed-card.ping { border-color: rgba(192, 132, 252, 0.35); background: rgba(168, 85, 247, 0.08); }
+.speed-val { font-size: 2.3rem; font-weight: 800; margin-top: 8px; }
 
 /* Mobile Top App Header Bar */
 .mobile-top-header {
   display: none;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  background: rgba(8, 12, 28, 0.95);
-  backdrop-filter: blur(20px);
+  padding: 16px 20px;
+  background: rgba(8, 12, 28, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
@@ -647,25 +703,26 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
 .mobile-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1.15rem;
+  gap: 12px;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #fff;
 }
 .mobile-brand img {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  box-shadow: 0 0 15px var(--glow-indigo);
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  box-shadow: 0 0 18px var(--glow-indigo);
 }
 
-/* Mobile Floating Pill Bottom Navbar */
+/* Mobile Floating Glass Pill Navbar */
 .mobile-bottom-nav {
   display: none;
 }
 
+/* Responsive Media Queries */
 @media (max-width: 992px) {
-  .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .panel-grid { grid-template-columns: 1fr; }
 }
 
@@ -677,7 +734,7 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
 
   .main-content {
     margin-left: 0;
-    padding: 16px 16px 110px 16px;
+    padding: 20px 18px 115px 18px;
     width: 100%;
     max-width: 100vw;
   }
@@ -685,100 +742,100 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
   .top-bar {
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 16px;
+    margin-bottom: 22px;
   }
   .top-actions {
     width: 100%;
     justify-content: space-between;
   }
-  .greeting h1 { font-size: 1.45rem; }
-  .greeting p { font-size: 0.85rem; }
+  .greeting h1 { font-size: 1.5rem; }
+  .greeting p { font-size: 0.88rem; }
 
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 22px;
   }
   .metric-card {
-    padding: 14px;
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 18px;
   }
-  .metric-title { font-size: 0.7rem; letter-spacing: 0.5px; }
-  .metric-icon { width: 32px; height: 32px; border-radius: 10px; }
-  .metric-value { font-size: 1.6rem; }
-  .metric-sub { font-size: 0.74rem; }
+  .metric-title { font-size: 0.72rem; letter-spacing: 0.6px; }
+  .metric-icon { width: 34px; height: 34px; border-radius: 10px; }
+  .metric-value { font-size: 1.7rem; }
+  .metric-sub { font-size: 0.76rem; }
 
   .card-box {
-    padding: 18px;
-    border-radius: 20px;
+    padding: 20px;
+    border-radius: 22px;
   }
-  .card-box h3 { font-size: 1.05rem; margin-bottom: 16px; }
+  .card-box h3 { font-size: 1.1rem; margin-bottom: 18px; }
 
   #speedTestBox {
     grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   #featureStatusResGrid {
     grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    gap: 12px !important;
   }
 
   .btn-primary, .btn-secondary {
-    padding: 13px;
-    font-size: 0.9rem;
+    padding: 14px;
+    font-size: 0.92rem;
   }
 
   .login-card {
-    padding: 24px 18px;
-    border-radius: 24px;
+    padding: 28px 20px;
+    border-radius: 26px;
   }
-  .login-card img { width: 68px; height: 68px; border-radius: 18px; margin-bottom: 14px; }
-  .login-card h2 { font-size: 1.55rem; }
-  .login-card p { font-size: 0.84rem; margin-bottom: 18px; }
+  .login-card img { width: 72px; height: 72px; border-radius: 20px; margin-bottom: 16px; }
+  .login-card h2 { font-size: 1.6rem; }
+  .login-card p { font-size: 0.86rem; margin-bottom: 20px; }
 
   /* Mobile Floating Glass Pill Navbar */
   .mobile-bottom-nav {
     display: flex;
     position: fixed;
-    bottom: 12px;
-    left: 10px;
-    right: 10px;
-    height: 64px;
-    background: rgba(8, 12, 30, 0.92);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    border-radius: 22px;
+    bottom: 14px;
+    left: 12px;
+    right: 12px;
+    height: 66px;
+    background: rgba(8, 12, 30, 0.93);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(99, 102, 241, 0.38);
+    border-radius: 24px;
     z-index: 9999;
     justify-content: space-around;
     align-items: center;
     padding: 0 4px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 25px var(--glow-indigo);
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.9), 0 0 30px var(--glow-indigo);
   }
   .mobile-nav-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     color: #94a3b8;
     font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
-    padding: 6px 2px;
-    border-radius: 14px;
-    transition: all 0.2s ease;
+    padding: 8px 4px;
+    border-radius: 16px;
+    transition: all 0.22s ease;
     flex: 1;
     text-align: center;
   }
-  .mobile-nav-item svg { width: 18px; height: 18px; }
+  .mobile-nav-item svg { width: 19px; height: 19px; }
   .mobile-nav-item.active {
     color: #fff;
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(168, 85, 247, 0.35));
-    border: 1px solid rgba(99, 102, 241, 0.5);
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.52);
+    box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
   }
 }
 </style>
@@ -787,17 +844,18 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
 
 <div class="ambient-orb-1"></div>
 <div class="ambient-orb-2"></div>
+<div class="ambient-orb-3"></div>
 <div id="toastContainer"></div>
 
-<!-- Mobile Top Header -->
+<!-- Mobile Sticky Top App Header -->
 <header class="mobile-top-header">
   <div class="mobile-brand">
     <img src="https://iili.io/Cwvlxwv.png" alt="Logo">
     <span>BotPanel Pro</span>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <div style="display:flex;align-items:center;gap:12px">
     <span id="mobileStatusDot" class="pulse-dot"></span>
-    <button onclick="logout()" class="btn-secondary" style="padding:6px 12px;font-size:0.75rem;border-radius:10px">Lock</button>
+    <button onclick="logout()" class="btn-secondary" style="padding:7px 14px;font-size:0.78rem;border-radius:12px">Lock</button>
   </div>
 </header>
 
@@ -821,7 +879,7 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
   </div>
   <div class="mobile-nav-item" onclick="showTab('users')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-    <span>Users</span>
+    <span>Access</span>
   </div>
   <div class="mobile-nav-item" onclick="showTab('logs')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
@@ -829,7 +887,7 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
   </div>
 </nav>
 
-<!-- Login Overlay Modal -->
+<!-- Login / Unlock Modal -->
 <div id="loginModal">
   <div class="login-card">
     <img src="https://iili.io/Cwvlxwv.png" alt="Bot Logo">
@@ -837,105 +895,104 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
     <p>Sign in to access your Bot Control Panel</p>
 
     <!-- X (Twitter) Follow & Passcode Section -->
-    <div style="background:rgba(99,102,241,0.1);border:1px solid var(--border);padding:14px;border-radius:16px;margin-bottom:18px;text-align:left;font-size:0.84rem">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;color:#fff;font-weight:700">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    <div style="background:rgba(99,102,241,0.12);border:1px solid var(--border);padding:16px;border-radius:20px;margin-bottom:20px;text-align:left;font-size:0.86rem">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#fff;font-weight:700">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         Follow @OnNerd_eth for 6-Digit Key
       </div>
-      <p style="color:var(--text-sub);font-size:0.8rem;margin:0 0 10px 0">Follow @OnNerd_eth on X to generate your access passcode.</p>
+      <p style="color:var(--text-sub);font-size:0.82rem;margin:0 0 12px 0">Follow @OnNerd_eth on X to generate your access passcode key.</p>
       
-      <button onclick="followAndGenerateKey()" class="btn-secondary" style="width:100%;justify-content:center;padding:10px 14px;font-size:0.84rem;background:#000;border-color:#333;color:#fff">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      <button onclick="followAndGenerateKey()" class="btn-secondary" style="width:100%;justify-content:center;padding:11px 16px;font-size:0.86rem;background:#000;border-color:#333;color:#fff">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
         Follow @OnNerd_eth & Get Passcode
       </button>
 
-      <div id="genKeyBox" style="display:none;margin-top:12px;padding:12px;background:#030712;border-radius:12px;border:1px solid #34d399;color:#34d399;font-weight:800;text-align:center;font-size:1.1rem"></div>
+      <div id="genKeyBox" style="display:none;margin-top:14px;padding:14px;background:#030712;border-radius:14px;border:1px solid #34d399;color:#34d399;font-weight:800;text-align:center;font-size:1.15rem"></div>
     </div>
 
-    <div id="loginErr" style="color:#f87171;font-size:0.84rem;margin-bottom:14px;display:none"></div>
+    <div id="loginErr" style="color:#f87171;font-size:0.86rem;margin-bottom:16px;display:none"></div>
     <input type="password" id="pwdInput" class="input-field" placeholder="Enter 6-Digit Passcode" onkeyup="if(event.key==='Enter')attemptLogin()">
     <button onclick="attemptLogin()" class="btn-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       Unlock Panel
     </button>
   </div>
 </div>
 
-<!-- Desktop Sidebar Navigation -->
+<!-- Desktop Left Sidebar -->
 <aside class="sidebar">
   <div class="brand">
     <img src="https://iili.io/Cwvlxwv.png" alt="Logo">
     <span>BotPanel</span>
-    <span class="brand-badge">PRO v2.5</span>
+    <span class="brand-badge">PRO v3.0</span>
   </div>
   <ul class="nav-list">
     <li class="nav-item active" onclick="showTab('dashboard')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
       <span>Dashboard</span>
     </li>
     <li class="nav-item" onclick="showTab('keys')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
       <span>AI & API Keys</span>
     </li>
     <li class="nav-item" onclick="showTab('features')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       <span>Feature Controls</span>
     </li>
     <li class="nav-item" onclick="showTab('connect')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
       <span>QR & Link Phone</span>
     </li>
     <li class="nav-item" onclick="showTab('users')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-      <span>Users & Access</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      <span>Access & Users</span>
     </li>
     <li class="nav-item" onclick="showTab('logs')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
       <span>Real-time Logs</span>
     </li>
     <li class="nav-item" onclick="showTab('terms')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span>Terms & Disclaimer</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Terms & Governance</span>
     </li>
   </ul>
   
-  <div style="margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:10px">
+  <div style="margin-top:auto;padding-top:22px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:12px">
     <!-- Made By Fortune Adebayo (AKA: Nerd_eth) Portfolio Link -->
-    <a href="https://fortuneadebayo.space/" target="_blank" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(99,102,241,0.14),rgba(168,85,247,0.14));border:1px solid rgba(168,85,247,0.35);border-radius:14px;padding:10px 12px;text-decoration:none;transition:all 0.2s ease">
-      <div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:0.75rem;flex-shrink:0">FA</div>
+    <a href="https://fortuneadebayo.space/" target="_blank" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.15));border:1px solid rgba(168,85,247,0.38);border-radius:16px;padding:12px 14px;text-decoration:none;transition:all 0.22s ease">
+      <div style="width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:0.8rem;flex-shrink:0">FA</div>
       <div>
-        <div style="color:#f3f4f6;font-size:0.75rem;font-weight:800">Made By Fortune Adebayo</div>
-        <div style="color:#c084fc;font-size:0.68rem;font-weight:600">(AKA: Nerd_eth)</div>
+        <div style="color:#f3f4f6;font-size:0.78rem;font-weight:800">Fortune Adebayo</div>
+        <div style="color:#c084fc;font-size:0.7rem;font-weight:600">(AKA: Nerd_eth)</div>
       </div>
     </a>
 
     <!-- Creator WhatsApp Contact -->
-    <a href="https://wa.me/2349167689200?text=Hi%20Nerd-eth%2C%20I%20have%20a%20question%20about%20your%20WhatsApp%20bot!" target="_blank" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(37,211,102,0.16),rgba(37,211,102,0.06));border:1px solid rgba(37,211,102,0.35);border-radius:14px;padding:10px 12px;text-decoration:none;color:#4ade80;font-size:0.82rem;font-weight:700">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <a href="https://wa.me/2349167689200?text=Hi%20Nerd-eth%2C%20I%20have%20a%20question%20about%20your%20WhatsApp%20bot!" target="_blank" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(37,211,102,0.16),rgba(37,211,102,0.06));border:1px solid rgba(37,211,102,0.38);border-radius:16px;padding:12px 14px;text-decoration:none;color:#4ade80;font-size:0.84rem;font-weight:700">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       <div>
-        <div style="color:#4ade80;font-weight:800;font-size:0.8rem">Chat with Creator</div>
-        <div style="color:#86efac;font-size:0.72rem;font-weight:500">+234 916 768 9200</div>
+        <div style="color:#4ade80;font-weight:800;font-size:0.82rem">Chat Creator</div>
+        <div style="color:#86efac;font-size:0.73rem;font-weight:500">+234 916 768 9200</div>
       </div>
     </a>
   </div>
 </aside>
 
-
-<!-- Main Workspace -->
+<!-- Main Workspace Content -->
 <main class="main-content">
   <!-- Top Header Bar -->
   <div class="top-bar">
     <div class="greeting">
       <h1 id="topGreeting">
-        <img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:36px;height:36px;border-radius:12px;box-shadow:0 0 20px var(--glow-indigo)">
+        <img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:38px;height:38px;border-radius:14px;box-shadow:0 0 22px var(--glow-indigo)">
         Hey, Admin.
       </h1>
       <p id="topSub">Real-time WhatsApp Bot Engine & AI Analytics Dashboard</p>
     </div>
     <div class="top-actions">
       <span id="statusBadge" class="status-tag offline">Offline</span>
-      <button onclick="logout()" class="btn-secondary" style="background:rgba(30,27,75,0.8)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <button onclick="logout()" class="btn-secondary" style="background:rgba(30,27,75,0.85)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Lock Panel
       </button>
     </div>
@@ -944,32 +1001,32 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
   <!-- Quick Actions Toolbar -->
   <div class="quick-toolbar">
     <div class="tool-chip" onclick="runSpeedTest()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Speed Test
     </div>
     <div class="tool-chip" onclick="testAiAction()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
       Test AI Provider
     </div>
     <div class="tool-chip" onclick="showTab('keys')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
       API Keys
     </div>
     <div class="tool-chip" onclick="showTab('connect')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
       Show QR Code
     </div>
-    <div class="tool-chip" onclick="showTab('terms')">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Terms & Disclaimer
+    <div class="tool-chip" onclick="showTab('users')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Access Rules
     </div>
     <div class="tool-chip" onclick="refreshAll()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
       Refresh Data
     </div>
   </div>
 
-  <!-- TAB 1: DASHBOARD -->
+  <!-- TAB 1: DASHBOARD OVERVIEW -->
   <div id="tab-dashboard" class="tab-content">
     <!-- Stat Metrics Grid -->
     <div class="metrics-grid">
@@ -977,108 +1034,108 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
         <div class="metric-header">
           <span class="metric-title">System Uptime</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mUptime">0s</div>
         <div class="metric-sub">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Engine Active
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Engine Active
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
           <span class="metric-title">Active Contacts</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mUsers">0</div>
         <div class="metric-sub">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Registered Contacts
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Registered Contacts
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
           <span class="metric-title">Memory Facts</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mFacts">0</div>
         <div class="metric-sub">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg> Learned Personalities
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5c0 1.28.48 2.45 1.28 3.34A5.002 5.002 0 0 0 4 15a5 5 0 0 0 4.75 4.98A5 5 0 0 0 12 22a5 5 0 0 0 3.25-2.02A5 5 0 0 0 20 15a5 5 0 0 0-4.28-4.66A5 5 0 0 0 17 7a5 5 0 0 0-5-5z"/></svg> Learned Personalities
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-header">
           <span class="metric-title">Total Commands</span>
           <div class="metric-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
         </div>
         <div class="metric-value" id="mCommands">0</div>
         <div class="metric-sub">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Executed Bot Actions
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Executed Bot Actions
         </div>
       </div>
     </div>
 
-    <!-- Internet Speed Test Engine Widget -->
-    <div class="card-box" style="margin-bottom:28px;background:linear-gradient(145deg, rgba(20,28,62,0.85), rgba(8,11,30,0.96));border:1px solid rgba(99,102,241,0.45)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px">
+    <!-- Speed Test Benchmark Engine Card -->
+    <div class="card-box" style="margin-bottom:30px;background:linear-gradient(145deg, rgba(20,28,62,0.88), rgba(8,11,30,0.96));border:1px solid rgba(99,102,241,0.48)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:16px">
         <h3 style="margin:0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           High-Precision Internet Speed Test Engine
         </h3>
-        <button onclick="runSpeedTest()" id="speedTestBtn" class="btn-primary" style="width:auto;padding:11px 22px;font-size:0.88rem">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <button onclick="runSpeedTest()" id="speedTestBtn" class="btn-primary" style="width:auto;padding:12px 24px;font-size:0.9rem">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           Run Live Speed Test
         </button>
       </div>
-      <div id="speedTestBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div id="speedTestBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
         <div class="speed-card download">
-          <span style="font-size:0.78rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">DOWNLOAD SPEED</span>
+          <span style="font-size:0.8rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">DOWNLOAD SPEED</span>
           <div id="spDl" class="speed-val" style="color:#34d399">-- Mbps</div>
         </div>
         <div class="speed-card upload">
-          <span style="font-size:0.78rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">UPLOAD SPEED</span>
+          <span style="font-size:0.8rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">UPLOAD SPEED</span>
           <div id="spUl" class="speed-val" style="color:#38bdf8">-- Mbps</div>
         </div>
         <div class="speed-card ping">
-          <span style="font-size:0.78rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">LATENCY / PING</span>
+          <span style="font-size:0.8rem;color:var(--text-sub);font-weight:700;letter-spacing:0.8px">LATENCY / PING</span>
           <div id="spPing" class="speed-val" style="color:#c084fc">-- ms</div>
         </div>
       </div>
-      <div id="spEngineLabel" style="margin-top:14px;font-size:0.82rem;color:var(--text-muted);text-align:right;font-weight:600">Engine: Native Socket Core & Cloudflare Edge CDN</div>
+      <div id="spEngineLabel" style="margin-top:16px;font-size:0.84rem;color:var(--text-muted);text-align:right;font-weight:600">Engine: Native Socket Core & Cloudflare Edge CDN</div>
     </div>
 
-    <!-- Live Streams Grid -->
+    <!-- Live Activity Streams -->
     <div class="panel-grid">
       <div class="card-box">
         <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          Live Message Activity
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Live Message Activity Stream
         </h3>
-        <div id="msgStream" style="max-height:360px;overflow-y:auto;padding-right:4px"></div>
+        <div id="msgStream" style="max-height:380px;overflow-y:auto;padding-right:6px"></div>
       </div>
       <div class="card-box">
         <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Command Audit Stream
         </h3>
-        <div id="cmdStream" style="max-height:360px;overflow-y:auto;padding-right:4px"></div>
+        <div id="cmdStream" style="max-height:380px;overflow-y:auto;padding-right:6px"></div>
       </div>
     </div>
   </div>
 
   <!-- TAB 2: AI & API KEYS -->
   <div id="tab-keys" class="tab-content" style="display:none">
-    <div class="card-box" style="margin-bottom:24px">
+    <div class="card-box" style="margin-bottom:26px">
       <h3>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         AI Provider & API Key Manager
       </h3>
-      <p style="color:var(--text-sub);font-size:0.9rem;margin-bottom:20px">Configure public and private AI key endpoints. Updates take effect instantly without restarting the bot.</p>
+      <p style="color:var(--text-sub);font-size:0.92rem;margin-bottom:22px">Configure public and private AI key endpoints. Changes apply dynamically in real-time.</p>
 
       <div class="form-group">
         <label>Groq API Key (Free, Ultra-Fast — console.groq.com)</label>
@@ -1100,35 +1157,35 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
         <input type="password" id="keyBrave" class="input-field" placeholder="BSA-...">
       </div>
 
-      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
-        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:12px 26px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      <div style="display:flex;gap:14px;margin-top:26px;flex-wrap:wrap">
+        <button onclick="saveKeysAction()" class="btn-primary" style="width:auto;padding:13px 28px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
           Save API Keys
         </button>
-        <button onclick="testAiAction()" class="btn-secondary" style="background:rgba(124,58,237,0.22)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
+        <button onclick="testAiAction()" class="btn-secondary" style="background:rgba(124,58,237,0.24)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55A2 2 0 0 0 6.54 23.5h10.92a2 2 0 0 0 1.82-2.95l-5.069-10.127A2 2 0 0 1 14 9.527V2"/></svg>
           Test AI Connection
         </button>
       </div>
 
-      <div id="keyStatusRes" style="margin-top:20px;padding:18px;background:#050718;border-radius:16px;border:1px solid var(--border);font-size:0.9rem;line-height:1.6"></div>
+      <div id="keyStatusRes" style="margin-top:22px;padding:20px;background:#050718;border-radius:18px;border:1px solid var(--border);font-size:0.92rem;line-height:1.65"></div>
     </div>
   </div>
 
   <!-- TAB 3: FEATURE CONTROLS -->
   <div id="tab-features" class="tab-content" style="display:none">
-    <div class="card-box" style="margin-bottom:24px">
+    <div class="card-box" style="margin-bottom:26px">
       <h3>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Feature & Command Controls
       </h3>
-      <p style="color:var(--text-sub);font-size:0.9rem;margin-bottom:20px">Enable or disable specific features or commands live. Disabled items will not execute.</p>
+      <p style="color:var(--text-sub);font-size:0.92rem;margin-bottom:22px">Enable or disable specific features or commands live. Disabled items will not execute.</p>
       
       <div id="featureStatusRes">Loading features...</div>
 
-      <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">
-        <label style="display:block;font-size:0.9rem;font-weight:700;color:#a5b4fc;margin-bottom:10px">Disable/Enable Any Command or Feature by Name</label>
-        <div style="display:flex;gap:10px;max-width:500px;flex-wrap:wrap">
+      <div style="margin-top:26px;border-top:1px solid var(--border);padding-top:22px">
+        <label style="display:block;font-size:0.92rem;font-weight:700;color:#a5b4fc;margin-bottom:12px">Disable/Enable Any Command or Feature by Name</label>
+        <div style="display:flex;gap:12px;max-width:520px;flex-wrap:wrap">
           <input type="text" id="toggleItemName" class="input-field" placeholder="e.g. music, download, movie, nuke, speed" style="margin:0">
           <button onclick="toggleCustomItem('disable')" class="btn-secondary" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.4);color:#f87171;width:auto">Disable</button>
           <button onclick="toggleCustomItem('enable')" class="btn-primary" style="width:auto">Enable</button>
@@ -1137,47 +1194,47 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
     </div>
 
     <!-- Creator Support Card -->
-    <div class="card-box" style="background:linear-gradient(135deg,rgba(37,211,102,0.08),rgba(6,8,24,0.95));border-color:rgba(37,211,102,0.3)">
+    <div class="card-box" style="background:linear-gradient(135deg,rgba(37,211,102,0.09),rgba(6,8,24,0.96));border-color:rgba(37,211,102,0.35)">
       <h3 style="color:#4ade80">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:#4ade80"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        Need Help? Contact Creator
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:#4ade80"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Need Support? Contact Creator
       </h3>
-      <p style="color:#86efac;font-size:0.9rem;line-height:1.6;margin-bottom:18px">
-        For <strong>bug reports</strong>, <strong>feature requests</strong>, or questions — chat with the creator directly on WhatsApp.
+      <p style="color:#86efac;font-size:0.92rem;line-height:1.65;margin-bottom:20px">
+        For <strong>bug reports</strong>, <strong>feature requests</strong>, or custom setup — chat with the creator directly on WhatsApp.
       </p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-        <a href="https://wa.me/2349167689200?text=Hi%20Nerd-eth%2C%20I%20need%20help%20with%20the%20WhatsApp%20bot!%20Issue%3A%20" target="_blank" style="display:flex;align-items:center;gap:12px;background:rgba(37,211,102,0.14);border:1px solid rgba(37,211,102,0.4);border-radius:16px;padding:14px 18px;text-decoration:none;color:#4ade80;font-weight:700;font-size:0.88rem;transition:all 0.2s">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+        <a href="https://wa.me/2349167689200?text=Hi%20Nerd-eth%2C%20I%20need%20help%20with%20the%20WhatsApp%20bot!%20Issue%3A%20" target="_blank" style="display:flex;align-items:center;gap:14px;background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.42);border-radius:18px;padding:16px 20px;text-decoration:none;color:#4ade80;font-weight:700;font-size:0.9rem;transition:all 0.22s">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           <div>
-            <div style="font-size:0.85rem;font-weight:800">WhatsApp Support</div>
-            <div style="font-size:0.74rem;color:#86efac">+234 916 768 9200</div>
+            <div style="font-size:0.88rem;font-weight:800">WhatsApp Support</div>
+            <div style="font-size:0.76rem;color:#86efac">+234 916 768 9200</div>
           </div>
         </a>
-        <a href="https://x.com/OnNerd_eth" target="_blank" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 18px;text-decoration:none;color:#e2e8f0;font-weight:700;font-size:0.88rem;transition:all 0.2s">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <a href="https://x.com/OnNerd_eth" target="_blank" style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:18px;padding:16px 20px;text-decoration:none;color:#e2e8f0;font-weight:700;font-size:0.9rem;transition:all 0.22s">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           <div>
-            <div style="font-size:0.85rem;font-weight:800">Follow on X</div>
-            <div style="font-size:0.74rem;color:var(--text-sub)">@OnNerd_eth — Updates</div>
+            <div style="font-size:0.88rem;font-weight:800">Follow on X</div>
+            <div style="font-size:0.76rem;color:var(--text-sub)">@OnNerd_eth — Updates</div>
           </div>
         </a>
       </div>
     </div>
   </div>
 
-  <!-- TAB 4: CONNECT -->
+  <!-- TAB 4: CONNECT & PAIR -->
   <div id="tab-connect" class="tab-content" style="display:none">
-    <div class="card-box" style="text-align:center;margin-bottom:24px">
+    <div class="card-box" style="text-align:center;margin-bottom:26px">
       <h3>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-        WhatsApp Linking — QR Code
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        WhatsApp Linking — High Definition QR Code
       </h3>
-      <p style="color:var(--text-sub);margin:8px 0">Open WhatsApp → Linked Devices → Link a Device</p>
+      <p style="color:var(--text-sub);margin:8px 0 20px 0">Open WhatsApp → Linked Devices → Link a Device</p>
       
-      <div id="qrWrapper" style="margin:20px 0">
-        <div style="position:relative;display:inline-block;padding:16px;background:#fff;border-radius:24px;box-shadow:0 15px 40px rgba(0,0,0,0.7)">
-          <img id="dashQrImg" src="" alt="QR Code" style="width:240px;height:240px;display:block">
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);border:2px solid #fff">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+      <div id="qrWrapper" style="margin:22px 0">
+        <div style="position:relative;display:inline-block;padding:18px;background:#fff;border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,0.8)">
+          <img id="dashQrImg" src="" alt="QR Code" style="width:250px;height:250px;display:block">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.35);border:2px solid #fff">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
               <path fill="#25D366" d="M12 2a10 10 0 0 0-8.62 15.08L2 22l5.07-1.33A10 10 0 1 0 12 2z"/>
               <path fill="#FFF" d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07a8.18 8.18 0 0 1-2.41-1.49 9.02 9.02 0 0 1-1.67-2.08c-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37a3.83 3.83 0 0 0-1.2 2.85c0 1.68 1.23 3.3 1.4 3.53.17.23 2.42 3.7 5.86 5.18.82.35 1.46.56 1.96.72.82.26 1.57.22 2.16.14.66-.1 2.02-.83 2.3-1.63.28-.8.28-1.48.2-1.63-.08-.15-.28-.24-.58-.39z"/>
             </svg>
@@ -1186,33 +1243,73 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
       </div>
 
       <button onclick="resetSessionAction()" class="btn-secondary" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.4);color:#f87171">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Reset Session & Refresh QR
       </button>
     </div>
 
     <div class="card-box">
       <h3>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        Alternative: Pairing Code
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Alternative: Pairing Code Link
       </h3>
-      <p style="color:var(--text-sub);margin:6px 0 18px 0">Enter phone number with country code (e.g. 2348012345678)</p>
-      <div style="display:flex;gap:10px;max-width:480px;flex-wrap:wrap">
+      <p style="color:var(--text-sub);margin:6px 0 20px 0">Enter phone number with country code (e.g. 2348012345678)</p>
+      <div style="display:flex;gap:12px;max-width:500px;flex-wrap:wrap">
         <input type="text" id="pairPhoneNum" class="input-field" placeholder="2348012345678" style="margin:0">
         <button onclick="requestPairCodeAction()" class="btn-primary" style="width:auto">Get Code</button>
       </div>
-      <div id="pairOutput" style="margin-top:18px;font-weight:700;font-size:1.1rem;color:#4ade80;display:none"></div>
+      <div id="pairOutput" style="margin-top:20px;font-weight:700;font-size:1.15rem;color:#4ade80;display:none"></div>
     </div>
   </div>
 
-  <!-- TAB 5: USERS -->
+  <!-- TAB 5: ACCESS & USERS DIRECTORY -->
   <div id="tab-users" class="tab-content" style="display:none">
+    <!-- Interactive Access Control Manager Card -->
+    <div class="card-box" style="margin-bottom:26px">
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Access Control & User Permission Suite
+      </h3>
+      <p style="color:var(--text-sub);font-size:0.92rem;margin-bottom:20px">Grant access permissions to specific phone numbers or manage approved user feature rules.</p>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:22px">
+        <div>
+          <label style="display:block;font-size:0.88rem;font-weight:700;color:#a5b4fc;margin-bottom:8px">Phone Number (with country code)</label>
+          <input type="text" id="acPhoneNum" class="input-field" placeholder="e.g. 2348012345678" style="margin-bottom:0">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.88rem;font-weight:700;color:#a5b4fc;margin-bottom:8px">User Name / Alias (Optional)</label>
+          <input type="text" id="acUserName" class="input-field" placeholder="e.g. John Doe" style="margin-bottom:0">
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:0.88rem;font-weight:700;color:#a5b4fc;margin-bottom:10px">Granted Feature Capabilities</label>
+        <div style="display:flex;flex-wrap:wrap;gap:12px">
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_ai" checked> AI Chat</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_imagine" checked> Image Gen</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_agent" checked> Deep Agent</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_download" checked> Downloader</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_music" checked> Music Player</label>
+          <label style="display:inline-flex;align-items:center;gap:6px;color:#fff;font-size:0.88rem;cursor:pointer"><input type="checkbox" id="feat_speed" checked> Speed Test</label>
+        </div>
+      </div>
+
+      <button onclick="addAccessUserAction()" class="btn-primary" style="width:auto;padding:12px 26px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        Approve & Grant Access
+      </button>
+
+      <div id="accessUsersList" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px">Loading access list...</div>
+    </div>
+
+    <!-- Active Contacts Directory Card -->
     <div class="card-box">
       <h3>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
-        Contact & Access Directory
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        Active Contact & Interaction Directory
       </h3>
-      <div class="table-container" style="margin-top:18px">
+      <div class="table-container" style="margin-top:20px">
         <table>
           <thead>
             <tr><th>User / JID</th><th>Facts Learned</th><th>Messages Sent</th><th>Last Active</th></tr>
@@ -1223,67 +1320,67 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
     </div>
   </div>
 
-  <!-- TAB 6: LOGS -->
+  <!-- TAB 6: LOGS & STREAM -->
   <div id="tab-logs" class="tab-content" style="display:none">
     <div class="card-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <h3>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-          Live Terminal Stream
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+          Live Terminal Stream Console
         </h3>
-        <button onclick="copyLogsAction()" class="btn-secondary" style="padding:8px 16px;font-size:0.82rem">Copy Logs</button>
+        <button onclick="copyLogsAction()" class="btn-secondary" style="padding:9px 18px;font-size:0.85rem">Copy Terminal Logs</button>
       </div>
       <pre id="rawLogBox" class="terminal-box">Loading terminal logs...</pre>
     </div>
   </div>
 
-  <!-- TAB 7: TERMS, PRIVACY & DISCLAIMER -->
+  <!-- TAB 7: TERMS & GOVERNANCE -->
   <div id="tab-terms" class="tab-content" style="display:none">
-    <div class="card-box" style="border:1px solid rgba(239,68,68,0.35);background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(30,27,75,0.6));padding:20px">
-      <h3 style="color:#f87171;font-size:1.15rem;display:flex;align-items:center;gap:10px">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="card-box" style="border:1px solid rgba(239,68,68,0.4);background:linear-gradient(135deg,rgba(239,68,68,0.09),rgba(30,27,75,0.65));padding:24px">
+      <h3 style="color:#f87171;font-size:1.2rem;display:flex;align-items:center;gap:12px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Master Terms of Service & Governance Notice
       </h3>
-      <p style="color:#cbd5e1;line-height:1.65;margin-top:10px;font-size:0.9rem">
-        <strong>Binding Agreement Notice:</strong> By installing or operating <strong>Nerd-eth WhatsApp Engine</strong>, you agree to be bound by all terms, privacy policies, and liability disclaimers. Cease software usage immediately if you do not agree.
+      <p style="color:#cbd5e1;line-height:1.68;margin-top:12px;font-size:0.92rem">
+        <strong>Binding Agreement Notice:</strong> By installing or operating <strong>Nerd-eth WhatsApp Engine</strong>, you agree to be bound by all terms, privacy policies, and disclaimers. Cease software usage immediately if you do not agree.
       </p>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:20px">
-      <!-- Terms -->
-      <div class="card-box" style="padding:20px">
-        <h3 style="color:#818cf8;font-size:1.05rem;display:flex;align-items:center;gap:8px">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px;margin-top:22px">
+      <!-- Usage Terms -->
+      <div class="card-box" style="padding:24px">
+        <h3 style="color:#818cf8;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           1. Terms & Usage Guidelines
         </h3>
-        <div style="color:var(--text-sub);line-height:1.7;margin-top:14px;font-size:0.86rem">
-          <p style="margin-bottom:10px"><strong>1.1 User Responsibility:</strong> You maintain sole legal liability for all messages and media sent using your bot instance.</p>
-          <p style="margin-bottom:10px"><strong>1.2 WhatsApp Policies:</strong> Usage must align with WhatsApp terms. Unsolicited mass spam is strictly prohibited.</p>
+        <div style="color:var(--text-sub);line-height:1.75;margin-top:16px;font-size:0.88rem">
+          <p style="margin-bottom:12px"><strong>1.1 User Responsibility:</strong> You maintain sole legal liability for all messages and media sent using your bot instance.</p>
+          <p style="margin-bottom:12px"><strong>1.2 WhatsApp Policies:</strong> Usage must align with WhatsApp terms. Unsolicited mass spam is strictly prohibited.</p>
           <p><strong>1.3 Counter-Measures:</strong> Anti-Bot counter-attacks (`!banaccount`) are provided solely to protect group environments.</p>
         </div>
       </div>
 
-      <!-- Privacy -->
-      <div class="card-box" style="padding:20px">
-        <h3 style="color:#34d399;font-size:1.05rem;display:flex;align-items:center;gap:8px">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <!-- Privacy & Sovereignty -->
+      <div class="card-box" style="padding:24px">
+        <h3 style="color:#34d399;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           2. Data Sovereignty & Privacy
         </h3>
-        <div style="color:var(--text-sub);line-height:1.7;margin-top:14px;font-size:0.86rem">
-          <p style="margin-bottom:10px"><strong>2.1 Local Storage:</strong> 100% of credentials, memory databases, and logs stay strictly on your local host. Zero telemetry.</p>
-          <p style="margin-bottom:10px"><strong>2.2 Zero Interception:</strong> No third party reads or stores private messages or session keys.</p>
-          <p><strong>2.3 Vault Security:</strong> View-once media is saved to your private local <code>storage/viewonce/</code> folder.</p>
+        <div style="color:var(--text-sub);line-height:1.75;margin-top:16px;font-size:0.88rem">
+          <p style="margin-bottom:12px"><strong>2.1 Local Storage:</strong> 100% of credentials, memory databases, and logs stay strictly on your local host. Zero telemetry.</p>
+          <p style="margin-bottom:12px"><strong>2.2 Zero Interception:</strong> No third party reads or stores private messages or session keys.</p>
+          <p><strong>2.3 Local Vault:</strong> View-once media is saved strictly to your private local <code>storage/viewonce/</code> folder.</p>
         </div>
       </div>
     </div>
 
-    <!-- Liability -->
-    <div class="card-box" style="margin-top:20px;padding:20px">
-      <h3 style="color:#f59e0b;font-size:1.05rem;display:flex;align-items:center;gap:8px">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <!-- Liability Disclaimer -->
+    <div class="card-box" style="margin-top:22px;padding:24px">
+      <h3 style="color:#f59e0b;font-size:1.1rem;display:flex;align-items:center;gap:10px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         3. Operational Disclaimer
       </h3>
-      <p style="color:var(--text-sub);line-height:1.7;margin-top:12px;font-size:0.86rem">
+      <p style="color:var(--text-sub);line-height:1.75;margin-top:14px;font-size:0.88rem">
         Provided <strong>"AS IS"</strong> without warranties. The lead creator — <strong>Fortune Adebayo (AKA: Nerd_eth)</strong> — explicitly disclaims legal liability for WhatsApp suspensions or automated management disputes.
       </p>
     </div>
@@ -1297,9 +1394,9 @@ function showToast(msg) {
   var container = document.getElementById('toastContainer');
   var toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> ' + msg;
+  toast.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> ' + msg;
   container.appendChild(toast);
-  setTimeout(function() { toast.remove(); }, 3000);
+  setTimeout(function() { toast.remove(); }, 3200);
 }
 
 function getUrlPwd() {
@@ -1335,7 +1432,7 @@ function followAndGenerateKey() {
     .then(function(d) {
       if (d.key) {
         document.getElementById('pwdInput').value = d.key;
-        genBox.innerHTML = '<span class="badge badge-success">Passcode</span> <span style="letter-spacing:3px;font-size:1.3rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key set — click Unlock Panel below!</small>';
+        genBox.innerHTML = '<span class="badge badge-success">Passcode Key</span> <span style="letter-spacing:4px;font-size:1.35rem">' + d.key + '</span><br><small style="color:#a5b4fc;font-weight:500">Key set — click Unlock Panel below!</small>';
         showToast('6-digit access key generated');
       }
     });
@@ -1384,16 +1481,17 @@ function showTab(name) {
 
   if (name === 'keys') loadKeysStatus();
   if (name === 'features') loadFeaturesStatus();
+  if (name === 'users') loadAccessControlList();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function refreshAll() {
   if (!pwd) { showLoginModal(); return; }
 
-  // Status
+  // Status API
   fetchAPI('/status').then(function(d) {
     document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('topGreeting').innerHTML = '<img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:36px;height:36px;border-radius:12px;box-shadow:0 0 20px var(--glow-indigo)"> Hey, ' + (d.botName || 'Admin') + '.';
+    document.getElementById('topGreeting').innerHTML = '<img src="https://iili.io/Cwvlxwv.png" alt="Logo" style="width:38px;height:38px;border-radius:14px;box-shadow:0 0 22px var(--glow-indigo)"> Hey, ' + (d.botName || 'Admin') + '.';
     
     var badge = document.getElementById('statusBadge');
     var mobileDot = document.getElementById('mobileStatusDot');
@@ -1413,14 +1511,14 @@ function refreshAll() {
     document.getElementById('mFacts').textContent = d.facts || 0;
     document.getElementById('mCommands').textContent = d.commands || 0;
 
-    // Messages
+    // Messages stream
     var mBox = document.getElementById('msgStream');
     mBox.innerHTML = '';
     (d.recentMessages || []).forEach(function(m) {
       mBox.innerHTML += '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.88rem"><strong style="color:#a5b4fc">' + m.from.substring(0, 16) + ':</strong> ' + m.text + '</div>';
     });
 
-    // Commands
+    // Commands stream
     var cBox = document.getElementById('cmdStream');
     cBox.innerHTML = '';
     (d.commandLog || []).forEach(function(c) {
@@ -1428,7 +1526,7 @@ function refreshAll() {
     });
   }).catch(function(){});
 
-  // QR
+  // QR Code API
   fetchAPI('/qrdata').then(function(d) {
     var qrImg = document.getElementById('dashQrImg');
     if (d.dataUrl) {
@@ -1439,7 +1537,7 @@ function refreshAll() {
     }
   }).catch(function(){});
 
-  // Users
+  // Users Directory API
   fetchAPI('/users').then(function(users) {
     var tbody = document.getElementById('usersTableBody');
     tbody.innerHTML = '';
@@ -1448,7 +1546,7 @@ function refreshAll() {
     });
   }).catch(function(){});
 
-  // Logs
+  // Logs API
   fetchAPI('/logs').then(function(l) {
     document.getElementById('rawLogBox').textContent = (l.logs || []).join('\n') || 'No terminal logs recorded yet.';
   }).catch(function(){});
@@ -1471,24 +1569,105 @@ function loadFeaturesStatus() {
   fetchAPI('/features').then(function(d) {
     var box = document.getElementById('featureStatusRes');
     if (!box) return;
-    var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">';
+    var html = '<div id="featureStatusResGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px">';
     var coreFeats = ['schedule', 'ai', 'status', 'viewonce', 'antibot', 'stealth'];
     coreFeats.forEach(function(f) {
       var isDis = (d.disabledFeatures || []).includes(f);
-      html += '<div style="background:rgba(6,8,24,0.8);padding:18px;border-radius:18px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">';
-      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:1rem">' + f + '</strong><br><small style="margin-top:4px;display:inline-block">' + (isDis ? '<span class="badge badge-danger">Disabled</span>' : '<span class="badge badge-success">Active</span>') + '</small></div>';
+      html += '<div style="background:rgba(6,8,24,0.85);padding:20px;border-radius:20px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">';
+      html += '<div><strong style="text-transform:capitalize;color:#fff;font-size:1.05rem">' + f + '</strong><br><small style="margin-top:6px;display:inline-block">' + (isDis ? '<span class="badge badge-danger">Disabled</span>' : '<span class="badge badge-success">Active</span>') + '</small></div>';
       html += '<label class="switch"><input type="checkbox" ' + (!isDis ? 'checked' : '') + ' onchange="toggleFeatureAction(\'' + f + '\', \'' + (!isDis ? 'disable' : 'enable') + '\')"><span class="slider"></span></label>';
       html += '</div>';
     });
     html += '</div>';
 
     if (d.disabledCommands && d.disabledCommands.length > 0) {
-      html += '<div style="margin-top:20px;padding:18px;background:rgba(6,8,24,0.8);border-radius:18px;border:1px solid rgba(239,68,68,0.4)">';
+      html += '<div style="margin-top:22px;padding:20px;background:rgba(6,8,24,0.85);border-radius:20px;border:1px solid rgba(239,68,68,0.4)">';
       html += '<strong style="color:#f87171">Disabled Commands:</strong> ' + d.disabledCommands.map(function(c){ return '<code>!' + c + '</code>'; }).join(', ');
       html += '</div>';
     }
     box.innerHTML = html;
   }).catch(function(){});
+}
+
+function loadAccessControlList() {
+  fetchAPI('/access').then(function(d) {
+    var box = document.getElementById('accessUsersList');
+    if (!box) return;
+    if (!d.users || d.users.length === 0) {
+      box.innerHTML = '<p style="color:var(--text-sub);font-size:0.9rem">No approved non-admin users in Access Control list. (System Access Control mode is ' + (d.enabled ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-muted">Public</span>') + ').</p>';
+      return;
+    }
+
+    var html = '<h4 style="color:#fff;margin-bottom:14px;font-size:1rem">Approved Access Users (' + d.users.length + ')</h4>';
+    html += '<div style="display:flex;flex-direction:column;gap:12px">';
+    d.users.forEach(function(u) {
+      html += '<div style="background:rgba(6,8,24,0.85);padding:16px 20px;border-radius:18px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">';
+      html += '<div>';
+      html += '<strong style="color:#fff;font-size:0.95rem">' + (u.name || u.number) + '</strong> <span style="color:#94a3b8;font-size:0.84rem">(' + u.number + ')</span><br>';
+      html += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">';
+      (u.features || []).forEach(function(ft) {
+        html += '<span class="badge badge-indigo" style="cursor:pointer" onclick="toggleUserFeatureAction(\'' + u.number + '\', \'' + ft + '\')">' + ft + ' ✕</span>';
+      });
+      html += '</div>';
+      html += '</div>';
+      html += '<button onclick="removeAccessUserAction(\'' + u.number + '\')" class="btn-danger">Revoke Access</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    box.innerHTML = html;
+  }).catch(function(){});
+}
+
+function addAccessUserAction() {
+  var num = document.getElementById('acPhoneNum').value.trim();
+  var name = document.getElementById('acUserName').value.trim();
+  if (!num) return alert('Please enter phone number');
+
+  var features = [];
+  if (document.getElementById('feat_ai').checked) features.push('ai');
+  if (document.getElementById('feat_imagine').checked) features.push('imagine');
+  if (document.getElementById('feat_agent').checked) features.push('agent');
+  if (document.getElementById('feat_download').checked) features.push('download');
+  if (document.getElementById('feat_music').checked) features.push('music');
+  if (document.getElementById('feat_speed').checked) features.push('speed');
+
+  fetchAPI('/access/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number: num, name: name, features: features })
+  }).then(function(d) {
+    if (d.success) {
+      showToast('Access approved for ' + num);
+      document.getElementById('acPhoneNum').value = '';
+      document.getElementById('acUserName').value = '';
+      loadAccessControlList();
+    } else {
+      alert(d.error || 'Failed to grant access');
+    }
+  }).catch(function(e){ alert('Error: ' + e.message); });
+}
+
+function removeAccessUserAction(num) {
+  if (!confirm('Revoke access for ' + num + '?')) return;
+  fetchAPI('/access/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number: num })
+  }).then(function(d) {
+    showToast('Access revoked');
+    loadAccessControlList();
+  });
+}
+
+function toggleUserFeatureAction(num, feature) {
+  fetchAPI('/access/toggle-feature', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ number: num, feature: feature })
+  }).then(function(d) {
+    showToast(feature + ' updated for ' + num);
+    loadAccessControlList();
+  });
 }
 
 function toggleFeatureAction(name, action) {
@@ -1605,7 +1784,7 @@ function runSpeedTest() {
 
   fetchAPI('/speedtest', { method: 'POST' }).then(function(d) {
     btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
     if (d.success) {
       var rawDl = d.download_mbps || d.downloadSpeed || d.download || d.download_speed;
       var rawUl = d.upload_mbps || d.uploadSpeed || d.upload || d.upload_speed;
@@ -1625,7 +1804,7 @@ function runSpeedTest() {
     }
   }).catch(function(e) {
     btn.disabled = false;
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
+    btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Run Live Speed Test';
     alert('Speed test error: ' + e.message);
   });
 }
