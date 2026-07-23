@@ -60,14 +60,25 @@ function createSchedule(name, type, timeConfig, message, target) {
   return { success: true, schedule: schedule };
 }
 
+function parseHoursMinutes(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return { hours: 8, minutes: 0 };
+  var parts = timeStr.trim().split(':');
+  var h = parseInt(parts[0], 10);
+  var m = parseInt(parts[1], 10);
+  return {
+    hours: isNaN(h) ? 8 : h,
+    minutes: isNaN(m) ? 0 : m,
+  };
+}
+
 function calculateNextRun(type, tc) {
   var now = new Date();
   var next = new Date(now);
 
   switch (type) {
     case 'daily': {
-      var parts = tc.time.split(':');
-      next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+      var hm = parseHoursMinutes(tc.time);
+      next.setHours(hm.hours, hm.minutes, 0, 0);
       if (next <= now) next.setDate(next.getDate() + 1);
       break;
     }
@@ -76,8 +87,8 @@ function calculateNextRun(type, tc) {
       if (tc.delayMs) {
         next = new Date(now.getTime() + tc.delayMs);
       } else if (tc.time) {
-        var parts = tc.time.split(':');
-        next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+        var hm = parseHoursMinutes(tc.time);
+        next.setHours(hm.hours, hm.minutes, 0, 0);
         if (next <= now) next.setDate(next.getDate() + 1);
       } else if (tc.minutes) {
         next = new Date(now.getTime() + (tc.minutes * 60000));
@@ -87,8 +98,8 @@ function calculateNextRun(type, tc) {
     case 'weekly': {
       var targetDay = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'].indexOf((tc.day || 'mon').toLowerCase());
       if (targetDay === -1) targetDay = 1;
-      var parts = tc.time.split(':');
-      next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+      var hm = parseHoursMinutes(tc.time);
+      next.setHours(hm.hours, hm.minutes, 0, 0);
       while (next.getDay() !== targetDay || next <= now) {
         next.setDate(next.getDate() + 1);
       }
@@ -96,17 +107,17 @@ function calculateNextRun(type, tc) {
     }
     case 'monthly': {
       var day = parseInt(tc.day) || 1;
-      var parts = tc.time.split(':');
+      var hm = parseHoursMinutes(tc.time);
       next.setDate(day);
-      next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+      next.setHours(hm.hours, hm.minutes, 0, 0);
       if (next <= now) next.setMonth(next.getMonth() + 1);
       break;
     }
     case 'yearly': {
       var monthDay = (tc.date || '01-01').split('-');
       next.setMonth((parseInt(monthDay[0]) || 1) - 1, parseInt(monthDay[1]) || 1);
-      var parts = tc.time.split(':');
-      next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
+      var hm = parseHoursMinutes(tc.time);
+      next.setHours(hm.hours, hm.minutes, 0, 0);
       if (next <= now) next.setFullYear(next.getFullYear() + 1);
       break;
     }

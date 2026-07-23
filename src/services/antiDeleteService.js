@@ -47,6 +47,32 @@ function getOwnerJid(sock) {
   return clean ? (clean + '@s.whatsapp.net') : null;
 }
 
+function unwrapMessageContent(content) {
+  if (!content) return { norm: content, isViewOnce: false };
+  var isViewOnce = !!(
+    content.viewOnceMessage ||
+    content.viewOnceMessageV2 ||
+    content.viewOnceMessageV2Extension ||
+    content.imageMessage?.viewOnce ||
+    content.videoMessage?.viewOnce ||
+    content.audioMessage?.viewOnce
+  );
+
+  var norm = normalizeMessageContent(content) || content;
+  if (norm.viewOnceMessage?.message) {
+    isViewOnce = true;
+    norm = normalizeMessageContent(norm.viewOnceMessage.message) || norm.viewOnceMessage.message;
+  } else if (norm.viewOnceMessageV2?.message) {
+    isViewOnce = true;
+    norm = normalizeMessageContent(norm.viewOnceMessageV2.message) || norm.viewOnceMessageV2.message;
+  } else if (norm.viewOnceMessageV2Extension?.message) {
+    isViewOnce = true;
+    norm = normalizeMessageContent(norm.viewOnceMessageV2Extension.message) || norm.viewOnceMessageV2Extension.message;
+  }
+
+  return { norm, isViewOnce };
+}
+
 /**
  * Cache incoming message so it can be recovered if deleted
  */
@@ -58,11 +84,13 @@ function cacheMessage(msg, sock) {
   const chatJid = msg.key.remoteJid;
   const pushName = msg.pushName || 'User';
 
-  const messageText = msg.message?.conversation
-    || msg.message?.extendedTextMessage?.text
-    || msg.message?.imageMessage?.caption
-    || msg.message?.videoMessage?.caption
-    || msg.message?.documentMessage?.caption
+  const { norm, isViewOnce } = unwrapMessageContent(msg.message);
+
+  const messageText = norm?.conversation
+    || norm?.extendedTextMessage?.text
+    || norm?.imageMessage?.caption
+    || norm?.videoMessage?.caption
+    || norm?.documentMessage?.caption
     || '';
 
   // Extract raw message payload
@@ -76,6 +104,8 @@ function cacheMessage(msg, sock) {
     pushName,
     text: messageText,
     content,
+    unwrappedContent: norm,
+    isViewOnce,
     savedBuffer: null,
     rawType: null,
     timestamp: Date.now(),
@@ -88,9 +118,8 @@ function cacheMessage(msg, sock) {
     messageCache.delete(oldestKey);
   }
 
-  // Pre-download media buffer in background so media deletion is 100% recoverable
+  // Pre-download media buffer in background so media deletion & View-Once is 100% recoverable
   try {
-    const norm = normalizeMessageContent(content) || content;
     const mediaObj = norm?.imageMessage || norm?.videoMessage || norm?.audioMessage || norm?.documentMessage || norm?.stickerMessage;
     if (mediaObj && sock) {
       const rawType = norm.imageMessage ? 'image' : (norm.videoMessage ? 'video' : (norm.audioMessage ? 'audio' : (norm.documentMessage ? 'document' : 'sticker')));
@@ -148,13 +177,15 @@ async function handleRevokeMessage(sock, msg) {
   const ownerJid = getOwnerJid(sock) || msg.key?.remoteJid;
   const isGroup = original.chatJid.endsWith('@g.us');
 
-  let header = '🗑️ *ANTI-DELETE: Deleted Message Recovered!*\n\n';
+  let header = original.isViewOnce
+    ? '👁️ *ANTI-DELETE: Deleted View-Once Message Recovered!*\n\n'
+    : '🗑️ *ANTI-DELETE: Deleted Message Recovered!*\n\n';
   header += '👤 *Sender:* @' + senderNum + ' (' + (original.pushName || 'Unknown') + ')\n';
   header += '💬 *Chat:* ' + (isGroup ? 'Group Chat' : 'Private DM') + '\n';
   header += '🕐 *Time Sent:* ' + new Date(original.timestamp).toLocaleTimeString() + '\n';
   header += '🕐 *Time Deleted:* ' + new Date().toLocaleTimeString() + '\n\n';
 
-  const norm = normalizeMessageContent(original.content) || original.content;
+  const { norm } = unwrapMessageContent(original.content);
   const mediaObj = norm?.imageMessage || norm?.videoMessage || norm?.audioMessage || norm?.documentMessage || norm?.stickerMessage;
 
   const cfg = getConfig();

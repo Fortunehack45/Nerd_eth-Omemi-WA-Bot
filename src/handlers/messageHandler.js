@@ -354,20 +354,28 @@ async function handleMessage(sock, msg) {
     addToConversation(sender, 'user', messageText);
   }
 
-  // 6. Handle commands (with prefix '!' or emoji shortcuts without prefix)
+  // 6. Handle commands (with prefix '!' or emoji shortcuts with/without prefix)
   var isCmd = isCommand(messageText);
   var emojiCmd = !isCmd ? getEmojiCommand(messageText) : null;
 
   if (isCmd) {
     var cmdText = messageText.slice(config.prefix.length).trim();
+    var mappedEmojiCmd = getEmojiCommand(cmdText);
+    if (mappedEmojiCmd) {
+      var firstSymbol = Array.from(cmdText)[0] || '';
+      var restArgs = cmdText.slice(firstSymbol.length).trim();
+      var fullCmdText = mappedEmojiCmd + (restArgs ? ' ' + restArgs : '');
+      await handleCommand(sock, msg, fullCmdText);
+      return;
+    }
     await handleCommand(sock, msg, cmdText);
     return;
   } else if (emojiCmd) {
     var trimmedMsg = messageText.trim();
     var firstSymbol = Array.from(trimmedMsg)[0] || '';
     var restArgs = trimmedMsg.slice(firstSymbol.length).trim();
-    var cmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
-    await handleCommand(sock, msg, cmdText);
+    var fullCmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
+    await handleCommand(sock, msg, fullCmdText);
     return;
   }
 
