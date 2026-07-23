@@ -58,12 +58,46 @@ module.exports = {
           timeConfig.minutes = mins;
         }
 
-        var target = flags.target || flags.ta || sender;
-        var result = createSchedule(name, type, timeConfig, name, target);
+        var rawTarget = flags.target || flags.ta;
+        var targetJid = sender;
+
+        if (rawTarget) {
+          var trimmed = String(rawTarget).trim();
+          if (!trimmed.endsWith('@g.us')) {
+            var digits = trimmed.replace(/[^0-9]/g, '');
+            if (digits && digits.length >= 7) {
+              if (sock && typeof sock.onWhatsApp === 'function') {
+                try {
+                  var onWaRes = await sock.onWhatsApp(digits);
+                  if (onWaRes && onWaRes.length > 0) {
+                    var match = onWaRes.find(function(r) { return r.exists; });
+                    if (match && match.exists) {
+                      targetJid = match.jid || (digits + '@s.whatsapp.net');
+                    } else {
+                      return sock.sendMessage(sender, {
+                        text: '❌ *Target Error:* Phone number `+' + digits + '` is not registered on WhatsApp. Task creation cancelled.'
+                      });
+                    }
+                  } else {
+                    targetJid = digits + '@s.whatsapp.net';
+                  }
+                } catch (e) {
+                  targetJid = digits + '@s.whatsapp.net';
+                }
+              } else {
+                targetJid = digits + '@s.whatsapp.net';
+              }
+            }
+          } else {
+            targetJid = trimmed;
+          }
+        }
+
+        var result = createSchedule(name, type, timeConfig, name, targetJid);
         if (result.success) {
           var next = new Date(result.schedule.nextRun).toLocaleString();
           await sock.sendMessage(sender, {
-            text: '✅ Schedule created!\n*Name:* ' + result.schedule.name + '\n*Type:* ' + type + '\n*Next Run:* ' + next + '\n*ID:* `' + result.schedule.id + '`',
+            text: '✅ *Schedule Created & Verified!*\n*Name:* ' + result.schedule.name + '\n*Type:* ' + type + '\n*Target:* ' + result.schedule.target + '\n*Next Run:* ' + next + '\n*ID:* `' + result.schedule.id + '`',
           });
         } else {
           await sock.sendMessage(sender, { text: 'Error: ' + (result.error || 'Unknown error') });
