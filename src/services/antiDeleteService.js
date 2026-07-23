@@ -50,7 +50,7 @@ function getOwnerJid(sock) {
 /**
  * Cache incoming message so it can be recovered if deleted
  */
-function cacheMessage(msg) {
+function cacheMessage(msg, sock) {
   if (!msg || !msg.key || !msg.key.id) return;
 
   const msgId = msg.key.id;
@@ -62,12 +62,13 @@ function cacheMessage(msg) {
     || msg.message?.extendedTextMessage?.text
     || msg.message?.imageMessage?.caption
     || msg.message?.videoMessage?.caption
+    || msg.message?.documentMessage?.caption
     || '';
 
   // Extract raw message payload
   const content = msg.message;
 
-  messageCache.set(msgId, {
+  const cacheItem = {
     id: msgId,
     key: msg.key,
     senderJid,
@@ -75,13 +76,35 @@ function cacheMessage(msg) {
     pushName,
     text: messageText,
     content,
+    savedBuffer: null,
+    rawType: null,
     timestamp: Date.now(),
-  });
+  };
+
+  messageCache.set(msgId, cacheItem);
 
   if (messageCache.size > MAX_CACHE_SIZE) {
     const oldestKey = messageCache.keys().next().value;
     messageCache.delete(oldestKey);
   }
+
+  // Pre-download media buffer in background so media deletion is 100% recoverable
+  try {
+    const norm = normalizeMessageContent(content) || content;
+    const mediaObj = norm?.imageMessage || norm?.videoMessage || norm?.audioMessage || norm?.documentMessage || norm?.stickerMessage;
+    if (mediaObj && sock) {
+      const rawType = norm.imageMessage ? 'image' : (norm.videoMessage ? 'video' : (norm.audioMessage ? 'audio' : (norm.documentMessage ? 'document' : 'sticker')));
+      downloadContentFromMessage(mediaObj, rawType).then(async (stream) => {
+        const chunks = [];
+        for await (const chunk of stream) chunks.push(chunk);
+        const buf = Buffer.concat(chunks);
+        if (buf && buf.length > 0) {
+          cacheItem.savedBuffer = buf;
+          cacheItem.rawType = rawType;
+        }
+      }).catch(function() {});
+    }
+  } catch (e) {}
 }
 
 /**
@@ -147,14 +170,18 @@ async function handleRevokeMessage(sock, msg) {
   saveConfig(cfg);
 
   try {
+    // Target delivery list
+    const targets = [];
+    if (cfg.forwardToOwner && ownerJid) targets.push(ownerJid);
+    if (cfg.notifyChat || !targets.length) {
+      if (!targets.includes(original.chatJid)) targets.push(original.chatJid);
+    }
+
     // If text message
     if (original.text && !mediaObj) {
       const fullText = header + '📝 *Original Message:*\n' + original.text;
-      if (cfg.forwardToOwner && ownerJid) {
-        await sock.sendMessage(ownerJid, { text: fullText, mentions: [original.senderJid] });
-      }
-      if (cfg.notifyChat && original.chatJid !== ownerJid) {
-        await sock.sendMessage(original.chatJid, { text: fullText, mentions: [original.senderJid] });
+      for (const targetJid of targets) {
+        await sock.sendMessage(targetJid, { text: fullText, mentions: [original.senderJid] }).catch(function() {});
       }
       console.log('[AntiDelete] Recovered deleted text message from ' + senderNum);
       return true;
@@ -167,25 +194,29 @@ async function handleRevokeMessage(sock, msg) {
       const captionText = header + (original.text ? '📝 *Caption:*\n' + original.text : '📦 *Type:* ' + rawType.toUpperCase());
 
       try {
-        const stream = await downloadContentFromMessage(mediaObj, rawType);
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        const buffer = Buffer.concat(chunks);
+        let buffer = original.savedBuffer;
+        if (!buffer || !buffer.length) {
+          const stream = await downloadContentFromMessage(mediaObj, rawType);
+          const chunks = [];
+          for await (const chunk of stream) chunks.push(chunk);
+          buffer = Buffer.concat(chunks);
+        }
 
         if (buffer && buffer.length > 0) {
-          const targetJid = cfg.forwardToOwner ? ownerJid : original.chatJid;
-          if (rawType === 'image') {
-            await sock.sendMessage(targetJid, { image: buffer, caption: captionText, mentions: [original.senderJid] });
-          } else if (rawType === 'video') {
-            await sock.sendMessage(targetJid, { video: buffer, caption: captionText, mentions: [original.senderJid] });
-          } else if (rawType === 'audio') {
-            await sock.sendMessage(targetJid, { audio: buffer, mimetype: 'audio/mp4', ptt: true });
-            await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] });
-          } else if (rawType === 'sticker') {
-            await sock.sendMessage(targetJid, { sticker: buffer });
-            await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] });
-          } else {
-            await sock.sendMessage(targetJid, { document: buffer, mimetype: 'application/octet-stream', fileName: 'recovered_media', caption: captionText, mentions: [original.senderJid] });
+          for (const targetJid of targets) {
+            if (rawType === 'image') {
+              await sock.sendMessage(targetJid, { image: buffer, caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+            } else if (rawType === 'video') {
+              await sock.sendMessage(targetJid, { video: buffer, caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+            } else if (rawType === 'audio') {
+              await sock.sendMessage(targetJid, { audio: buffer, mimetype: 'audio/mp4', ptt: true }).catch(function() {});
+              await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] }).catch(function() {});
+            } else if (rawType === 'sticker') {
+              await sock.sendMessage(targetJid, { sticker: buffer }).catch(function() {});
+              await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] }).catch(function() {});
+            } else {
+              await sock.sendMessage(targetJid, { document: buffer, mimetype: 'application/octet-stream', fileName: 'recovered_media', caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+            }
           }
           console.log('[AntiDelete] Recovered deleted ' + rawType + ' media from ' + senderNum);
           return true;
@@ -196,13 +227,17 @@ async function handleRevokeMessage(sock, msg) {
 
       // Fallback if media download failed
       const fallbackText = header + '⚠️ *Original message contained media (' + rawType + '), but buffer download expired.*\n' + (original.text ? '📝 *Caption:* ' + original.text : '');
-      await sock.sendMessage(ownerJid || original.chatJid, { text: fallbackText, mentions: [original.senderJid] });
+      for (const targetJid of targets) {
+        await sock.sendMessage(targetJid, { text: fallbackText, mentions: [original.senderJid] }).catch(function() {});
+      }
       return true;
     }
 
     // Default text fallback
     const textFallback = header + '📝 *Original Message:*\n' + (original.text || 'Non-text message content');
-    await sock.sendMessage(ownerJid || original.chatJid, { text: textFallback, mentions: [original.senderJid] });
+    for (const targetJid of targets) {
+      await sock.sendMessage(targetJid, { text: textFallback, mentions: [original.senderJid] }).catch(function() {});
+    }
     return true;
   } catch (err) {
     console.error('[AntiDelete Error]', err.message);

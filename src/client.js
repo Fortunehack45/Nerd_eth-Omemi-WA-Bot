@@ -191,6 +191,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         setTimeout(() => simulateOrganicPresence(sock), randomBetween(30000, 90000));
         console.log('[CLIENT] 🥷 Organic presence simulation scheduled.');
       }
+      var { init: initScheduler } = require('./services/schedulerService');
+      initScheduler(sock);
+
       if (typeof onConnected === 'function') {
         onConnected(sock);
       }
@@ -236,6 +239,31 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         await new Promise(r => setTimeout(r, randomBetween(200, 800)));
       }
       await messageHandler(sock, m);
+    }
+  });
+
+  sock.ev.on('messages.update', async (updates) => {
+    if (!updates || !updates.length) return;
+    var { handleRevokeMessage } = require('./services/antiDeleteService');
+    for (var update of updates) {
+      if (update.update?.messageStubType === 68 || update.update?.protocolMessage?.type === 0 || update.update?.protocolMessage?.type === 'REVOKE') {
+        var deletedId = update.key?.id || update.update?.protocolMessage?.key?.id;
+        if (deletedId) {
+          var fakeRevokeMsg = {
+            key: update.key,
+            pushName: update.pushName || 'User',
+            message: {
+              protocolMessage: {
+                key: { id: deletedId },
+                type: 0
+              }
+            }
+          };
+          await handleRevokeMessage(sock, fakeRevokeMsg).catch(function(e) {
+            console.error('[AntiDelete Update Error]', e.message);
+          });
+        }
+      }
     }
   });
 

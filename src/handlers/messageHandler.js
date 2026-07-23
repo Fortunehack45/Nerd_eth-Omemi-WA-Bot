@@ -152,7 +152,7 @@ async function handleMessage(sock, msg) {
   // Anti-Delete Engine: Cache incoming message & handle Delete for Everyone (revoke)
   var { cacheMessage, handleRevokeMessage } = require('../services/antiDeleteService');
   if (!msg.message?.protocolMessage) {
-    cacheMessage(msg);
+    cacheMessage(msg, sock);
   } else {
     var isRevoked = await handleRevokeMessage(sock, msg);
     if (isRevoked) return;
