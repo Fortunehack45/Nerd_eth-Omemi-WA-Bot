@@ -4,9 +4,26 @@ var { loadJson, saveJson } = require('../utils/helpers');
 var config = require('../../config');
 
 var SCHEDULE_FILE = path.join(__dirname, '..', '..', 'storage', 'schedules.json');
-var CHECK_INTERVAL = 60000;
+var CHECK_INTERVAL = 10000; // Check every 10 seconds for precise execution
 var interval = null;
 var sockRef = null;
+
+function cleanTargetJid(rawTarget, defaultTarget) {
+  if (!rawTarget) return defaultTarget || '';
+  if (typeof rawTarget !== 'string') return defaultTarget || '';
+  
+  var trimmed = rawTarget.trim();
+
+  if (trimmed.endsWith('@g.us')) return trimmed;
+  if (trimmed.endsWith('@s.whatsapp.net')) return trimmed;
+
+  var digits = trimmed.replace(/[^0-9]/g, '');
+  if (digits.length >= 7) {
+    return digits + '@s.whatsapp.net';
+  }
+
+  return defaultTarget || trimmed;
+}
 
 function getSchedules() {
   return loadJson(SCHEDULE_FILE, []);
@@ -23,13 +40,15 @@ function generateId() {
 function createSchedule(name, type, timeConfig, message, target) {
   var schedules = getSchedules();
   var id = generateId();
+  var formattedTarget = cleanTargetJid(target, (config.ownerNumber || '') + '@s.whatsapp.net');
+
   var schedule = {
     id: id,
     name: name,
     type: type,
     timeConfig: timeConfig,
     message: message,
-    target: target || config.ownerNumber + '@s.whatsapp.net',
+    target: formattedTarget,
     enabled: true,
     createdAt: Date.now(),
     lastRun: null,
@@ -60,6 +79,8 @@ function calculateNextRun(type, tc) {
         var parts = tc.time.split(':');
         next.setHours(parseInt(parts[0]) || 8, parseInt(parts[1]) || 0, 0, 0);
         if (next <= now) next.setDate(next.getDate() + 1);
+      } else if (tc.minutes) {
+        next = new Date(now.getTime() + (tc.minutes * 60000));
       }
       break;
     }
@@ -114,6 +135,9 @@ function updateSchedule(id, updates) {
   var idx = schedules.findIndex(function(s) { return s.id === id; });
   if (idx === -1) return { error: 'Schedule not found.' };
   Object.assign(schedules[idx], updates);
+  if (updates.target) {
+    schedules[idx].target = cleanTargetJid(updates.target, schedules[idx].target);
+  }
   if (updates.timeConfig || updates.type) {
     schedules[idx].nextRun = calculateNextRun(schedules[idx].type, schedules[idx].timeConfig);
   }
@@ -149,8 +173,10 @@ async function executeSchedule(schedule) {
   executing.add(schedule.id);
   try {
     if (!sockRef) return;
+    var targetJid = cleanTargetJid(schedule.target, sockRef?.user?.id);
     var msg = '📅 *Scheduled Task: ' + schedule.name + '*\n\n' + schedule.message;
-    await sockRef.sendMessage(schedule.target, { text: msg });
+    await sockRef.sendMessage(targetJid, { text: msg });
+    console.log('[Scheduler] Executed schedule "' + schedule.name + '" to ' + targetJid);
     var schedules = getSchedules();
     var idx = schedules.findIndex(function(s) { return s.id === schedule.id; });
     if (idx !== -1) {
@@ -164,7 +190,7 @@ async function executeSchedule(schedule) {
       saveSchedules(schedules);
     }
   } catch (err) {
-    console.error('Schedule execution error:', err.message);
+    console.error('[Scheduler Execution Error]', err.message);
   } finally {
     executing.delete(schedule.id);
   }
@@ -188,6 +214,7 @@ function startScheduler(sock) {
   sockRef = sock;
   if (interval) clearInterval(interval);
   interval = setInterval(checkSchedules, CHECK_INTERVAL);
+  checkSchedules(); // run immediate check upon startup
   console.log('Scheduler started (check interval: ' + (CHECK_INTERVAL / 1000) + 's)');
   return { success: true };
 }
@@ -200,6 +227,7 @@ function stopScheduler() {
 }
 
 module.exports = {
+  init: startScheduler,
   createSchedule,
   listSchedules,
   getSchedule,
