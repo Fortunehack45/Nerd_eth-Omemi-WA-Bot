@@ -198,7 +198,18 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
   }
 }
 
+async function sendStatus(sock, text) {
+  try {
+    if (!sock) return { success: false, error: 'WhatsApp client is not connected' };
+    await sock.sendMessage('status@broadcast', { text: text });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   saveAndForwardStatus,
   downloadStatusBuffer,
+  sendStatus,
 };

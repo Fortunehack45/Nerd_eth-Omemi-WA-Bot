@@ -415,6 +415,13 @@ module.exports = {
         infoText += '\n👉 Download: `!apk download ' + info.package + '`';
       }
 
+      if (info.icon && typeof info.icon === 'string' && info.icon.startsWith('http')) {
+        try {
+          await sock.sendMessage(sender, { image: { url: info.icon }, caption: infoText.substring(0, 1024) });
+          return;
+        } catch (e1) {}
+      }
+
       await sock.sendMessage(sender, { text: infoText });
       return;
     }
@@ -449,14 +456,22 @@ module.exports = {
     }
 
     var topApp = searchRes[0];
-    await sock.sendMessage(sender, {
-      text: '📦 Found: *' + topApp.name + '*\n' +
-        (topApp.package ? '📦 Package: `' + topApp.package + '`\n' : '') +
-        (topApp.version ? '🏷 Version: ' + topApp.version + '\n' : '') +
-        (topApp.size && topApp.size !== 'Unknown' ? '💾 Size: ' + topApp.size + '\n' : '') +
-        '🌐 Source: ' + topApp.source + '\n' +
-        '_Preparing download..._'
-    });
+    var topCaption = '📦 Found: *' + topApp.name + '*\n' +
+      (topApp.package ? '📦 Package: `' + topApp.package + '`\n' : '') +
+      (topApp.version ? '🏷 Version: ' + topApp.version + '\n' : '') +
+      (topApp.size && topApp.size !== 'Unknown' ? '💾 Size: ' + topApp.size + '\n' : '') +
+      '🌐 Source: ' + topApp.source + '\n' +
+      '_Preparing download..._';
+
+    if (topApp.icon && typeof topApp.icon === 'string' && topApp.icon.startsWith('http')) {
+      try {
+        await sock.sendMessage(sender, { image: { url: topApp.icon }, caption: topCaption });
+      } catch (e2) {
+        await sock.sendMessage(sender, { text: topCaption });
+      }
+    } else {
+      await sock.sendMessage(sender, { text: topCaption });
+    }
 
     // Resolve download URL
     var dlInfo = null;

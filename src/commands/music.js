@@ -125,6 +125,17 @@ async function cmdInfo(sock, sender, args, flags) {
   if (info.description) text += '\n*Description:*\n' + info.description.substring(0, 500) + '\n';
   text += '\n🔗 ' + info.url;
   if (info.authorUrl) text += '\n👤 Author: ' + info.authorUrl;
+
+  if (info.thumbnail && typeof info.thumbnail === 'string' && info.thumbnail.startsWith('http')) {
+    try {
+      await sock.sendMessage(sender, {
+        image: { url: info.thumbnail },
+        caption: text.substring(0, 1024)
+      });
+      return;
+    } catch (e) {}
+  }
+
   await sock.sendMessage(sender, { text });
 }
 
@@ -211,8 +222,17 @@ async function cmdPlay(sock, sender, args, flags) {
       var sr = await ytSearch({ query: query, pageStart: 1, pageEnd: 1 });
       var v = sr.videos && sr.videos[0];
       if (v) {
-        await sock.sendMessage(sender, { text: '🎵 Found: *' + v.title + '*\n👤 ' + v.author.name + ' | ⏱ ' + v.timestamp + '\n_Downloading audio..._' });
-        previewSent = true;
+        var captionText = '🎵 *Found:* ' + v.title + '\n👤 *Artist:* ' + v.author.name + ' | ⏱ *Duration:* ' + v.timestamp + '\n_Downloading audio..._';
+        if (v.thumbnail && typeof v.thumbnail === 'string' && v.thumbnail.startsWith('http')) {
+          try {
+            await sock.sendMessage(sender, { image: { url: v.thumbnail }, caption: captionText });
+            previewSent = true;
+          } catch (e1) {}
+        }
+        if (!previewSent) {
+          await sock.sendMessage(sender, { text: captionText });
+          previewSent = true;
+        }
       }
     } catch (e) {}
   }

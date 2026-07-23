@@ -94,8 +94,8 @@ module.exports = {
 
       var targets = participants.filter(p => {
         var pNum = parseJid(p.id);
-        // Exclude bot and caller/owner
-        return pNum !== botNum && pNum !== callerNum && !isAdmin(p.id);
+        // Exclude bot, caller, bot admins, and group admins (who cannot be kicked without demoting first)
+        return pNum !== botNum && pNum !== callerNum && !isAdmin(p.id) && !p.admin;
       }).map(p => p.id);
 
       if (targets.length === 0) {

@@ -137,6 +137,17 @@ async function cmdInfo(sock, sender, args, flags) {
   }
 
   if (info.url) text += '\n🔗 ' + info.url;
+
+  if (info.poster && info.poster !== 'N/A' && typeof info.poster === 'string' && info.poster.startsWith('http')) {
+    try {
+      await sock.sendMessage(sender, {
+        image: { url: info.poster },
+        caption: text.substring(0, 1024)
+      });
+      return;
+    } catch (e) {}
+  }
+
   await sock.sendMessage(sender, { text: text.substring(0, 4000) });
 }
 

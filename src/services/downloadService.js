@@ -504,6 +504,25 @@ async function downloadInstagramMedia(url) {
     }
   } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
 
+  // Engine 2: btch-downloader direct Instagram scraper
+  try {
+    log('Instagram — trying btch-downloader...');
+    var { igdl: btchIg } = require('btch-downloader');
+    var btchRes = await btchIg(url);
+    if (btchRes && Array.isArray(btchRes) && btchRes.length > 0) {
+      var directBtchUrl = btchRes[0].url || btchRes[0];
+      if (typeof directBtchUrl === 'string') {
+        var isVidBtch = !directBtchUrl.match(/\.(jpg|jpeg|png|webp)/i);
+        var fpBtch = isVidBtch ? path.join(tempDir, 'instagram_btch_' + ts + '.mp4') : path.join(tempDir, 'instagram_btch_' + ts + '.jpg');
+        var stBtch = await downloadStream(directBtchUrl, fpBtch);
+        if (stBtch.size > 3000) {
+          log('Instagram — btch-downloader success (' + (stBtch.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fpBtch, title: 'Instagram Media', size: stBtch.size, author: 'Instagram' };
+        }
+      }
+    }
+  } catch (e) { log('Instagram btch-downloader fail: ' + e.message); }
+
   // Engine 2: SnapSave API Scraper
   try {
     log('Instagram — trying SnapSave...');
@@ -720,21 +739,39 @@ async function downloadSpotifyAudio(url) {
 
 async function downloadTwitterVideo(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'twitter_' + Date.now() + '.mp4');
+  var ts = Date.now();
+  var fp = path.join(tempDir, 'twitter_' + ts + '.mp4');
 
-  // API 1: Cobalt
+  // Engine 1: btch-downloader Twitter API
+  try {
+    log('Twitter/X — trying btch-downloader...');
+    var { twitter: btchTwit } = require('btch-downloader');
+    var twRes = await btchTwit(url);
+    if (twRes && (twRes.url || (Array.isArray(twRes) && twRes.length > 0))) {
+      var directTwUrl = Array.isArray(twRes) ? twRes[0].url || twRes[0] : (twRes.url.hd || twRes.url.sd || twRes.url);
+      if (typeof directTwUrl === 'string') {
+        var stTw = await downloadStream(directTwUrl, fp);
+        if (stTw.size > 3000) {
+          log('Twitter/X — btch-downloader success (' + (stTw.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fp, title: twRes.title || 'Twitter/X Video', size: stTw.size, author: 'Twitter' };
+        }
+      }
+    }
+  } catch (e) { log('Twitter/X btch-downloader fail: ' + e.message); }
+
+  // Engine 2: Cobalt
   try {
     log('Twitter — trying Cobalt...');
     var cobalt = await cobaltRequest(url, false);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
-      if (stC.size > 10000) {
+      if (stC.size > 5000) {
         return { success: true, filePath: fp, title: 'Twitter Video', size: stC.size, author: 'Twitter' };
       }
     }
   } catch (e) { log('Twitter Cobalt fail: ' + e.message); }
 
-  // API 2: twitsave
+  // Engine 3: twitsave
   try {
     log('Twitter — trying twitsave...');
     var r2 = await axios.get('https://twitsave.com/info?url=' + encodeURIComponent(url), {
@@ -744,7 +781,7 @@ async function downloadTwitterVideo(url) {
     var dlLink = $('a[href*=".mp4"]').first().attr('href');
     if (dlLink) {
       var st2 = await downloadStream(dlLink, fp);
-      if (st2.size > 10000) {
+      if (st2.size > 5000) {
         return { success: true, filePath: fp, title: 'Twitter Video', size: st2.size, author: 'Twitter' };
       }
     }

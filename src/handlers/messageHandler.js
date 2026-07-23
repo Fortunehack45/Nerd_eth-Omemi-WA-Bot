@@ -18,6 +18,109 @@ const STATUS_EMOJIS_NORM = [
   '🙂', '😊', '😀', '😃', '😁', '😄', '☺️', '😇', '😌', '😋', '😛', '😜', '🤪'
 ];
 
+const EMOJI_COMMAND_MAP = {
+  '🔢': 'pair',
+  '🤗': 'hug',
+  '😘': 'kiss',
+  '🖐️': 'slap',
+  '👊': 'punch',
+  '💃': 'dance',
+  '😉': 'wink',
+  '👋': 'wave',
+  '🖼️': 'getpp',
+  '📷': 'getpp',
+  '👤': 'profile',
+  '🧹': 'nuke',
+  '🚨': 'nuke',
+  '💣': 'nuke',
+  '💥': 'nuke',
+  '👑': 'adminme',
+  '📢': 'tagall',
+  '👥': 'groupinfo',
+  'ℹ️': 'groupinfo',
+  '🔗': 'link',
+  '🏓': 'ping',
+  '🎵': 'music',
+  '🎶': 'music',
+  '🎧': 'music',
+  '🎬': 'movie',
+  '🍿': 'movie',
+  '🎥': 'movie',
+  '📦': 'unzip',
+  '⚡': 'speed',
+  '🚀': 'speed',
+  '📸': 'viewonce',
+  '👁️': 'viewonce',
+  '🙈': 'viewonce',
+  '📱': 'apk',
+  '📲': 'apk',
+  '🤖': 'ai',
+  '🧠': 'ai',
+  '💡': 'ai',
+  '❓': 'help',
+  '📜': 'help',
+  '📖': 'help',
+  '📥': 'download',
+  '⬇️': 'download',
+  '📹': 'download',
+  '🔍': 'search',
+  '🔎': 'search',
+  '🌐': 'search',
+  '📌': 'remember',
+  '📝': 'generate',
+  '📄': 'generate',
+  '🎨': 'imagine',
+  '🖌️': 'imagine',
+  '⏰': 'schedule',
+  '⏱️': 'schedule',
+  '📅': 'schedule',
+  '💾': 'memoryadmin',
+  '💿': 'memoryadmin',
+  '🥷': 'stealth',
+  '👻': 'stealth',
+  '💻': 'terminal',
+  '⌨️': 'terminal',
+  '🖥️': 'terminal',
+  '🔑': 'access',
+  '🔐': 'access',
+  '🛡️': 'access',
+  '⚔️': 'antibot',
+  '🛑': 'antibot',
+  '📣': 'broadcast',
+  '📻': 'broadcast',
+  '🎭': 'persona',
+  '📚': 'knowledge',
+  '🗂️': 'knowledge',
+  '📁': 'media',
+  '🗃️': 'media',
+  '📊': 'status',
+  '📈': 'status',
+  '🎚️': 'togglefeature',
+  '🔀': 'togglefeature',
+  '🔨': 'banaccount',
+  '🚫': 'banaccount',
+  '❌': 'disable',
+  '✅': 'enable',
+  '📋': 'disabled',
+};
+
+function getEmojiCommand(text) {
+  if (!text) return null;
+  var trimmed = text.trim();
+  var firstChar = Array.from(trimmed)[0];
+  if (firstChar && EMOJI_COMMAND_MAP[firstChar]) {
+    return EMOJI_COMMAND_MAP[firstChar];
+  }
+  var cleaned = normalizeEmojiStr(trimmed);
+  for (var emoji in EMOJI_COMMAND_MAP) {
+    var normKey = normalizeEmojiStr(emoji);
+    if (normKey && (cleaned === normKey || cleaned.startsWith(normKey))) {
+      return EMOJI_COMMAND_MAP[emoji];
+    }
+  }
+  return null;
+}
+
 function isCommand(text) {
   return text && text.startsWith(config.prefix);
 }
@@ -45,6 +148,15 @@ async function handleMessage(sock, msg) {
     || msg.message?.videoMessage?.caption
     || msg.message?.reactionMessage?.text
     || '';
+
+  // Anti-Delete Engine: Cache incoming message & handle Delete for Everyone (revoke)
+  var { cacheMessage, handleRevokeMessage } = require('../services/antiDeleteService');
+  if (!msg.message?.protocolMessage) {
+    cacheMessage(msg);
+  } else {
+    var isRevoked = await handleRevokeMessage(sock, msg);
+    if (isRevoked) return;
+  }
 
   // 0. Anti-Bot Engine: Detect, Block & Counter-Ban requests from other automated bots (DMs & Groups)
   if (isAntiBotEnabled() && !isFeatureDisabled('antibot') && !msg.key?.fromMe) {
@@ -242,9 +354,19 @@ async function handleMessage(sock, msg) {
     addToConversation(sender, 'user', messageText);
   }
 
-  // 6. Handle commands exclusively
-  if (isCommand(messageText)) {
+  // 6. Handle commands (with prefix '!' or emoji shortcuts without prefix)
+  var isCmd = isCommand(messageText);
+  var emojiCmd = !isCmd ? getEmojiCommand(messageText) : null;
+
+  if (isCmd) {
     var cmdText = messageText.slice(config.prefix.length).trim();
+    await handleCommand(sock, msg, cmdText);
+    return;
+  } else if (emojiCmd) {
+    var trimmedMsg = messageText.trim();
+    var firstSymbol = Array.from(trimmedMsg)[0] || '';
+    var restArgs = trimmedMsg.slice(firstSymbol.length).trim();
+    var cmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
     await handleCommand(sock, msg, cmdText);
     return;
   }
