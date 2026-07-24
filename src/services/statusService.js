@@ -240,24 +240,48 @@ async function autoViewStatus(sock, statusMsg) {
   if (!statusMsg || !statusMsg.key || !sock) return false;
 
   try {
-    const rawParticipant = statusMsg.key.participant || statusMsg.key.remoteJid || '';
-    const cleanNum = parseJid(rawParticipant);
-    const cleanParticipant = cleanNum ? (cleanNum + '@s.whatsapp.net') : rawParticipant;
+    const key = statusMsg.key;
+    const participant = key.participant || key.remoteJid || 'Unknown';
+    const cleanNum = parseJid(participant) || participant;
 
-    const statusKey = {
-      remoteJid: 'status@broadcast',
-      id: statusMsg.key.id,
-      participant: cleanParticipant,
-      fromMe: false
-    };
-
-    if (typeof sock.readMessages === 'function') {
-      await sock.readMessages([statusKey]);
-    } else if (typeof sock.sendReceipt === 'function') {
-      await sock.sendReceipt('status@broadcast', cleanParticipant, [statusMsg.key.id], 'read');
+    // Strategy 1: Pass original message key directly to readMessages (100% exact WhatsApp key match)
+    try {
+      if (typeof sock.readMessages === 'function') {
+        await sock.readMessages([key]);
+        console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: @' + cleanNum);
+        return true;
+      }
+    } catch (e1) {
+      console.warn('[AutoViewStatus Strategy 1 Warning]', e1.message);
     }
-    console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: @' + cleanNum);
-    return true;
+
+    // Strategy 2: Constructed status key with status@broadcast
+    try {
+      const statusKey = {
+        remoteJid: 'status@broadcast',
+        id: key.id,
+        participant: key.participant || participant,
+        fromMe: false
+      };
+      if (typeof sock.readMessages === 'function') {
+        await sock.readMessages([statusKey]);
+        console.log('[AutoViewStatus] 👁️ Auto-viewed (Strategy 2) WhatsApp Status from: @' + cleanNum);
+        return true;
+      }
+    } catch (e2) {
+      console.warn('[AutoViewStatus Strategy 2 Warning]', e2.message);
+    }
+
+    // Strategy 3: Direct sendReceipt
+    try {
+      if (typeof sock.sendReceipt === 'function') {
+        await sock.sendReceipt('status@broadcast', key.participant || participant, [key.id], 'read');
+        console.log('[AutoViewStatus] 👁️ Auto-viewed (Strategy 3) WhatsApp Status from: @' + cleanNum);
+        return true;
+      }
+    } catch (e3) {
+      console.warn('[AutoViewStatus Strategy 3 Warning]', e3.message);
+    }
   } catch (err) {
     console.error('[AutoViewStatus Error]', err.message);
   }

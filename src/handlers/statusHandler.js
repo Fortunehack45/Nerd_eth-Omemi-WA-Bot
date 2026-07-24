@@ -16,13 +16,19 @@ async function handleStatus(sock, statusMsg) {
     }
   }
 
-  // Execute Auto-View and Auto-Like concurrently without blocking delays
-  Promise.allSettled([
-    autoViewStatus(sock, statusMsg),
-    autoLikeStatus(sock, statusMsg)
-  ]).catch(function(err) {
-    console.error('[StatusHandler Async Error]', err.message);
-  });
+  // 1. Auto-View Status (Mark as read)
+  try {
+    await autoViewStatus(sock, statusMsg);
+  } catch (eV) {
+    console.error('[AutoViewStatus Error]', eV.message);
+  }
+
+  // 2. Auto-Like Status (Send reaction emoji)
+  try {
+    await autoLikeStatus(sock, statusMsg);
+  } catch (eL) {
+    console.error('[AutoLikeStatus Error]', eL.message);
+  }
 }
 
 module.exports = { handleStatus };
