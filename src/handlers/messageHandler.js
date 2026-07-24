@@ -356,7 +356,8 @@ async function handleMessage(sock, msg) {
 
   // 6. Handle commands (with prefix '!' or emoji shortcuts with/without prefix)
   var isCmd = isCommand(messageText);
-  var emojiCmd = !isCmd ? getEmojiCommand(messageText) : null;
+  // Messages sent by self (fromMe) MUST have explicit prefix (!) to trigger commands
+  var emojiCmd = (!isCmd && !msg.key?.fromMe) ? getEmojiCommand(messageText) : null;
 
   if (isCmd) {
     var cmdText = messageText.slice(config.prefix.length).trim();

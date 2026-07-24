@@ -229,12 +229,10 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       }
 
       // Admin self-commands: allow owner to send commands to themselves
-      // Supports BOTH '!' prefix commands AND bare emoji shortcut commands (no prefix needed)
+      // Must explicitly start with prefix (!) or be a reactionMessage to prevent bot output emojis from looping recursively!
       if (isFromMe) {
         var prefix = config.prefix || '!';
-        var hasPrefix = msgText && msgText.startsWith(prefix);
-        var hasEmojiShortcut = !hasPrefix && msgText && msgText.trim().length > 0;
-        if (hasPrefix || hasEmojiShortcut) {
+        if ((msgText && msgText.startsWith(prefix)) || msg.message?.reactionMessage) {
           await messageHandler(sock, m);
         }
         continue;
