@@ -1,30 +1,33 @@
-# 🤖 Nerd-eth (Omemi) WhatsApp Bot — Technical Encyclopedia & Master Manual
+# 🤖 Nerd-eth (Omemi) WhatsApp Bot — Technical Manual & Developer Guide
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/Node.js-v18%2B-green.svg)](https://nodejs.org)
 [![Baileys Framework](https://img.shields.io/badge/Baileys-v6.6%2B-purple.svg)](https://github.com/WhiskeySockets/Baileys)
 [![Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-success.svg)](#)
 
-Welcome to the official developer manual and architectural documentation for **Nerd-eth (Omemi) WhatsApp Bot**. Built on top of Node.js and `@whiskeysockets/baileys`, Nerd-eth is an enterprise-grade autonomous assistant, media downloader, AI agent router, status ad blocker, anti-delete recovery system, and group management bot.
+Welcome to the official developer manual and architectural documentation for **Nerd-eth (Omemi) WhatsApp Bot**. Built on Node.js and `@whiskeysockets/baileys`, Nerd-eth is an enterprise-grade autonomous assistant, media downloader, AI agent router, status ad blocker, anti-delete recovery system, and group management bot.
 
 ---
 
 ## 📋 Table of Contents
 1. [Core Features & Architecture](#-core-features--architecture)
-2. [Command Catalog (All 41 Commands)](#-command-catalog-all-41-commands)
-3. [Core Engines Deep Dive](#-core-engines-deep-dive)
+2. [Project Directory Layout](#-project-directory-layout)
+3. [Command Catalog (All 41 Commands)](#-command-catalog-all-41-commands)
+4. [Developer Guide: How to Add New Custom Commands](#-developer-guide-how-to-add-new-custom-commands)
+5. [Core Engines Deep Dive](#-core-engines-deep-dive)
    - [Anti-Delete & View-Once Media Engine](#1-anti-delete--view-once-media-engine)
    - [WhatsApp Status Ad Blocker Engine](#2-whatsapp-status-ad-blocker-engine)
-   - [Multi-Engine Media Downloader (yt-dlp)](#3-multi-engine-media-downloader-yt-dlp)
-   - [Scheduler & Target Verification Engine](#4-scheduler--target-verification-engine)
-   - [Stealth & Anti-Ban Security Engine](#5-stealth--anti-ban-security-engine)
-4. [Installation & Setup](#-installation--setup)
-5. [Configuration Reference (.env)](#-configuration-reference-env)
-6. [Pairing Code & QR Authentication](#-pairing-code--qr-authentication)
-7. [Web Management Dashboard](#-web-management-dashboard)
-8. [Terms and Conditions of Service](#-terms-and-conditions-of-service)
-9. [Privacy Policy & Data Protection](#-privacy-policy--data-protection)
-10. [Legal Disclaimer & Liability Waiver](#-legal-disclaimer--liability-waiver)
+   - [Auto-View & Auto-Like Status Engine](#3-auto-view--auto-like-status-engine)
+   - [Multi-Engine Media Downloader (yt-dlp)](#4-multi-engine-media-downloader-yt-dlp)
+   - [Scheduler & Target Verification Engine](#5-scheduler--target-verification-engine)
+   - [Stealth & Anti-Ban Security Engine](#6-stealth--anti-ban-security-engine)
+6. [Installation & Setup](#-installation--setup)
+7. [Configuration Reference (.env)](#-configuration-reference-env)
+8. [Pairing Code & QR Authentication](#-pairing-code--qr-authentication)
+9. [Web Management Dashboard](#-web-management-dashboard)
+10. [Terms and Conditions of Service](#-terms-and-conditions-of-service)
+11. [Privacy Policy & Data Protection](#-privacy-policy--data-protection)
+12. [Legal Disclaimer & Liability Waiver](#-legal-disclaimer--liability-waiver)
 
 ---
 
@@ -58,9 +61,59 @@ Welcome to the official developer manual and architectural documentation for **N
 - **Prefix & Prefix-Less Emoji Dispatcher**: All commands can be triggered with standard prefix (`!music`), short forms (`!m`), or directly via emojis (`🎵`, `!🎵`).
 - **Pre-Buffered Anti-Delete Engine**: Intercepts `messages.upsert` and pre-downloads photos, videos, voice notes, stickers, documents, and View-Once media into memory prior to deletion.
 - **WhatsApp Status Ad Blocker**: Filters out WhatsApp sponsored ads, Meta promotional stories, and channel ads, preventing auto-viewing or auto-liking of commercial clutter.
+- **Auto-View & Auto-Like Status**: Automatically sends read-receipts (`sock.readMessages`) and green heart reactions (`💚`) to status updates from real contacts.
 - **High-Performance Downloader**: Native `yt-dlp` integration for HD Instagram Reels/Posts, Twitter/X videos, TikTok, YouTube audio, and Spotify tracks.
 - **Media Information Cards**: Embeds album covers, movie banners, and app icons into WhatsApp cards.
 - **AI Agent Router & Swarm**: Supports OpenAI (`gpt-4o-mini`), Groq (`llama-3.1-8b-instant`), and autonomous multi-agent tool execution.
+
+---
+
+## 📁 Project Directory Layout
+
+```
+whatsappbot/
+├── config.js                       # Master environment & bot settings
+├── index.js                        # System entry point
+├── package.json                    # Node.js dependencies & scripts
+├── LICENSE                         # MIT License
+├── README.md                       # Developer encyclopedia & manual
+├── src/
+│   ├── client.js                   # Baileys WebSocket lifecycle & connection manager
+│   ├── commands/                   # Command modules (41 files)
+│   │   ├── access.js               # Access control command
+│   │   ├── agent.js                # Autonomous subagent runner
+│   │   ├── ai.js                   # AI chat command
+│   │   ├── antibot.js              # Anti-bot counter-attack manager
+│   │   ├── antidelete.js           # Anti-delete recovery manager
+│   │   ├── apk.js                  # APK downloader command
+│   │   ├── blockads.js             # Status Ad Blocker command
+│   │   ├── download.js             # Universal downloader command
+│   │   ├── help.js                 # Command help menu
+│   │   ├── movie.js                # Movie search command
+│   │   ├── music.js                # Music search & download command
+│   │   ├── pair.js                 # 8-digit pairing code generator
+│   │   ├── schedule.js             # Task schedule manager
+│   │   └── ... (30+ additional command files)
+│   ├── handlers/                   # Message & status event routers
+│   │   ├── commandHandler.js       # Dynamic command loader & runner
+│   │   ├── messageHandler.js       # Message parser & emoji dispatcher
+│   │   └── statusHandler.js        # Status event filter & ad blocker
+│   ├── services/                   # Core business logic & services
+│   │   ├── accessControl.js        # Permission & role manager
+│   │   ├── aiService.js            # OpenAI & Groq AI provider engine
+│   │   ├── antiBotService.js       # Rival bot counter-attack engine
+│   │   ├── antiDeleteService.js    # Pre-buffered anti-delete engine
+│   │   ├── downloadService.js      # yt-dlp & multi-engine scraper
+│   │   ├── schedulerService.js     # Schedule timer & onWhatsApp check
+│   │   ├── statusAdBlockerService.js # Status Ad Blocker engine
+│   │   ├── statusService.js        # Auto-View, Auto-Like & Status saver
+│   │   ├── stealthService.js       # Anti-Ban stealth fingerprinting
+│   │   └── viewOnceService.js      # View-Once message reveal engine
+│   └── utils/                      # Helper functions & data storage
+│       └── helpers.js              # Formatting & JSON persistence
+├── storage/                        # Local data storage (downloads, logs, memory)
+└── web/                            # Web management dashboard interface
+```
 
 ---
 
@@ -126,6 +179,53 @@ Below is the complete reference of all 41 commands supported by Nerd-eth, includ
 
 ---
 
+## 🛠️ Developer Guide: How to Add New Custom Commands
+
+Adding a new command to Nerd-eth is **100% modular and automatic**! You do not need to register the command manually—simply create a new JavaScript file in `src/commands/`.
+
+### Step-by-Step Tutorial
+
+1. **Create File**: Create a new file in `src/commands/` (e.g. `src/commands/mycommand.js`).
+2. **Export Command Module**: Export an object containing:
+   - `name`: String (primary command name, lowercase).
+   - `alias`: Array of Strings (short forms and emoji shortcuts).
+   - `description`: String (brief explanation).
+   - `usage`: String (syntax format).
+   - `adminOnly`: Boolean (`true` if restricted to admins/owner).
+   - `execute`: Async function `(sock, msg, args, ctx) => { ... }`.
+3. **Test**: The command loader in `src/handlers/commandHandler.js` will automatically discover and register your new command upon startup!
+
+### Command Template (`src/commands/mycommand.js`)
+
+```javascript
+module.exports = {
+  name: 'mycommand',
+  alias: ['mycmd', 'mc', '🎉'], // Short forms and emoji shortcuts
+  description: 'A custom command that demonstrates bot functionality',
+  usage: '!mycommand [text]',
+  adminOnly: false, // Set to true if restricted to admins
+  execute: async (sock, msg, args, ctx) => {
+    var sender = ctx.sender;
+    var textInput = (args || '').trim();
+
+    if (!textInput) {
+      return sock.sendMessage(sender, {
+        text: '❌ *Usage Error:* Please provide text argument.\nSyntax: `!mycommand Hello World`'
+      });
+    }
+
+    var replyText = '🎉 *My Custom Command Executed!*\n\n' +
+      '▸ *Input:* ' + textInput + '\n' +
+      '▸ *Caller:* ' + (ctx.pushName || 'User') + '\n' +
+      '▸ *Time:* ' + new Date().toLocaleTimeString();
+
+    await sock.sendMessage(sender, { text: replyText });
+  },
+};
+```
+
+---
+
 ## 🛠️ Core Engines Deep Dive
 
 ### 1. Anti-Delete & View-Once Media Engine
@@ -135,20 +235,25 @@ Below is the complete reference of all 41 commands supported by Nerd-eth, includ
 
 ### 2. WhatsApp Status Ad Blocker Engine
 - **Protocol & Context Metadata Scanning**: Inspects incoming `status@broadcast` updates for `sponsoredMessage`, `adContext`, `externalAdReply`, `isAd`, and `sourceApp` (`facebook`, `instagram`, `ads`).
-- **Sender & Keyword Verification**: Filters out business bot IDs (`0@s.whatsapp.net`, channel broadcasts (`@newsletter`), and commercial call-to-action phrases (`#ad`, `#sponsored`, `shop now`, `install app`, discount codes).
+- **Sender & Keyword Verification**: Filters out business bot IDs (`0@s.whatsapp.net`), channel broadcasts (`@newsletter`), and commercial call-to-action phrases (`#ad`, `#sponsored`, `shop now`, `install app`, discount codes).
 - **Execution Drop**: When an ad is detected, `statusHandler.js` drops execution immediately—preventing auto-viewing or auto-liking of ads.
 
-### 3. Multi-Engine Media Downloader (yt-dlp)
+### 3. Auto-View & Auto-Like Status Engine
+- **Auto-View**: Automatically sends read-receipts (`sock.readMessages([key])`) for contact status updates when `AUTO_VIEW_STATUS` is enabled.
+- **Auto-Like**: Automatically sends green heart status reactions (`💚`) to contact status updates when `AUTO_LIKE_STATUS` is enabled.
+- **Ad Filtering**: Automatically bypassed for status ads detected by the Status Ad Blocker engine.
+
+### 4. Multi-Engine Media Downloader (yt-dlp)
 - **Primary Engine**: Integrates local `yt-dlp` executable for high-resolution video streams from Instagram Reels/Posts, Twitter/X, TikTok, and YouTube.
 - **Fallback Chain**: `yt-dlp` ➔ `btch-downloader` ➔ `Cobalt API` ➔ HTML Scrapers (`indown.io`, `twitsave.com`, `snapsave.app`).
 - **Attached Media Posters**: Automatically attaches album art covers to music downloads (`!music`), movie posters to film info cards (`!movie`), and application icons to APK cards (`!apk`).
 
-### 4. Scheduler & Target Verification Engine
+### 5. Scheduler & Target Verification Engine
 - **onWhatsApp Verification**: When creating a scheduled task (`!schedule create`), `sock.onWhatsApp(targetNumber)` verifies whether the phone number is active on WhatsApp before accepting the schedule.
 - **24-Hour Clock Accuracy**: `parseHoursMinutes` cleanly handles midnight times (e.g., `00:56`) without falsy coercion errors.
 - **High-Precision Loop**: Runs background checks every 10 seconds for precise execution.
 
-### 5. Stealth & Anti-Ban Security Engine
+### 6. Stealth & Anti-Ban Security Engine
 - **Organic Fingerprinting**: Simulates authentic WhatsApp Web clients with randomised browser strings, User-Agents, and WebSocket heartbeat presences.
 - **Human Typing Delay**: Applies human-like typing indicators (`composing`, `recording`) with random delays before responding.
 - **Rival Anti-Bot Counter-Attack**: Detects automated spam bots and automatically counter-bans/kicks them from group chats.

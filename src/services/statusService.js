@@ -208,8 +208,52 @@ async function sendStatus(sock, text) {
   }
 }
 
+async function autoViewStatus(sock, statusMsg) {
+  var config = require('../../config');
+  if (config.status?.autoView === false) return false;
+  if (!statusMsg || !statusMsg.key || !sock) return false;
+
+  try {
+    const key = statusMsg.key;
+    const participant = key.participant || key.remoteJid || 'Unknown';
+    if (typeof sock.readMessages === 'function') {
+      await sock.readMessages([key]);
+      console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: ' + participant);
+      return true;
+    }
+  } catch (err) {
+    console.error('[AutoViewStatus Error]', err.message);
+  }
+  return false;
+}
+
+async function autoLikeStatus(sock, statusMsg) {
+  var config = require('../../config');
+  if (config.status?.autoLike === false) return false;
+  if (!statusMsg || !statusMsg.key || !sock) return false;
+
+  try {
+    const key = statusMsg.key;
+    const participant = key.participant || key.remoteJid || 'Unknown';
+    const reactionEmoji = '💚';
+
+    await sock.sendMessage(
+      'status@broadcast',
+      { react: { text: reactionEmoji, key: key } },
+      { statusJidList: [participant] }
+    );
+    console.log('[AutoLikeStatus] 💚 Auto-liked WhatsApp Status from: ' + participant);
+    return true;
+  } catch (err) {
+    console.error('[AutoLikeStatus Error]', err.message);
+  }
+  return false;
+}
+
 module.exports = {
   saveAndForwardStatus,
   downloadStatusBuffer,
   sendStatus,
+  autoViewStatus,
+  autoLikeStatus,
 };
