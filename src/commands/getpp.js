@@ -1,12 +1,24 @@
 const { parseJid } = require('../utils/helpers');
 const axios = require('axios');
 
+function cleanTargetJid(jid) {
+  if (!jid || typeof jid !== 'string') return null;
+  var trimmed = jid.trim();
+  if (trimmed.endsWith('@g.us')) {
+    var gDigits = trimmed.split('@')[0].replace(/[^0-9]/g, '');
+    return gDigits ? (gDigits + '@g.us') : null;
+  }
+  var digits = parseJid(trimmed);
+  if (!digits || digits.length < 5) return null;
+  return digits + '@s.whatsapp.net';
+}
+
 module.exports = {
   name: 'getpp',
   alias: ['pfp', 'profilepic', 'avatar', 'pp', '🖼️', '📷'],
-  description: 'Fetch and send the profile picture of the contact you are chatting with, group, or tagged user',
+  description: 'Fetch and send the profile picture of any contact, group, or tagged user',
   usage: '!getpp [@user | reply | phone_number | group]',
-  adminOnly: true,
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
     var senderId = ctx.senderId;
@@ -39,7 +51,7 @@ module.exports = {
         targetJid = sender;
       } else {
         var cleanNum = args.replace(/[^0-9]/g, '');
-        if (cleanNum.length >= 7) {
+        if (cleanNum.length >= 5) {
           targetJid = cleanNum + '@s.whatsapp.net';
         }
       }
@@ -57,61 +69,52 @@ module.exports = {
       return sock.sendMessage(sender, { text: '⚠️ Please mention a user, reply to their message, or enter a phone number.' });
     }
 
-    // Clean JID: strip device IDs like ':12'
-    var isGroupTarget = targetJid.endsWith('@g.us');
-    var cleanJid = isGroupTarget
-      ? targetJid
-      : (parseJid(targetJid) ? (parseJid(targetJid) + '@s.whatsapp.net') : targetJid);
-
     await sock.sendPresenceUpdate('composing', sender);
 
     // Profile Picture retrieval helper with multi-type fallback
-    async function fetchPPUrl(jid) {
+    async function fetchPPUrl(rawJid) {
       if (!sock || typeof sock.profilePictureUrl !== 'function') return null;
+      var cJid = cleanTargetJid(rawJid);
+      if (!cJid) return null;
       try {
-        const u = await sock.profilePictureUrl(jid, 'image');
-        if (u) return u;
+        const u = await sock.profilePictureUrl(cJid, 'image');
+        if (u) return { url: u, jid: cJid };
       } catch (e1) {}
       try {
-        const u = await sock.profilePictureUrl(jid, 'preview');
-        if (u) return u;
+        const u = await sock.profilePictureUrl(cJid, 'preview');
+        if (u) return { url: u, jid: cJid };
       } catch (e2) {}
       try {
-        const u = await sock.profilePictureUrl(jid);
-        if (u) return u;
+        const u = await sock.profilePictureUrl(cJid);
+        if (u) return { url: u, jid: cJid };
       } catch (e3) {}
       return null;
     }
 
-    var ppUrl = await fetchPPUrl(cleanJid);
+    var resObj = await fetchPPUrl(targetJid);
 
-    // If target was caller in group and failed, fallback to group icon
-    if (!ppUrl && isGroup && !isGroupTarget && (!args || !args.trim())) {
-      ppUrl = await fetchPPUrl(sender);
-      if (ppUrl) {
-        cleanJid = sender;
-        isGroupTarget = true;
-      }
+    // Smart Fallbacks for group chat:
+    // If target was caller in group and failed, fallback to group picture
+    if (!resObj && isGroup && (!args || !args.trim())) {
+      resObj = await fetchPPUrl(sender);
+    }
+    // If target was group picture and failed, fallback to caller picture
+    if (!resObj && isGroup && (!args || !args.trim())) {
+      resObj = await fetchPPUrl(senderId);
     }
 
-    // If target was group icon and failed in group without args, fallback to caller icon
-    if (!ppUrl && isGroup && isGroupTarget && (!args || !args.trim())) {
-      var callerJid = parseJid(senderId) + '@s.whatsapp.net';
-      ppUrl = await fetchPPUrl(callerJid);
-      if (ppUrl) {
-        cleanJid = callerJid;
-        isGroupTarget = false;
-      }
-    }
-
-    var targetTag = isGroupTarget ? 'Group' : '@' + parseJid(cleanJid);
-
-    if (!ppUrl) {
+    if (!resObj || !resObj.url) {
+      var displayTag = targetJid.endsWith('@g.us') ? 'Group' : '@' + (parseJid(targetJid) || 'User');
       return sock.sendMessage(sender, {
-        text: '❌ Could not retrieve profile picture for ' + targetTag + '.\n\n💡 The contact or group may not have a profile picture set, or their privacy settings ("Who can see my profile photo") prevent viewing it.',
-        mentions: isGroupTarget ? [] : [cleanJid]
+        text: '❌ Could not retrieve profile picture for ' + displayTag + '.\n\n💡 The contact or group may not have a profile picture set, or privacy settings ("Who can see my profile photo") prevent viewing it.',
+        mentions: targetJid.endsWith('@g.us') ? [] : [targetJid]
       });
     }
+
+    var ppUrl = resObj.url;
+    var targetJidUsed = resObj.jid;
+    var isGroupTarget = targetJidUsed.endsWith('@g.us');
+    var targetTag = isGroupTarget ? 'Group' : '@' + parseJid(targetJidUsed);
 
     try {
       // Download buffer using axios with browser User-Agent headers
@@ -129,8 +132,7 @@ module.exports = {
           buffer = Buffer.from(res.data);
         }
       } catch (eAxios) {
-        console.warn('[getpp Axios Download Warning]', eAxios.message);
-        // Fallback to native fetch
+        console.warn('[getpp Axios Warning]', eAxios.message);
         try {
           var res2 = await fetch(ppUrl, {
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
@@ -146,13 +148,13 @@ module.exports = {
         await sock.sendMessage(sender, {
           image: buffer,
           caption: '📷 *Profile Picture of:* ' + targetTag,
-          mentions: isGroupTarget ? [] : [cleanJid]
+          mentions: isGroupTarget ? [] : [targetJidUsed]
         });
       } else {
         await sock.sendMessage(sender, {
           image: { url: ppUrl },
           caption: '📷 *Profile Picture of:* ' + targetTag,
-          mentions: isGroupTarget ? [] : [cleanJid]
+          mentions: isGroupTarget ? [] : [targetJidUsed]
         });
       }
     } catch (err) {
