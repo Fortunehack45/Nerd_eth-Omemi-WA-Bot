@@ -43,7 +43,7 @@ module.exports = {
         }
       }
     }
-    // 4. Fallback in group chat: default to caller
+    // 4. Fallback in group chat: check group picture first if requested or default to senderId / group
     else if (isGroup) {
       targetJid = senderId || sender;
     }
@@ -73,7 +73,17 @@ module.exports = {
       } catch (err1) {
         try {
           ppUrl = await sock.profilePictureUrl(cleanJid);
-        } catch (err2) {}
+        } catch (err2) {
+          // If group picture failed and was in group without explicit args, try caller picture fallback
+          if (isGroup && isGroupTarget && (!args || !args.trim())) {
+            try {
+              var callerJid = parseJid(senderId) + '@s.whatsapp.net';
+              ppUrl = await sock.profilePictureUrl(callerJid, 'image');
+              cleanJid = callerJid;
+              isGroupTarget = false;
+            } catch (err3) {}
+          }
+        }
       }
     }
 
@@ -87,15 +97,21 @@ module.exports = {
     }
 
     try {
-      // Fetch buffer directly for 100% reliable message delivery
+      // Download buffer directly using browser User-Agent headers to bypass WhatsApp CDN 403 blocks
       var buffer = null;
       try {
-        var res = await fetch(ppUrl);
+        var fetchHeaders = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        };
+        var res = await fetch(ppUrl, { headers: fetchHeaders });
         if (res.ok) {
           var arrBuf = await res.arrayBuffer();
           buffer = Buffer.from(arrBuf);
         }
-      } catch (eFetch) {}
+      } catch (eFetch) {
+        console.warn('[getpp Fetch Buffer Error]', eFetch.message);
+      }
 
       if (buffer && buffer.length > 0) {
         await sock.sendMessage(sender, {
@@ -111,6 +127,7 @@ module.exports = {
         });
       }
     } catch (err) {
+      console.error('[getpp Send Error]', err.message);
       await sock.sendMessage(sender, { text: '❌ Failed to send profile picture: ' + err.message });
     }
   },

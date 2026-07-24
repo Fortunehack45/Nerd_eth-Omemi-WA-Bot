@@ -122,53 +122,49 @@ async function saveViewOnce(sock, msg) {
   try {
     var buffer = null;
 
-    // 1. Try downloading with original msg object (best for Baileys reupload handling)
+    // Priority 1: Direct stream decoding via downloadContentFromMessage (fastest & most reliable)
     try {
-      buffer = await downloadMediaMessage(
-        msg,
-        'buffer',
-        {},
-        { logger: console, reuploadRequest: sock?.updateMediaMessage }
-      );
-    } catch (e1) {
-      // 2. Fallback to innerMsg container
+      const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+      var mediaObj = extracted.inner?.[innerType];
+      if (mediaObj) {
+        var rawType = innerType.replace('Message', '');
+        var stream = await downloadContentFromMessage(mediaObj, rawType);
+        var chunks = [];
+        for await (const chunk of stream) {
+          chunks.push(chunk);
+        }
+        buffer = Buffer.concat(chunks);
+      }
+    } catch (eStream) {}
+
+    // Priority 2: Fallback to Baileys downloadMediaMessage
+    if (!buffer || buffer.length === 0) {
       try {
         buffer = await downloadMediaMessage(
           innerMsg,
           'buffer',
           {},
-          { logger: console, reuploadRequest: sock?.updateMediaMessage }
+          { reuploadRequest: sock?.updateMediaMessage }
         );
-      } catch (e2) {
-        // 3. Fallback to sock.downloadMediaMessage if bound
-        if (sock && typeof sock.downloadMediaMessage === 'function') {
-          try {
-            buffer = await sock.downloadMediaMessage(msg);
-          } catch (e3) {
+      } catch (e1) {
+        try {
+          buffer = await downloadMediaMessage(
+            msg,
+            'buffer',
+            {},
+            { reuploadRequest: sock?.updateMediaMessage }
+          );
+        } catch (e2) {
+          if (sock && typeof sock.downloadMediaMessage === 'function') {
             try {
               buffer = await sock.downloadMediaMessage(innerMsg);
-            } catch (e4) {}
+            } catch (e3) {
+              try {
+                buffer = await sock.downloadMediaMessage(msg);
+              } catch (e4) {}
+            }
           }
         }
-      }
-    }
-
-    // 4. Low-level downloadContentFromMessage stream decoding fallback
-    if (!buffer || buffer.length === 0) {
-      try {
-        const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
-        var mediaObj = extracted.inner?.[innerType];
-        if (mediaObj) {
-          var rawType = innerType.replace('Message', '');
-          var stream = await downloadContentFromMessage(mediaObj, rawType);
-          var chunks = [];
-          for await (const chunk of stream) {
-            chunks.push(chunk);
-          }
-          buffer = Buffer.concat(chunks);
-        }
-      } catch (e5) {
-        console.error('[ViewOnce Stream Download Error]', e5.message);
       }
     }
 
