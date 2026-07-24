@@ -80,8 +80,10 @@ function cacheMessage(msg, sock) {
   if (!msg || !msg.key || !msg.key.id) return;
 
   const msgId = msg.key.id;
-  const senderJid = msg.key.participant || msg.key.remoteJid;
-  const chatJid = msg.key.remoteJid;
+  const rawSender = msg.key.participant || msg.key.remoteJid || '';
+  const cleanSenderNum = parseJid(rawSender);
+  const senderJid = cleanSenderNum ? (cleanSenderNum + '@s.whatsapp.net') : rawSender;
+  const chatJid = msg.key.remoteJid || '';
   const pushName = msg.pushName || 'User';
 
   const { norm, isViewOnce } = unwrapMessageContent(msg.message);
@@ -118,7 +120,7 @@ function cacheMessage(msg, sock) {
     messageCache.delete(oldestKey);
   }
 
-  // Pre-download media buffer in background so media deletion & View-Once is 100% recoverable
+  // Pre-download media buffer asynchronously so media deletion is 100% recoverable
   try {
     const mediaObj = norm?.imageMessage || norm?.videoMessage || norm?.audioMessage || norm?.documentMessage || norm?.stickerMessage;
     if (mediaObj && sock) {
@@ -143,27 +145,24 @@ async function handleRevokeMessage(sock, msg) {
   if (!isAntiDeleteEnabled()) return false;
 
   const protocolMsg = msg.message?.protocolMessage;
-  if (!protocolMsg) return false;
-
-  // Protocol message type 0 = REVOKE
-  const isRevoke = protocolMsg.type === 0 || protocolMsg.type === 1 || protocolMsg.type === 'REVOKE';
-  if (!isRevoke) return false;
-
-  const deletedId = protocolMsg.key?.id;
+  const deletedId = protocolMsg?.key?.id || msg.deletedId || msg.key?.id;
   if (!deletedId) return false;
 
   // Find original cached message
   let original = messageCache.get(deletedId);
   if (!original && global.msgStore && global.msgStore.has(deletedId)) {
     const rawMsg = global.msgStore.get(deletedId);
+    const { norm, isViewOnce } = unwrapMessageContent(rawMsg);
     original = {
       id: deletedId,
-      key: protocolMsg.key,
-      senderJid: protocolMsg.key?.participant || msg.key?.remoteJid,
-      chatJid: msg.key?.remoteJid,
+      key: protocolMsg?.key || msg.key || { id: deletedId },
+      senderJid: parseJid(protocolMsg?.key?.participant || msg.key?.participant || msg.key?.remoteJid) + '@s.whatsapp.net',
+      chatJid: msg.key?.remoteJid || protocolMsg?.key?.remoteJid || '',
       pushName: msg.pushName || 'User',
-      text: rawMsg.conversation || rawMsg.extendedTextMessage?.text || rawMsg.imageMessage?.caption || '',
+      text: norm?.conversation || norm?.extendedTextMessage?.text || norm?.imageMessage?.caption || norm?.videoMessage?.caption || '',
       content: rawMsg,
+      unwrappedContent: norm,
+      isViewOnce,
       timestamp: Date.now(),
     };
   }
@@ -174,8 +173,9 @@ async function handleRevokeMessage(sock, msg) {
   }
 
   const senderNum = parseJid(original.senderJid);
+  const cleanSenderJid = senderNum ? (senderNum + '@s.whatsapp.net') : original.senderJid;
   const ownerJid = getOwnerJid(sock) || msg.key?.remoteJid;
-  const isGroup = original.chatJid.endsWith('@g.us');
+  const isGroup = original.chatJid ? original.chatJid.endsWith('@g.us') : false;
 
   let header = original.isViewOnce
     ? '👁️ *ANTI-DELETE: Deleted View-Once Message Recovered!*\n\n'
@@ -185,7 +185,7 @@ async function handleRevokeMessage(sock, msg) {
   header += '🕐 *Time Sent:* ' + new Date(original.timestamp).toLocaleTimeString() + '\n';
   header += '🕐 *Time Deleted:* ' + new Date().toLocaleTimeString() + '\n\n';
 
-  const { norm } = unwrapMessageContent(original.content);
+  const norm = original.unwrappedContent || unwrapMessageContent(original.content).norm;
   const mediaObj = norm?.imageMessage || norm?.videoMessage || norm?.audioMessage || norm?.documentMessage || norm?.stickerMessage;
 
   const cfg = getConfig();
@@ -201,20 +201,20 @@ async function handleRevokeMessage(sock, msg) {
   saveConfig(cfg);
 
   try {
-    // Target delivery list
+    // Target delivery list: forward to owner self-chat and/or source chat based on config
     const targets = [];
     if (cfg.forwardToOwner && ownerJid) targets.push(ownerJid);
     if (cfg.notifyChat || !targets.length) {
-      if (!targets.includes(original.chatJid)) targets.push(original.chatJid);
+      if (original.chatJid && !targets.includes(original.chatJid)) targets.push(original.chatJid);
     }
 
-    // If text message
+    // If pure text message
     if (original.text && !mediaObj) {
       const fullText = header + '📝 *Original Message:*\n' + original.text;
       for (const targetJid of targets) {
-        await sock.sendMessage(targetJid, { text: fullText, mentions: [original.senderJid] }).catch(function() {});
+        await sock.sendMessage(targetJid, { text: fullText, mentions: [cleanSenderJid] }).catch(function() {});
       }
-      console.log('[AntiDelete] Recovered deleted text message from ' + senderNum);
+      console.log('[AntiDelete] Recovered deleted text message from @' + senderNum);
       return true;
     }
 
@@ -236,20 +236,20 @@ async function handleRevokeMessage(sock, msg) {
         if (buffer && buffer.length > 0) {
           for (const targetJid of targets) {
             if (rawType === 'image') {
-              await sock.sendMessage(targetJid, { image: buffer, caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+              await sock.sendMessage(targetJid, { image: buffer, caption: captionText, mentions: [cleanSenderJid] }).catch(function() {});
             } else if (rawType === 'video') {
-              await sock.sendMessage(targetJid, { video: buffer, caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+              await sock.sendMessage(targetJid, { video: buffer, caption: captionText, mentions: [cleanSenderJid] }).catch(function() {});
             } else if (rawType === 'audio') {
               await sock.sendMessage(targetJid, { audio: buffer, mimetype: 'audio/mp4', ptt: true }).catch(function() {});
-              await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] }).catch(function() {});
+              await sock.sendMessage(targetJid, { text: captionText, mentions: [cleanSenderJid] }).catch(function() {});
             } else if (rawType === 'sticker') {
               await sock.sendMessage(targetJid, { sticker: buffer }).catch(function() {});
-              await sock.sendMessage(targetJid, { text: captionText, mentions: [original.senderJid] }).catch(function() {});
+              await sock.sendMessage(targetJid, { text: captionText, mentions: [cleanSenderJid] }).catch(function() {});
             } else {
-              await sock.sendMessage(targetJid, { document: buffer, mimetype: 'application/octet-stream', fileName: 'recovered_media', caption: captionText, mentions: [original.senderJid] }).catch(function() {});
+              await sock.sendMessage(targetJid, { document: buffer, mimetype: 'application/octet-stream', fileName: 'recovered_media', caption: captionText, mentions: [cleanSenderJid] }).catch(function() {});
             }
           }
-          console.log('[AntiDelete] Recovered deleted ' + rawType + ' media from ' + senderNum);
+          console.log('[AntiDelete] Recovered deleted ' + rawType + ' media from @' + senderNum);
           return true;
         }
       } catch (e1) {
@@ -257,17 +257,17 @@ async function handleRevokeMessage(sock, msg) {
       }
 
       // Fallback if media download failed
-      const fallbackText = header + '⚠️ *Original message contained media (' + rawType + '), but buffer download expired.*\n' + (original.text ? '📝 *Caption:* ' + original.text : '');
+      const fallbackText = header + '⚠️ *Original message contained media (' + rawType + '), but download expired.*\n' + (original.text ? '📝 *Caption:* ' + original.text : '');
       for (const targetJid of targets) {
-        await sock.sendMessage(targetJid, { text: fallbackText, mentions: [original.senderJid] }).catch(function() {});
+        await sock.sendMessage(targetJid, { text: fallbackText, mentions: [cleanSenderJid] }).catch(function() {});
       }
       return true;
     }
 
-    // Default text fallback
+    // Default fallback
     const textFallback = header + '📝 *Original Message:*\n' + (original.text || 'Non-text message content');
     for (const targetJid of targets) {
-      await sock.sendMessage(targetJid, { text: textFallback, mentions: [original.senderJid] }).catch(function() {});
+      await sock.sendMessage(targetJid, { text: textFallback, mentions: [cleanSenderJid] }).catch(function() {});
     }
     return true;
   } catch (err) {

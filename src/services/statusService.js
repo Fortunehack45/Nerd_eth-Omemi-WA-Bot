@@ -201,7 +201,33 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
 async function sendStatus(sock, text) {
   try {
     if (!sock) return { success: false, error: 'WhatsApp client is not connected' };
-    await sock.sendMessage('status@broadcast', { text: text });
+    const colors = ['#1f2937', '#111827', '#0f172a', '#1e1b4b', '#311b92', '#1a237e', '#004d40', '#4a148c', '#880e4f', '#3e2723', '#264653', '#2a9d8f', '#e76f51'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    await sock.sendMessage('status@broadcast', {
+      text: text,
+      backgroundColor: randomColor,
+      font: Math.floor(Math.random() * 5) + 1
+    });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+async function sendMediaStatus(sock, buffer, mediaType, caption) {
+  try {
+    if (!sock) return { success: false, error: 'WhatsApp client is not connected' };
+    if (!buffer || !buffer.length) return { success: false, error: 'Empty media buffer' };
+
+    if (mediaType === 'image') {
+      await sock.sendMessage('status@broadcast', { image: buffer, caption: caption || '' });
+    } else if (mediaType === 'video') {
+      await sock.sendMessage('status@broadcast', { video: buffer, caption: caption || '' });
+    } else if (mediaType === 'audio') {
+      await sock.sendMessage('status@broadcast', { audio: buffer, mimetype: 'audio/mp4', ptt: true });
+    } else {
+      return { success: false, error: 'Unsupported media type for status: ' + mediaType };
+    }
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -214,14 +240,23 @@ async function autoViewStatus(sock, statusMsg) {
   if (!statusMsg || !statusMsg.key || !sock) return false;
 
   try {
-    const key = statusMsg.key;
-    const participant = key.participant || key.remoteJid || 'Unknown';
+    const rawParticipant = statusMsg.key.participant || statusMsg.key.remoteJid || '';
+    const cleanNum = parseJid(rawParticipant);
+    const cleanParticipant = cleanNum ? (cleanNum + '@s.whatsapp.net') : rawParticipant;
+
+    const statusKey = {
+      remoteJid: 'status@broadcast',
+      id: statusMsg.key.id,
+      participant: cleanParticipant,
+      fromMe: false
+    };
+
     if (typeof sock.readMessages === 'function') {
-      await sock.readMessages([key]);
+      await sock.readMessages([statusKey]);
     } else if (typeof sock.sendReceipt === 'function') {
-      await sock.sendReceipt(key.remoteJid || 'status@broadcast', participant, [key.id], 'read');
+      await sock.sendReceipt('status@broadcast', cleanParticipant, [statusMsg.key.id], 'read');
     }
-    console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: ' + participant);
+    console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: @' + cleanNum);
     return true;
   } catch (err) {
     console.error('[AutoViewStatus Error]', err.message);
@@ -238,28 +273,34 @@ async function autoLikeStatus(sock, statusMsg) {
 
   try {
     const key = statusMsg.key;
-    const participant = key.participant || key.remoteJid || 'Unknown';
+    const rawParticipant = key.participant || key.remoteJid || '';
+    const cleanNum = parseJid(rawParticipant);
+    if (!cleanNum) return false;
+    const cleanParticipant = cleanNum + '@s.whatsapp.net';
+
     const reactionEmoji = STATUS_LIKE_EMOJIS[Math.floor(Math.random() * STATUS_LIKE_EMOJIS.length)];
-    // Baileys requires own JID to be included in statusJidList for status reactions to work
-    const ownJid = sock.user?.id || sock.user?.jid || '';
-    const jidList = [participant];
-    if (ownJid && !jidList.includes(ownJid)) jidList.push(ownJid);
+
+    const statusKey = {
+      remoteJid: 'status@broadcast',
+      id: key.id,
+      participant: cleanParticipant,
+      fromMe: false
+    };
 
     // Strategy 1: Standard Baileys status reaction with statusJidList
     try {
       await sock.sendMessage(
         'status@broadcast',
-        { react: { text: reactionEmoji, key: key } },
-        { statusJidList: jidList }
+        { react: { text: reactionEmoji, key: statusKey } },
+        { statusJidList: [cleanParticipant] }
       );
-      console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked status from: ' + participant);
+      console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked status from: @' + cleanNum);
       return true;
     } catch (e1) {
-      // Strategy 2: Send reaction directly to participant JID
+      // Strategy 2: Direct participant reaction fallback
       try {
-        const cleanParticipant = participant.includes('@') ? participant : participant + '@s.whatsapp.net';
-        await sock.sendMessage(cleanParticipant, { react: { text: reactionEmoji, key: key } });
-        console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked (direct) from: ' + participant);
+        await sock.sendMessage(cleanParticipant, { react: { text: reactionEmoji, key: statusKey } });
+        console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked (direct) from: @' + cleanNum);
         return true;
       } catch (e2) {
         console.error('[AutoLikeStatus] Both strategies failed:', e1.message, '|', e2.message);
@@ -275,6 +316,7 @@ module.exports = {
   saveAndForwardStatus,
   downloadStatusBuffer,
   sendStatus,
+  sendMediaStatus,
   autoViewStatus,
   autoLikeStatus,
 };

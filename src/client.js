@@ -209,6 +209,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
   sock.ev.on('messages.upsert', async (msg) => {
     if (!msg.messages || msg.messages.length === 0) return;
+    var { cacheMessage } = require('./services/antiDeleteService');
     for (const m of msg.messages) {
       if (!m.message) continue;
       if (m.key?.id && global.msgStore) {
@@ -220,6 +221,10 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         }
         global.msgStore.set(m.key.id, m.message);
       }
+
+      // Cache all messages immediately for anti-delete recovery
+      try { cacheMessage(m, sock); } catch (e) {}
+
       var remoteJid = m.key?.remoteJid || '';
       var isFromMe = m.key?.fromMe;
       var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
@@ -227,7 +232,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       // Status updates
       if (remoteJid === 'status@broadcast') {
         if (config.status.autoView || config.status.autoLike) {
-          await statusHandler(sock, m);
+          statusHandler(sock, m).catch(function(e) {
+            console.error('[StatusHandler Error]', e.message);
+          });
         }
         continue;
       }
@@ -243,9 +250,6 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       }
 
       if (config.antiBan.enabled && isDuplicateMessage(m.key?.id)) continue;
-      if (config.antiBan.enabled && config.antiBan.safeMode) {
-        await new Promise(r => setTimeout(r, randomBetween(200, 800)));
-      }
       await messageHandler(sock, m);
     }
   });

@@ -104,19 +104,23 @@ const EMOJI_COMMAND_MAP = {
   '📋': 'disabled',
 };
 
+const EMOJI_NORMALIZED_MAP = new Map();
+for (var emojiKey in EMOJI_COMMAND_MAP) {
+  EMOJI_NORMALIZED_MAP.set(emojiKey, EMOJI_COMMAND_MAP[emojiKey]);
+  var normK = normalizeEmojiStr(emojiKey);
+  if (normK) EMOJI_NORMALIZED_MAP.set(normK, EMOJI_COMMAND_MAP[emojiKey]);
+}
+
 function getEmojiCommand(text) {
   if (!text) return null;
   var trimmed = text.trim();
   var firstChar = Array.from(trimmed)[0];
-  if (firstChar && EMOJI_COMMAND_MAP[firstChar]) {
-    return EMOJI_COMMAND_MAP[firstChar];
+  if (firstChar && EMOJI_NORMALIZED_MAP.has(firstChar)) {
+    return EMOJI_NORMALIZED_MAP.get(firstChar);
   }
   var cleaned = normalizeEmojiStr(trimmed);
-  for (var emoji in EMOJI_COMMAND_MAP) {
-    var normKey = normalizeEmojiStr(emoji);
-    if (normKey && (cleaned === normKey || cleaned.startsWith(normKey))) {
-      return EMOJI_COMMAND_MAP[emoji];
-    }
+  if (cleaned && EMOJI_NORMALIZED_MAP.has(cleaned)) {
+    return EMOJI_NORMALIZED_MAP.get(cleaned);
   }
   return null;
 }
