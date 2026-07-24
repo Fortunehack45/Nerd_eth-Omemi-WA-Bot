@@ -82,56 +82,77 @@ function setRuntimeKey(providerName, key) {
   return initAI();
 }
 
+async function fetchFreeAI(messages) {
+  try {
+    var userMsg = messages[messages.length - 1]?.content || 'Hello';
+    var sysMsg = messages.find(m => m.role === 'system')?.content || 'You are a helpful AI assistant.';
+    
+    // Primary free endpoint: Pollinations AI
+    var payload = {
+      messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: userMsg }],
+      model: 'openai'
+    };
+    var pResp = await axios.post('https://text.pollinations.ai/', payload, { timeout: 15000 });
+    if (pResp.data && typeof pResp.data === 'string' && pResp.data.trim().length > 0 && !pResp.data.includes('Error')) {
+      return { text: pResp.data.trim(), success: true };
+    }
+  } catch (e) {}
+
+  // Fallback free endpoint: Pollinations GET interface
+  try {
+    var userText = encodeURIComponent(messages[messages.length - 1]?.content || 'Hello');
+    var gResp = await axios.get('https://text.pollinations.ai/' + userText, { timeout: 15000 });
+    if (gResp.data && typeof gResp.data === 'string' && gResp.data.trim().length > 0) {
+      return { text: gResp.data.trim(), success: true };
+    }
+  } catch (e2) {}
+
+  return { text: '⚠️ AI is currently busy. Please try again in a few seconds.', success: false };
+}
+
 async function chatComplete(messages, modelOverride) {
   // Public Free AI Fallback (No key needed)
   if (provider === 'public-free' || !aiClient) {
-    try {
-      var userMsg = messages[messages.length - 1]?.content || 'Hello';
-      var sysMsg = messages.find(m => m.role === 'system')?.content || '';
-      var payload = {
-        messages: [{ role: 'system', content: sysMsg || 'You are a helpful AI assistant.' }, { role: 'user', content: userMsg }],
-        model: 'openai'
-      };
-      var pResp = await axios.post('https://text.pollinations.ai/', payload, { timeout: 20000 });
-      if (pResp.data && typeof pResp.data === 'string' && pResp.data.trim().length > 0) {
-        return { text: pResp.data.trim(), success: true };
-      }
-    } catch (e) {}
-    return { text: '⚠️ AI is in free mode. To unlock faster responses, set a free Groq key via !setkey groq <key> or in the Dashboard.', success: false };
+    return await fetchFreeAI(messages);
   }
 
   var model = modelOverride || currentModel;
 
   try {
+    var textResult = null;
     if (provider === 'groq') {
-      // Groq native SDK
       var completion = await aiClient.chat.completions.create({
         messages: messages,
         model: model,
         temperature: config.openai?.temperature || 0.7,
         max_tokens: config.openai?.maxTokens || 2048,
       });
-      return { text: completion.choices[0]?.message?.content || 'No response', success: true };
+      if (completion && Array.isArray(completion.choices) && completion.choices.length > 0) {
+        textResult = completion.choices[0]?.message?.content || null;
+      }
     } else {
-      // OpenAI-compatible (OpenAI, AgentRouter, OpenRouter)
       var completion2 = await aiClient.chat.completions.create({
         model: model,
         temperature: config.openai?.temperature || 0.7,
         max_tokens: config.openai?.maxTokens || 2000,
         messages: messages,
       });
-      return { text: completion2.choices[0]?.message?.content || 'No response', success: true };
+      if (completion2 && Array.isArray(completion2.choices) && completion2.choices.length > 0) {
+        textResult = completion2.choices[0]?.message?.content || null;
+      }
+    }
+
+    if (textResult) {
+      return { text: textResult, success: true };
+    } else {
+      // Fallback to free AI if SDK response was malformed
+      console.warn('[AI Service] API response missing choices, falling back to free AI');
+      return await fetchFreeAI(messages);
     }
   } catch (err) {
-    var msg = err.message || 'Unknown AI error';
-    // Friendly error messages
-    if (msg.includes('401') || msg.includes('invalid_api_key')) {
-      return { text: '❌ AI key is invalid or expired. Admin can update it with: !setkey groq <new-key>', success: false };
-    }
-    if (msg.includes('429') || msg.includes('rate_limit')) {
-      return { text: '⏳ AI is rate limited. Please wait a moment and try again.', success: false };
-    }
-    return { text: '❌ AI Error: ' + msg, success: false };
+    console.warn('[AI Service Error]', err.message || err);
+    // Fallback to free public AI out of the box when key is invalid, rate-limited, or expired!
+    return await fetchFreeAI(messages);
   }
 }
 

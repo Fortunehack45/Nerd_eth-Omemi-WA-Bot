@@ -93,9 +93,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     syncFullHistory: false,
     markOnlineOnConnect: true,
     generateHighQualityLink: true,
-    defaultQueryTimeoutMs: 120000,
-    keepAliveIntervalMs: 15000,
-    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
+    keepAliveIntervalMs: 10000,      // Ping WA servers every 10s (prevents 50-min drop)
+    connectTimeoutMs: 30000,
     qrTimeout: 180000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
@@ -191,6 +191,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         setTimeout(() => simulateOrganicPresence(sock), randomBetween(30000, 90000));
         console.log('[CLIENT] 🥷 Organic presence simulation scheduled.');
       }
+      // Start WebSocket-level heartbeat to prevent silent 50-minute drops
+      startHeartbeat();
+
       var { init: initScheduler } = require('./services/schedulerService');
       initScheduler(sock);
 
@@ -226,9 +229,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       }
 
       // Admin self-commands: allow owner to send commands to themselves
+      // Supports BOTH '!' prefix commands AND bare emoji shortcut commands (no prefix needed)
       if (isFromMe) {
         var prefix = config.prefix || '!';
-        if (msgText && msgText.startsWith(prefix)) {
+        var hasPrefix = msgText && msgText.startsWith(prefix);
+        var hasEmojiShortcut = !hasPrefix && msgText && msgText.trim().length > 0;
+        if (hasPrefix || hasEmojiShortcut) {
           await messageHandler(sock, m);
         }
         continue;
@@ -268,6 +274,31 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   });
 
   return sock;
+}
+
+let heartbeatInterval = null;
+
+function startHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(async () => {
+    if (!sock?.ws || sock.ws.readyState !== 1) return;
+    try {
+      if (typeof sock.sendPing === 'function') {
+        await sock.sendPing();
+      } else {
+        await sock.sendPresenceUpdate('available');
+      }
+    } catch (e) {
+      console.warn('[CLIENT HEARTBEAT] Ping failed:', e.message);
+    }
+  }, 20000); // 20-second active heartbeat
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
 }
 
 function startPresenceKeepAlive() {

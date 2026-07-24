@@ -218,14 +218,18 @@ async function autoViewStatus(sock, statusMsg) {
     const participant = key.participant || key.remoteJid || 'Unknown';
     if (typeof sock.readMessages === 'function') {
       await sock.readMessages([key]);
-      console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: ' + participant);
-      return true;
+    } else if (typeof sock.sendReceipt === 'function') {
+      await sock.sendReceipt(key.remoteJid || 'status@broadcast', participant, [key.id], 'read');
     }
+    console.log('[AutoViewStatus] 👁️ Auto-viewed WhatsApp Status from: ' + participant);
+    return true;
   } catch (err) {
     console.error('[AutoViewStatus Error]', err.message);
   }
   return false;
 }
+
+const STATUS_LIKE_EMOJIS = ['💚', '❤️', '🔥', '👍', '👏', '😍', '💯', '✨', '🎉', '😎', '🙌', '💫', '🌟', '🥰', '🤩', '💥'];
 
 async function autoLikeStatus(sock, statusMsg) {
   var config = require('../../config');
@@ -235,15 +239,32 @@ async function autoLikeStatus(sock, statusMsg) {
   try {
     const key = statusMsg.key;
     const participant = key.participant || key.remoteJid || 'Unknown';
-    const reactionEmoji = '💚';
+    const reactionEmoji = STATUS_LIKE_EMOJIS[Math.floor(Math.random() * STATUS_LIKE_EMOJIS.length)];
+    // Baileys requires own JID to be included in statusJidList for status reactions to work
+    const ownJid = sock.user?.id || sock.user?.jid || '';
+    const jidList = [participant];
+    if (ownJid && !jidList.includes(ownJid)) jidList.push(ownJid);
 
-    await sock.sendMessage(
-      'status@broadcast',
-      { react: { text: reactionEmoji, key: key } },
-      { statusJidList: [participant] }
-    );
-    console.log('[AutoLikeStatus] 💚 Auto-liked WhatsApp Status from: ' + participant);
-    return true;
+    // Strategy 1: Standard Baileys status reaction with statusJidList
+    try {
+      await sock.sendMessage(
+        'status@broadcast',
+        { react: { text: reactionEmoji, key: key } },
+        { statusJidList: jidList }
+      );
+      console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked status from: ' + participant);
+      return true;
+    } catch (e1) {
+      // Strategy 2: Send reaction directly to participant JID
+      try {
+        const cleanParticipant = participant.includes('@') ? participant : participant + '@s.whatsapp.net';
+        await sock.sendMessage(cleanParticipant, { react: { text: reactionEmoji, key: key } });
+        console.log('[AutoLikeStatus] ' + reactionEmoji + ' Auto-liked (direct) from: ' + participant);
+        return true;
+      } catch (e2) {
+        console.error('[AutoLikeStatus] Both strategies failed:', e1.message, '|', e2.message);
+      }
+    }
   } catch (err) {
     console.error('[AutoLikeStatus Error]', err.message);
   }

@@ -680,53 +680,52 @@ async function downloadSpotifyAudio(url) {
   var trackTitle = 'Spotify Track';
   var artistName = 'Unknown Artist';
 
-  // Engine 1: btch-downloader direct 320kbps Spotify API
+  // ── STEP 1: Fetch Spotify OEmbed metadata FIRST so every engine knows the real title + artist ──
+  try {
+    log('Spotify — fetching track metadata via Spotify OEmbed...');
+    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(cleanUrl), { timeout: 8000 });
+    if (metaR.data) {
+      if (metaR.data.title)       trackTitle = metaR.data.title;
+      if (metaR.data.author_name) artistName = metaR.data.author_name;
+    }
+    log('Spotify — metadata: "' + trackTitle + '" by ' + artistName);
+  } catch (e) { log('Spotify OEmbed metadata note: ' + e.message); }
+
+  // ── Engine 1: btch-downloader direct 320kbps Spotify API ──
   try {
     log('Spotify — trying btch-downloader...');
     var { spotify: btchSpotify } = require('btch-downloader');
     var spRes = await btchSpotify(cleanUrl);
     if (spRes && spRes.status && spRes.result && spRes.result.formats && spRes.result.formats.length > 0) {
       var directMp3 = spRes.result.formats[0].url;
-      var titleSp = spRes.result.title || trackTitle;
+      // Prefer the Spotify OEmbed title we already fetched; fall back to what btch-downloader reports
+      var titleSp = trackTitle !== 'Spotify Track' ? trackTitle : (spRes.result.title || trackTitle);
       var stBtch = await downloadStream(directMp3, fp);
       if (stBtch.size > 10000) {
         log('Spotify — btch-downloader success (' + (stBtch.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: titleSp, size: stBtch.size, author: artistName };
+        return { success: true, filePath: fp, title: titleSp, author: artistName, size: stBtch.size };
       }
     }
   } catch (e) { log('Spotify btch-downloader fail: ' + e.message); }
 
-  // Extract metadata via Spotify OEmbed API
-  try {
-    log('Spotify — fetching track metadata via Spotify OEmbed...');
-    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(cleanUrl), { timeout: 8000 });
-    if (metaR.data) {
-      if (metaR.data.title) trackTitle = metaR.data.title;
-      if (metaR.data.author_name) artistName = metaR.data.author_name;
-    }
-  } catch (e) { log('Spotify OEmbed metadata note: ' + e.message); }
-
-  log('Spotify — searching audio for: "' + trackTitle + '" by ' + artistName);
-
-  // PRIMARY METHOD: YouTube search + download (Matches Spotify song to high-res YouTube audio)
+  // ── Engine 2: YouTube search + download (matches Spotify song to high-res YouTube audio) ──
   try {
     var searchQuery = artistName !== 'Unknown Artist'
       ? (artistName + ' ' + trackTitle + ' official audio')
       : (trackTitle + ' audio');
 
     log('Spotify — searching YouTube: "' + searchQuery + '"...');
-
     var searchRes = await searchYouTubeAndDownloadAudio(searchQuery);
     if (searchRes.success && searchRes.filePath && fs.existsSync(searchRes.filePath)) {
       var spFp = path.join(tempDir, 'spotify_yt_' + ts + '.mp3');
       fs.renameSync(searchRes.filePath, spFp);
       var stSp = fs.statSync(spFp);
       log('Spotify — YouTube match success (' + (stSp.size / 1024).toFixed(0) + 'KB)');
-      return { success: true, filePath: spFp, title: trackTitle, size: stSp.size, author: artistName };
+      return { success: true, filePath: spFp, title: trackTitle, author: artistName, size: stSp.size };
     }
   } catch (e) { log('Spotify YouTube search fail: ' + e.message); }
 
-  // FALLBACK 1: Cobalt direct Spotify request
+  // ── Engine 3: Cobalt direct Spotify request ──
   try {
     log('Spotify — trying Cobalt directly...');
     var cobalt = await cobaltRequest(cleanUrl, true);
@@ -734,12 +733,12 @@ async function downloadSpotifyAudio(url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
         log('Spotify — Cobalt success (' + (stC.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: trackTitle, size: stC.size, author: artistName };
+        return { success: true, filePath: fp, title: trackTitle, author: artistName, size: stC.size };
       }
     }
   } catch (e) { log('Spotify Cobalt fail: ' + e.message); }
 
-  // FALLBACK 2: spotifydown API
+  // ── Engine 4: spotifydown API ──
   var trackMatch = cleanUrl.match(/\/track\/([a-zA-Z0-9]+)/);
   if (trackMatch && trackMatch[1]) {
     try {
@@ -756,7 +755,9 @@ async function downloadSpotifyAudio(url) {
         var st1 = await downloadStream(r1.data.link, fp);
         if (st1.size > 10000) {
           log('Spotify — spotifydown success (' + (st1.size / 1024).toFixed(0) + 'KB)');
-          return { success: true, filePath: fp, title: r1.data.metadata?.title || trackTitle, size: st1.size, author: artistName };
+          // Prefer OEmbed title, fall back to spotifydown metadata
+          var sdTitle = trackTitle !== 'Spotify Track' ? trackTitle : (r1.data.metadata && r1.data.metadata.title ? r1.data.metadata.title : trackTitle);
+          return { success: true, filePath: fp, title: sdTitle, author: artistName, size: st1.size };
         }
       }
     } catch (e) { log('Spotify spotifydown fail: ' + e.message); }

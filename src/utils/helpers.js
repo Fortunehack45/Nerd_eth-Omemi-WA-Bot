@@ -163,64 +163,70 @@ async function sendAudioMessage(sock, sender, filePath, title, author) {
     return;
   }
 
-  const cleanTitle = (title || 'Audio Track').replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 80);
-  const fileNameMp3 = cleanTitle + '.mp3';
+  // Build a meaningful filename: "Artist - Title.mp3" when both are known
+  var cleanTitle  = (title  || 'Audio Track').replace(/[<>:"/\\|?*\r\n]/g, '_').trim().substring(0, 80);
+  var cleanAuthor = (author || '').replace(/[<>:"/\\|?*\r\n]/g, '_').trim().substring(0, 60);
+  var isGenericAuthor = !cleanAuthor || ['Unknown Artist', 'Spotify', 'YouTube', 'Download'].includes(cleanAuthor);
+  var baseName = isGenericAuthor ? cleanTitle : (cleanAuthor + ' - ' + cleanTitle);
+  var fileName  = baseName.substring(0, 110) + '.mp3';
 
-  // 1. Convert MP3 to WhatsApp native m4a AAC audio if ffmpeg is available
-  var m4aPath = filePath.replace(/\.[^.]+$/, '') + '_wa.m4a';
-  var convertedSuccess = false;
+  var taggedPath = filePath.replace(/\.[^.]+$/, '') + '_tagged.mp3';
+  var taggedOk   = false;
 
+  // 1. Embed ID3 title + artist metadata so WhatsApp audio player shows the correct song name
   if (ffmpegPath && fs.existsSync(ffmpegPath)) {
     try {
       await new Promise(function(resolve, reject) {
-        var args = ['-y', '-i', filePath, '-c:a', 'aac', '-b:a', '128k', m4aPath];
+        var metaArgs = [];
+        if (cleanTitle)  metaArgs.push('-metadata', 'title='  + cleanTitle);
+        if (!isGenericAuthor) metaArgs.push('-metadata', 'artist=' + cleanAuthor);
+        var args = ['-y', '-i', filePath, '-c', 'copy', '-id3v2_version', '3'].concat(metaArgs).concat([taggedPath]);
         execFile(ffmpegPath, args, { timeout: 30000 }, function(err) {
-          if (!err && fs.existsSync(m4aPath) && fs.statSync(m4aPath).size > 1000) {
+          if (!err && fs.existsSync(taggedPath) && fs.statSync(taggedPath).size > 1000) {
             resolve();
           } else {
-            reject(err || new Error('FFmpeg output invalid'));
+            reject(err || new Error('ffmpeg ID3 output invalid'));
           }
         });
       });
-      convertedSuccess = true;
+      taggedOk = true;
     } catch (e) {
-      console.warn('[sendAudioMessage] AAC conversion note:', e.message);
+      console.warn('[sendAudioMessage] ID3 tagging skipped:', e && e.message);
     }
   }
 
-  // 2. Send both native audio format AND MP3 document format so WhatsApp Web & Mobile Apps render 100%!
+  var sendPath = (taggedOk && fs.existsSync(taggedPath)) ? taggedPath : filePath;
+  var caption = '🎵 *' + cleanTitle + '*';
+  if (!isGenericAuthor) caption += '\n👤 ' + cleanAuthor;
+
+  // 2. Send as document with audio/mpeg MIME type.
+  //    WhatsApp ALWAYS shows the fileName for document-type messages.
+  //    Sending as `audio` type causes WA to assign a random ID (e.g. "aaaghJ784").
   try {
-    if (convertedSuccess && fs.existsSync(m4aPath)) {
-      var m4aBuf = fs.readFileSync(m4aPath);
-      await sock.sendMessage(sender, {
-        audio: m4aBuf,
-        mimetype: 'audio/mp4',
-        ptt: false,
-        fileName: fileNameMp3,
-      });
-      try { fs.unlinkSync(m4aPath); } catch (e) {}
-    } else {
-      var mp3Buf = fs.readFileSync(filePath);
-      var caption = '🎵 *' + cleanTitle + '*';
-      if (author) caption += '\n👤 ' + author;
-      await sock.sendMessage(sender, {
-        document: mp3Buf,
-        mimetype: 'audio/mpeg',
-        fileName: fileNameMp3,
-        caption: caption,
-      });
-    }
-  } catch (err) {
-    console.warn('[sendAudioMessage] Primary send failed, using document fallback:', err.message);
-    var mp3Buf2 = fs.readFileSync(filePath);
+    var buf = fs.readFileSync(sendPath);
     await sock.sendMessage(sender, {
-      document: mp3Buf2,
+      document: buf,
       mimetype: 'audio/mpeg',
-      fileName: fileNameMp3,
-      caption: '🎵 *' + cleanTitle + '*',
+      fileName: fileName,
+      caption: caption,
     });
+  } catch (err) {
+    console.warn('[sendAudioMessage] Document send failed, falling back to audio type:', err.message);
+    try {
+      var buf2 = fs.readFileSync(sendPath);
+      await sock.sendMessage(sender, {
+        audio: buf2,
+        mimetype: 'audio/mpeg',
+        ptt: false,
+        fileName: fileName,
+      });
+    } catch (err2) {
+      console.error('[sendAudioMessage] All send attempts failed:', err2.message);
+      await sock.sendMessage(sender, { text: '❌ Failed to send audio: ' + err2.message });
+    }
   } finally {
-    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
+    try { if (fs.existsSync(filePath))  fs.unlinkSync(filePath);  } catch (e) {}
+    try { if (fs.existsSync(taggedPath)) fs.unlinkSync(taggedPath); } catch (e) {}
   }
 }
 

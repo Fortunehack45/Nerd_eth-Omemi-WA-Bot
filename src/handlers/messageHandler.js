@@ -201,7 +201,7 @@ async function handleMessage(sock, msg) {
           await sendMediaItem(sock, ownerJid, savedItem);
           console.log('[EmojiReaction ViewOnce] Delivered saved viewonce ' + savedItem.id + ' to owner self-chat (' + ownerJid + ')');
         }
-        return; // Silent delivery — no notification in source chat!
+        return; // Silent delivery — no text message in source chat!
       }
 
       // Status Saver trigger via Emoji Reaction (🙂, 😊)
@@ -214,7 +214,7 @@ async function handleMessage(sock, msg) {
           };
           await saveAndForwardStatus(sock, statusMsgKey, reaction.key.message || {}, msg.pushName);
         }
-        return; // Silent delivery — no notification in source chat!
+        return; // Silent delivery — no text message in source chat!
       }
     }
     return;

@@ -114,7 +114,7 @@ async function handleCommand(sock, msg, text) {
     }
 
     if (config.antiBan.enabled && config.antiBan.humanTyping && !cmd.noTyping) {
-      await simulateTyping(sock, sender, args || 'command');
+      simulateTyping(sock, sender, args || 'command').catch(function() {});
     }
     await cmd.execute(sock, msg, args, {
       sender: sender,
