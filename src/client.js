@@ -47,6 +47,10 @@ function clearSessionFolder() {
 function resetSession() {
   lastQR = null;
   clearSessionFolder();
+  try {
+    var { resetOnboarding } = require('./services/onboardingService');
+    resetOnboarding();
+  } catch (e) {}
   if (sock) {
     try {
       sock.ev.removeAllListeners();

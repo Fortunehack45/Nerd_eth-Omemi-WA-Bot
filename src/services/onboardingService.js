@@ -1,6 +1,6 @@
 var path = require('path');
 var fs = require('fs');
-var { loadJson, saveJson } = require('../utils/helpers');
+var { loadJson, saveJson, parseJid } = require('../utils/helpers');
 var config = require('../../config');
 
 var ONBOARDING_FILE = path.join(__dirname, '..', '..', 'storage', 'onboarding.json');
@@ -40,26 +40,32 @@ function waitForConnection(sock, maxWaitMs) {
   });
 }
 
-async function startOnboarding(sock) {
-  if (isOnboarded()) return false;
+async function startOnboarding(sock, force) {
+  if (!force && isOnboarded()) return false;
 
-  var connected = await waitForConnection(sock, 60000);
-  if (!connected) {
-    console.error('Onboarding skipped: no connection within 60s');
+  var connected = await waitForConnection(sock, 30000);
+  if (!connected || !sock || !sock.user) {
+    console.error('[Onboarding] Skipped: WhatsApp socket not fully ready within 30s');
     return false;
   }
 
-  var admins = Array.isArray(config.admins) && config.admins.length > 0 ? config.admins : [];
-  var adminJid = admins[0] ? (admins[0] + '@s.whatsapp.net') : (sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null);
-  if (!adminJid) return false;
-  if (!connected) {
-    console.error('Onboarding skipped: no connection within 60s');
+  // Calculate clean JIDs without duplicate @s.whatsapp.net suffixes
+  var botNumber = parseJid(sock.user.id);
+  var ownerNumber = config.admins && config.admins[0] ? parseJid(config.admins[0]) : '';
+  
+  var targets = new Set();
+  if (botNumber) targets.add(botNumber + '@s.whatsapp.net');
+  if (ownerNumber) targets.add(ownerNumber + '@s.whatsapp.net');
+
+  if (targets.size === 0) {
+    console.error('[Onboarding] Failed: Could not resolve valid target JID');
     return false;
   }
 
   try {
     var steps = [];
-    steps.push('*🎉 Welcome to Nerd-eth Bot!*\n');
+    steps.push('🤖 *Nerd-eth WhatsApp Bot Connected!*');
+    steps.push('──────────────────────────────');
     steps.push('I\'m your new WhatsApp assistant built for multi-purpose automation, AI, and media management!\n');
     steps.push('*👨‍💻 About the Creator:*');
     steps.push('Built by *Fortune Adebayo (AKA: Nerd_eth)* — Full-Stack & AI Software Engineer.');
@@ -81,23 +87,28 @@ async function startOnboarding(sock) {
     steps.push('I\'m ready when you are! 🚀');
 
     var welcomeCaption = steps.join('\n');
-    var targetJid = adminJid;
-    if (sock && sock.user && sock.user.id) {
-      targetJid = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+
+    for (var targetJid of targets) {
+      try {
+        await sock.sendMessage(targetJid, {
+          image: { url: 'https://iili.io/Cwvlxwv.png' },
+          caption: welcomeCaption
+        });
+        console.log('[Onboarding] ✅ Welcome message delivered to: ' + targetJid);
+      } catch (e1) {
+        try {
+          await sock.sendMessage(targetJid, { text: welcomeCaption });
+          console.log('[Onboarding] ✅ Welcome text message delivered to: ' + targetJid);
+        } catch (e2) {
+          console.error('[Onboarding Error] Failed to send welcome message to ' + targetJid + ':', e2.message);
+        }
+      }
     }
 
-    try {
-      await sock.sendMessage(targetJid, {
-        image: { url: 'https://iili.io/Cwvlxwv.png' },
-        caption: welcomeCaption
-      });
-    } catch (e) {
-      await sock.sendMessage(targetJid, { text: welcomeCaption });
-    }
     markOnboarded();
     return true;
   } catch (err) {
-    console.error('Onboarding failed:', err.message);
+    console.error('[Onboarding Error]', err.message);
     return false;
   }
 }
