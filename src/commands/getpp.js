@@ -1,8 +1,9 @@
 const { parseJid } = require('../utils/helpers');
+const axios = require('axios');
 
 module.exports = {
   name: 'getpp',
-  alias: ['pfp', 'profilepic', 'avatar', 'pp'],
+  alias: ['pfp', 'profilepic', 'avatar', 'pp', '🖼️', '📷'],
   description: 'Fetch and send the profile picture of the contact you are chatting with, group, or tagged user',
   usage: '!getpp [@user | reply | phone_number | group]',
   adminOnly: true,
@@ -43,7 +44,7 @@ module.exports = {
         }
       }
     }
-    // 4. Fallback in group chat: check group picture first if requested or default to senderId / group
+    // 4. Fallback in group chat: default to caller
     else if (isGroup) {
       targetJid = senderId || sender;
     }
@@ -56,7 +57,7 @@ module.exports = {
       return sock.sendMessage(sender, { text: '⚠️ Please mention a user, reply to their message, or enter a phone number.' });
     }
 
-    // Clean JID: strip device IDs like ':12' or '@s.whatsapp.net' duplicates
+    // Clean JID: strip device IDs like ':12'
     var isGroupTarget = targetJid.endsWith('@g.us');
     var cleanJid = isGroupTarget
       ? targetJid
@@ -64,26 +65,42 @@ module.exports = {
 
     await sock.sendPresenceUpdate('composing', sender);
 
-    var ppUrl = null;
-    try {
-      ppUrl = await sock.profilePictureUrl(cleanJid, 'image');
-    } catch (e) {
+    // Profile Picture retrieval helper with multi-type fallback
+    async function fetchPPUrl(jid) {
+      if (!sock || typeof sock.profilePictureUrl !== 'function') return null;
       try {
-        ppUrl = await sock.profilePictureUrl(cleanJid, 'preview');
-      } catch (err1) {
-        try {
-          ppUrl = await sock.profilePictureUrl(cleanJid);
-        } catch (err2) {
-          // If group picture failed and was in group without explicit args, try caller picture fallback
-          if (isGroup && isGroupTarget && (!args || !args.trim())) {
-            try {
-              var callerJid = parseJid(senderId) + '@s.whatsapp.net';
-              ppUrl = await sock.profilePictureUrl(callerJid, 'image');
-              cleanJid = callerJid;
-              isGroupTarget = false;
-            } catch (err3) {}
-          }
-        }
+        const u = await sock.profilePictureUrl(jid, 'image');
+        if (u) return u;
+      } catch (e1) {}
+      try {
+        const u = await sock.profilePictureUrl(jid, 'preview');
+        if (u) return u;
+      } catch (e2) {}
+      try {
+        const u = await sock.profilePictureUrl(jid);
+        if (u) return u;
+      } catch (e3) {}
+      return null;
+    }
+
+    var ppUrl = await fetchPPUrl(cleanJid);
+
+    // If target was caller in group and failed, fallback to group icon
+    if (!ppUrl && isGroup && !isGroupTarget && (!args || !args.trim())) {
+      ppUrl = await fetchPPUrl(sender);
+      if (ppUrl) {
+        cleanJid = sender;
+        isGroupTarget = true;
+      }
+    }
+
+    // If target was group icon and failed in group without args, fallback to caller icon
+    if (!ppUrl && isGroup && isGroupTarget && (!args || !args.trim())) {
+      var callerJid = parseJid(senderId) + '@s.whatsapp.net';
+      ppUrl = await fetchPPUrl(callerJid);
+      if (ppUrl) {
+        cleanJid = callerJid;
+        isGroupTarget = false;
       }
     }
 
@@ -91,26 +108,38 @@ module.exports = {
 
     if (!ppUrl) {
       return sock.sendMessage(sender, {
-        text: '❌ Could not retrieve profile picture for ' + targetTag + '. The profile picture may not be set or privacy settings prevent viewing it.',
+        text: '❌ Could not retrieve profile picture for ' + targetTag + '.\n\n💡 The contact or group may not have a profile picture set, or their privacy settings ("Who can see my profile photo") prevent viewing it.',
         mentions: isGroupTarget ? [] : [cleanJid]
       });
     }
 
     try {
-      // Download buffer directly using browser User-Agent headers to bypass WhatsApp CDN 403 blocks
+      // Download buffer using axios with browser User-Agent headers
       var buffer = null;
       try {
-        var fetchHeaders = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
-        };
-        var res = await fetch(ppUrl, { headers: fetchHeaders });
-        if (res.ok) {
-          var arrBuf = await res.arrayBuffer();
-          buffer = Buffer.from(arrBuf);
+        const res = await axios.get(ppUrl, {
+          responseType: 'arraybuffer',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+          },
+          timeout: 12000
+        });
+        if (res.data && res.data.length > 0) {
+          buffer = Buffer.from(res.data);
         }
-      } catch (eFetch) {
-        console.warn('[getpp Fetch Buffer Error]', eFetch.message);
+      } catch (eAxios) {
+        console.warn('[getpp Axios Download Warning]', eAxios.message);
+        // Fallback to native fetch
+        try {
+          var res2 = await fetch(ppUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+          });
+          if (res2.ok) {
+            var arrBuf = await res2.arrayBuffer();
+            buffer = Buffer.from(arrBuf);
+          }
+        } catch (eFetch) {}
       }
 
       if (buffer && buffer.length > 0) {
