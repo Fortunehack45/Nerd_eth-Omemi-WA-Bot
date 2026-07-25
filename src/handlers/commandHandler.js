@@ -53,11 +53,19 @@ function loadCommands() {
 }
 
 async function handleCommand(sock, msg, text) {
-  var sender = msg.key.remoteJid;
+  var sender = msg.key.remoteJid || '';
+  if (sender && !sender.endsWith('@g.us') && sender.includes(':')) {
+    sender = sender.split(':')[0] + '@s.whatsapp.net';
+    msg.key.remoteJid = sender;
+  }
   var isGroup = sender.endsWith('@g.us');
   var isFromMe = !!msg.key.fromMe;
   var botJid = sock.user?.id || sock.user?.jid || '';
+  if (botJid && botJid.includes(':')) botJid = botJid.split(':')[0] + '@s.whatsapp.net';
   var senderId = isFromMe ? botJid : (msg.key.participant || sender);
+  if (senderId && !senderId.endsWith('@g.us') && senderId.includes(':')) {
+    senderId = senderId.split(':')[0] + '@s.whatsapp.net';
+  }
   var pushName = msg.pushName || 'User';
 
   var extracted = extractCommand(text);

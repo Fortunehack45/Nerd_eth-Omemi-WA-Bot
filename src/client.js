@@ -98,7 +98,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     markOnlineOnConnect: true,
     generateHighQualityLink: true,
     defaultQueryTimeoutMs: 60000,
-    keepAliveIntervalMs: 10000,      // Ping WA servers every 10s (prevents 50-min drop)
+    keepAliveIntervalMs: 25000,      // Ping WA servers every 25s (prevents socket drops and timeouts)
     connectTimeoutMs: 30000,
     qrTimeout: 180000,
     shouldSyncHistoryMessage: () => false,
@@ -213,6 +213,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     var { cacheMessage } = require('./services/antiDeleteService');
     for (const m of msg.messages) {
       if (!m.message) continue;
+
+      // Clean remoteJid: strip device suffix (e.g. :12) to prevent Baileys query timeouts
+      if (m.key?.remoteJid && !m.key.remoteJid.endsWith('@g.us') && m.key.remoteJid.includes(':')) {
+        m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
+      }
+
       if (m.key?.id && global.msgStore) {
         if (global.processedMsgIds.has(m.key.id)) continue;
         global.processedMsgIds.add(m.key.id);
@@ -228,7 +234,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
       var remoteJid = m.key?.remoteJid || '';
       var isFromMe = m.key?.fromMe;
-      var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
+      var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
 
       // Status updates
       if (remoteJid === 'status@broadcast') {
@@ -240,11 +246,16 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         continue;
       }
 
-      // Admin self-commands: allow owner to send commands to themselves
-      // Must explicitly start with prefix (!) or be a reactionMessage to prevent bot output emojis from looping recursively!
+      // Admin self-commands: allow owner to send commands to themselves or in any chat
       if (isFromMe) {
         var prefix = config.prefix || '!';
-        if ((msgText && msgText.startsWith(prefix)) || msg.message?.reactionMessage) {
+        var { parseJid } = require('./utils/helpers');
+        var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
+        var isSelfChat = remoteJid ? (parseJid(remoteJid) === botNum) : false;
+        var hasPrefix = msgText && msgText.startsWith(prefix);
+        var isReaction = !!m.message?.reactionMessage;
+
+        if (hasPrefix || isReaction || isSelfChat) {
           await messageHandler(sock, m);
         }
         continue;

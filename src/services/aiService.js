@@ -89,7 +89,7 @@ async function fetchFreeAI(messages) {
   // 1. Popcat Chatbot API (Fast, zero setup)
   try {
     var pUrl = 'https://api.popcat.xyz/chatbot?msg=' + encodeURIComponent(userMsg) + '&owner=' + encodeURIComponent(config.botName || 'Nerd') + '&botname=' + encodeURIComponent(config.botName || 'Nerd-eth');
-    var pResp = await axios.get(pUrl, { timeout: 10000 });
+    var pResp = await axios.get(pUrl, { timeout: 4000 });
     if (pResp.data && pResp.data.response && typeof pResp.data.response === 'string' && pResp.data.response.trim().length > 0) {
       return { text: pResp.data.response.trim(), success: true };
     }
@@ -99,7 +99,7 @@ async function fetchFreeAI(messages) {
   try {
     var sResp = await axios.post('https://api.simsimi.vn/v1/simtalk', 'text=' + encodeURIComponent(userMsg) + '&lc=en', {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 10000
+      timeout: 4000
     });
     if (sResp.data && sResp.data.message && typeof sResp.data.message === 'string' && sResp.data.message.trim().length > 0) {
       return { text: sResp.data.message.trim(), success: true };
@@ -113,7 +113,7 @@ async function fetchFreeAI(messages) {
       model: 'openai'
     };
     var polResp = await axios.post('https://text.pollinations.ai/', payload, {
-      timeout: 10000,
+      timeout: 4000,
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
