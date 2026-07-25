@@ -98,11 +98,7 @@ function getRandomMessageId() {
 async function simulateTyping(sock, jid, text) {
   try {
     if (!sock || typeof sock.sendPresenceUpdate !== 'function') return;
-    await sock.sendPresenceUpdate('composing', jid).catch(function() {});
-    // Fast organic typing delay (300ms to 700ms max)
-    const delayTime = Math.min(Math.max((text ? text.length * 8 : 300), 300), 700);
-    await new Promise(resolve => setTimeout(resolve, delayTime));
-    await sock.sendPresenceUpdate('paused', jid).catch(function() {});
+    sock.sendPresenceUpdate('composing', jid).catch(function() {});
   } catch (e) { }
 }
 

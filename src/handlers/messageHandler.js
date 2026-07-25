@@ -344,31 +344,51 @@ async function handleMessage(sock, msg) {
 
   // 6. Handle commands (with prefix '!' or emoji shortcuts with/without prefix)
   var isCmd = isCommand(messageText);
-  // Messages sent by self (fromMe) MUST have explicit prefix (!) to trigger commands
-  var emojiCmd = (!isCmd && !msg.key?.fromMe) ? getEmojiCommand(messageText) : null;
 
   if (isCmd) {
     var cmdText = messageText.slice(config.prefix.length).trim();
-    var mappedEmojiCmd = getEmojiCommand(cmdText);
-    if (mappedEmojiCmd) {
-      var firstSymbol = Array.from(cmdText)[0] || '';
-      var restArgs = cmdText.slice(firstSymbol.length).trim();
-      var fullCmdText = mappedEmojiCmd + (restArgs ? ' ' + restArgs : '');
+    var firstChar = Array.from(cmdText)[0] || '';
+    // Only map emoji shortcut if the command starts with an emoji symbol
+    if (firstChar && EMOJI_NORMALIZED_MAP.has(firstChar)) {
+      var mappedCmd = EMOJI_NORMALIZED_MAP.get(firstChar);
+      var restArgs = cmdText.slice(firstChar.length).trim();
+      var fullCmdText = mappedCmd + (restArgs ? ' ' + restArgs : '');
       await handleCommand(sock, msg, fullCmdText);
       return;
     }
     await handleCommand(sock, msg, cmdText);
     return;
-  } else if (emojiCmd) {
-    var trimmedMsg = messageText.trim();
-    var firstSymbol = Array.from(trimmedMsg)[0] || '';
-    var restArgs = trimmedMsg.slice(firstSymbol.length).trim();
-    var fullCmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
-    await handleCommand(sock, msg, fullCmdText);
+  } else if (!msg.key?.fromMe) {
+    var emojiCmd = getEmojiCommand(messageText);
+    if (emojiCmd) {
+      var trimmedMsg = messageText.trim();
+      var firstSymbol = Array.from(trimmedMsg)[0] || '';
+      var restArgs = trimmedMsg.slice(firstSymbol.length).trim();
+      var fullCmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
+      await handleCommand(sock, msg, fullCmdText);
+      return;
+    }
+  }
+
+  // 7. Auto-AI response in private DM for non-command text messages
+  if (isPrivate && !msg.key?.fromMe && messageText && !isCmd) {
+    if (!isFeatureDisabled('ai')) {
+      try {
+        var aiCmd = require('../commands/ai');
+        await aiCmd.execute(sock, msg, messageText, {
+          sender: sender,
+          senderId: msg.key.participant || sender,
+          pushName: msg.pushName || 'User',
+          isGroup: false,
+          command: 'ai',
+        });
+      } catch (e) {
+        console.error('[Auto AI DM Error]', e.message);
+      }
+    }
     return;
   }
 
-  // Non-command messages: Do NOT auto-reply or auto-respond in DMs or groups
   return;
 }
 
