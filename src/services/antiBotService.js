@@ -13,7 +13,7 @@ function ensureDirs() {
 function getAntiBotData() {
   ensureDirs();
   return loadJson(STORAGE_FILE, {
-    enabled: true,
+    enabled: false,
     blockedBots: [],
     logs: [],
   });
@@ -25,7 +25,7 @@ function saveAntiBotData(data) {
 
 function isAntiBotEnabled() {
   var data = getAntiBotData();
-  return data.enabled !== false;
+  return data.enabled === true;
 }
 
 function setAntiBotEnabled(enabled) {

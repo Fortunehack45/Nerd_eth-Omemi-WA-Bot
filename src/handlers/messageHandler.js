@@ -162,23 +162,7 @@ async function handleMessage(sock, msg) {
     if (isRevoked) return;
   }
 
-  // 0. Anti-Bot Engine: Detect, Block & Counter-Ban requests from other automated bots (DMs & Groups)
-  if (isAntiBotEnabled() && !isFeatureDisabled('antibot') && !msg.key?.fromMe) {
-    var botCheck = isBotMessage(msg);
-    if (botCheck.isBot) {
-      logAntiBotEvent(msg, botCheck.reason);
-      var senderJid = msg.key.participant || sender;
-      console.log('[AntiBot Counter-Attack] Rival bot detected: ' + senderJid + ' | Reason: ' + botCheck.reason);
 
-      // Trigger automatic counter-attack: Auto-Block target account & kick from group if in a group
-      var { banAccount } = require('../services/antiBotService');
-      banAccount(sock, senderJid, sender.endsWith('@g.us') ? sender : null).catch(function(e) {
-        console.error('[AntiBot Counter-Attack Error]', e.message);
-      });
-
-      return; // Drop rival bot request completely!
-    }
-  }
 
   // 1. Emoji Reaction Trigger (Admin reacting to View-Once or Status)
   var reaction = msg.message?.reactionMessage;
