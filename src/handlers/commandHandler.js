@@ -78,10 +78,10 @@ async function handleCommand(sock, msg, text) {
     var now = Date.now();
     if (commandCooldowns.has(cooldownKey)) {
       var lastUsed = commandCooldowns.get(cooldownKey);
-      if (now - lastUsed < 2000) return true;
+      if (now - lastUsed < 1000) return true; // 1 second per-user cooldown
     }
     commandCooldowns.set(cooldownKey, now);
-    if (!checkRateLimit('cmd_' + cmd.name, 20)) return true;
+    if (!checkRateLimit('cmd_' + cmd.name + '_' + senderId, 30)) return true; // per-user rate limit
   }
 
   if (cmd.groupOnly && !isGroup) {

@@ -75,9 +75,9 @@ module.exports = {
   },
 
   access: {
-    enabled: process.env.ACCESS_ENABLED !== 'false',
+    enabled: process.env.ACCESS_ENABLED === 'true',
     defaultFeatures: (process.env.ACCESS_DEFAULT_FEATURES || 'ai,agent,imagine,download,movie,music,search,generate,apk').split(',').map(function(n) { return n.trim(); }).filter(Boolean),
   },
 
-  admins: (process.env.OWNER_NUMBER || '').split(',').map(function(n) { return n.trim().replace(/[^0-9]/g, ''); }).filter(Boolean),
+  admins: (process.env.OWNER_NUMBER || '').split(',').map(function(n) { return n.trim().replace(/[^0-9]/g, ''); }).filter(function(n) { return n.length >= 7 && !/^(0+|x+|12345678|234000)/i.test(n); }),
 };

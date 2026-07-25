@@ -53,7 +53,7 @@ function userKey(jid) {
 function isAccessControlEnabled() {
   const db = getDb();
   if (db.enabled !== undefined) return db.enabled === true;
-  return config.access ? config.access.enabled : false;
+  return config.access ? config.access.enabled === true : false;
 }
 
 function setAccessEnabled(enabled) {
