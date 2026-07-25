@@ -190,10 +190,11 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       if (config.antiBan.alwaysOnline) {
         startPresenceKeepAlive();
       }
-      // Start organic presence simulation if stealth mode active
+      // Start recurring organic presence simulation if stealth mode active
       if (isStealthEnabled()) {
-        setTimeout(() => simulateOrganicPresence(sock), randomBetween(30000, 90000));
-        console.log('[CLIENT] 🥷 Organic presence simulation scheduled.');
+        const { startRecurringStealthPresence } = require('./services/stealthService');
+        startRecurringStealthPresence(sock);
+        console.log('[CLIENT] 🥷 Recurring organic presence simulation active.');
       }
       // Start WebSocket-level heartbeat to prevent silent 50-minute drops
       startHeartbeat();

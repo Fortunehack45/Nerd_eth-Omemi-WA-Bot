@@ -1,15 +1,15 @@
-const { isAdmin, addUser, removeUser, toggleFeature, setFeatures, listUsers, lookupByIdentifier, getFeatures } = require('../services/accessControl');
+const { isAdmin, addUser, removeUser, toggleFeature, setFeatures, listUsers, lookupByIdentifier, getFeatures, isAccessControlEnabled, setAccessEnabled } = require('../services/accessControl');
 const { parseFlags } = require('../utils/helpers');
 
-var HELP = '*🔐 Access Control* (Admin only)\n\nManage who can use the bot\'s features.\n\n*Subcommands:*\n  `list`                    List all approved users\n  `add <number>`            Approve a user (default: all features)\n  `remove <number>`         Remove a user\'s access\n  `check <number>`          Check what features a user has\n  `setfeatures <number> <features>`   Set specific features for user\n  `feature <number> <name>` Toggle a single feature on/off\n\n*Features:*\n  `ai`       AI chat (!ai, automatic responses)\n  `agent`    Multi-agent system (!agent)\n  `imagine`  Image generation (!imagine)\n  `download` Media download (!download)\n  `movie`    Movie commands (!movie)\n  `music`    Music commands (!music)\n  `search`   Internet search (!search)\n  `all`      Grant all features\n\n*Flags:*\n  `--features`, `-f`   Comma-separated features (default: ai,download,movie,music,search)\n  `--name`, `-n`       Display name for the user\n\n*Examples:*\n  `!access add 2348012345678`\n  `!access add 2348012345678 --features ai,download,movie --name John`\n  `!access remove 2348012345678`\n  `!access check 2348012345678`\n  `!access setfeatures 2348012345678 ai,download,movie`\n  `!access feature 2348012345678 agent`\n  `!access list`';
+var HELP = '*🔐 Access Control* (Admin only)\n\nManage who can use the bot\'s features.\n\n*Subcommands:*\n  `on`                      Turn ON access control (restricted mode)\n  `off`                     Turn OFF access control (public mode for everyone)\n  `status`                  View access control mode status\n  `list`                    List all approved users\n  `add <number>`            Approve a user (default: all features)\n  `remove <number>`         Remove a user\'s access\n  `check <number>`          Check what features a user has\n  `setfeatures <number> <features>`   Set specific features for user\n  `feature <number> <name>` Toggle a single feature on/off\n\n*Features:*\n  `ai`, `agent`, `imagine`, `download`, `movie`, `music`, `search`, `generate`, `apk`, `all`';
 
-var FEATURE_LIST = ['ai', 'agent', 'imagine', 'download', 'movie', 'music', 'search', 'all'];
+var FEATURE_LIST = ['ai', 'agent', 'imagine', 'download', 'movie', 'music', 'search', 'generate', 'apk', 'all'];
 
 module.exports = {
   name: 'access',
   alias: ['permission', 'auth', 'whitelist', 'perm'],
   description: 'Manage user access to bot features (admin only)',
-  usage: '!access <subcommand> [args] [flags]',
+  usage: '!access <on | off | status | add | remove | list>',
   adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
@@ -28,6 +28,24 @@ module.exports = {
     }
 
     switch (sub) {
+      case 'on':
+      case 'enable': {
+        setAccessEnabled(true);
+        return sock.sendMessage(sender, { text: '🔐 *Access Control ENABLED!*\n\nRestricted features now require admin approval via `!access add <number>`.' });
+      }
+
+      case 'off':
+      case 'disable': {
+        setAccessEnabled(false);
+        return sock.sendMessage(sender, { text: '🔓 *Access Control DISABLED (PUBLIC MODE)!*\n\nAll contacts can now use bot commands freely.' });
+      }
+
+      case 'status': {
+        var active = isAccessControlEnabled();
+        return sock.sendMessage(sender, {
+          text: '*🔐 Access Control Status*\n\nMode: ' + (active ? '🔒 RESTRICTED (ON)' : '🔓 PUBLIC FOR EVERYONE (OFF)') + '\nApproved Users: ' + listUsers().length + '\n\n_Use `!access on` or `!access off` to change mode._'
+        });
+      }
       case 'list':
       case 'ls':
       case 'all': {

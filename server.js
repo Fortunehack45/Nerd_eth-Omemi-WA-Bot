@@ -357,9 +357,17 @@ function getDashboardUrl() {
 function startSelfPing() {
   var http = require('http');
   var https = require('https');
-  var pingIntervalMs = 5 * 60 * 1000; // 5 minutes
+  var pingIntervalMs = 3 * 60 * 1000; // 3 minutes (Render sleeps at 15m)
 
   setInterval(function() {
+    var port = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+
+    // 1. Internal Loopback Ping (keeps process event loop active inside container)
+    try {
+      http.get('http://127.0.0.1:' + port + '/ping', function(res) {}).on('error', function(e) {});
+    } catch (e) {}
+
+    // 2. External Hostname Ping (prevents Render Free Web Service idle sleep)
     var selfUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
     if (!selfUrl && process.env.RENDER_SERVICE_NAME) {
       selfUrl = 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com';
@@ -368,10 +376,16 @@ function startSelfPing() {
 
     try {
       var pingTarget = selfUrl.replace(/\/$/, '') + '/ping';
-      var requester = pingTarget.startsWith('https') ? https : http;
-      requester.get(pingTarget, function(res) {
-        console.log('[24/7 SELF-PING] Pinged server (' + res.statusCode + ')');
-      }).on('error', function(e) {});
+      if (pingTarget.startsWith('https')) {
+        var options = { rejectUnauthorized: false, headers: { 'User-Agent': 'Render-247-KeepAlive/2.0' } };
+        https.get(pingTarget, options, function(res) {
+          console.log('[24/7 SELF-PING] Pinged public endpoint (' + res.statusCode + ')');
+        }).on('error', function(e) {});
+      } else {
+        http.get(pingTarget, function(res) {
+          console.log('[24/7 SELF-PING] Pinged public endpoint (' + res.statusCode + ')');
+        }).on('error', function(e) {});
+      }
     } catch (e) {}
   }, pingIntervalMs);
 }

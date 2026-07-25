@@ -83,31 +83,48 @@ function setRuntimeKey(providerName, key) {
 }
 
 async function fetchFreeAI(messages) {
+  var userMsg = messages[messages.length - 1]?.content || 'Hello';
+  var sysMsg = messages.find(m => m.role === 'system')?.content || 'You are a helpful AI assistant.';
+
+  // 1. Popcat Chatbot API (Fast, zero setup)
   try {
-    var userMsg = messages[messages.length - 1]?.content || 'Hello';
-    var sysMsg = messages.find(m => m.role === 'system')?.content || 'You are a helpful AI assistant.';
-    
-    // Primary free endpoint: Pollinations AI
+    var pUrl = 'https://api.popcat.xyz/chatbot?msg=' + encodeURIComponent(userMsg) + '&owner=' + encodeURIComponent(config.botName || 'Nerd') + '&botname=' + encodeURIComponent(config.botName || 'Nerd-eth');
+    var pResp = await axios.get(pUrl, { timeout: 10000 });
+    if (pResp.data && pResp.data.response && typeof pResp.data.response === 'string' && pResp.data.response.trim().length > 0) {
+      return { text: pResp.data.response.trim(), success: true };
+    }
+  } catch (e) {}
+
+  // 2. Simtalk Free AI API
+  try {
+    var sResp = await axios.post('https://api.simsimi.vn/v1/simtalk', 'text=' + encodeURIComponent(userMsg) + '&lc=en', {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout: 10000
+    });
+    if (sResp.data && sResp.data.message && typeof sResp.data.message === 'string' && sResp.data.message.trim().length > 0) {
+      return { text: sResp.data.message.trim(), success: true };
+    }
+  } catch (e2) {}
+
+  // 3. Pollinations AI POST
+  try {
     var payload = {
       messages: [{ role: 'system', content: sysMsg }, { role: 'user', content: userMsg }],
       model: 'openai'
     };
-    var pResp = await axios.post('https://text.pollinations.ai/', payload, { timeout: 15000 });
-    if (pResp.data && typeof pResp.data === 'string' && pResp.data.trim().length > 0 && !pResp.data.includes('Error')) {
-      return { text: pResp.data.trim(), success: true };
+    var polResp = await axios.post('https://text.pollinations.ai/', payload, {
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    if (polResp.data && typeof polResp.data === 'string' && polResp.data.trim().length > 0 && !polResp.data.includes('Error') && !polResp.data.includes('402')) {
+      return { text: polResp.data.trim(), success: true };
     }
-  } catch (e) {}
+  } catch (e3) {}
 
-  // Fallback free endpoint: Pollinations GET interface
-  try {
-    var userText = encodeURIComponent(messages[messages.length - 1]?.content || 'Hello');
-    var gResp = await axios.get('https://text.pollinations.ai/' + userText, { timeout: 15000 });
-    if (gResp.data && typeof gResp.data === 'string' && gResp.data.trim().length > 0) {
-      return { text: gResp.data.trim(), success: true };
-    }
-  } catch (e2) {}
-
-  return { text: '⚠️ AI is currently busy. Please try again in a few seconds.', success: false };
+  return { text: '⚠️ Built-in AI is currently busy. Please try again in a moment or set an API key with `!setkey groq <your_key>`.', success: false };
 }
 
 async function chatComplete(messages, modelOverride) {

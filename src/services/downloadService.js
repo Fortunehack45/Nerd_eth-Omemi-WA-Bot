@@ -860,22 +860,75 @@ async function downloadTwitterVideo(url) {
 
 async function downloadFacebookVideo(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'facebook_' + Date.now() + '.mp4');
+  var ts = Date.now();
+  var fp = path.join(tempDir, 'facebook_' + ts + '.mp4');
+  var outPatternFb = path.join(tempDir, 'facebook_' + ts + '.%(ext)s');
+  var expectedMp4Fb = path.join(tempDir, 'facebook_' + ts + '.mp4');
 
-  // API 1: Cobalt
+  // Engine 1: Native yt-dlp Executable (HD, reliable)
+  try {
+    log('Facebook — trying native yt-dlp...');
+    var resYtFb = await runYtDlp([
+      '-f', 'b[ext=mp4]/b/best',
+      '-o', outPatternFb,
+      '--no-playlist',
+      '--no-warnings',
+      '--no-check-certificate',
+      url
+    ], 35000);
+
+    if (fs.existsSync(expectedMp4Fb)) {
+      var stYtFb = fs.statSync(expectedMp4Fb);
+      if (stYtFb.size > 5000) {
+        log('Facebook — yt-dlp success (' + (stYtFb.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: expectedMp4Fb, title: 'Facebook Video', size: stYtFb.size, author: 'Facebook' };
+      }
+    }
+
+    var filesFb = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('facebook_' + ts); });
+    if (filesFb.length > 0) {
+      var fpFb0 = path.join(tempDir, filesFb[0]);
+      var stFb1 = fs.statSync(fpFb0);
+      if (stFb1.size > 5000) {
+        log('Facebook — yt-dlp file success (' + (stFb1.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpFb0, title: 'Facebook Video', size: stFb1.size, author: 'Facebook' };
+      }
+    }
+  } catch (e) { log('Facebook yt-dlp fail: ' + e.message); }
+
+  // Engine 2: btch-downloader Facebook API
+  try {
+    log('Facebook — trying btch-downloader...');
+    var { fbdown: btchFb } = require('btch-downloader');
+    var fbRes = await btchFb(url);
+    if (fbRes && (fbRes.HD || fbRes.SD || fbRes.normal || (Array.isArray(fbRes) && fbRes.length > 0))) {
+      var directFbUrl = fbRes.HD || fbRes.SD || fbRes.normal || (Array.isArray(fbRes) ? fbRes[0].url || fbRes[0] : null);
+      if (typeof directFbUrl === 'string' && directFbUrl.startsWith('http')) {
+        var stBtchFb = await downloadStream(directFbUrl, fp);
+        if (stBtchFb.size > 5000) {
+          log('Facebook — btch-downloader success (' + (stBtchFb.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fp, title: 'Facebook Video', size: stBtchFb.size, author: 'Facebook' };
+        }
+      }
+    }
+  } catch (e) { log('Facebook btch-downloader fail: ' + e.message); }
+
+  // Engine 3: Cobalt API
   try {
     log('Facebook — trying Cobalt...');
     var cobalt = await cobaltRequest(url, false);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
+        log('Facebook — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
         return { success: true, filePath: fp, title: 'Facebook Video', size: stC.size, author: 'Facebook' };
       }
     }
   } catch (e) { log('Facebook Cobalt fail: ' + e.message); }
 
   safeUnlink(fp);
-  return { error: 'Facebook video download failed.' };
+  safeUnlink(expectedMp4Fb);
+  return { error: 'Facebook video download failed. Make sure the post or reel is public.' };
 }
 
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
@@ -886,6 +939,7 @@ async function processLink(url) {
     case 'youtube': return { platform: 'youtube', title: 'YouTube Video', url: url };
     case 'tiktok': { var ti = await downloadTikTokVideo(url); return ti.success ? { platform: 'tiktok', title: ti.title, downloadUrl: null } : ti; }
     case 'instagram': { var ii = await downloadInstagramMedia(url); return ii.success ? { platform: 'instagram', title: ii.title } : ii; }
+    case 'facebook': { var fi = await downloadFacebookVideo(url); return fi.success ? { platform: 'facebook', title: fi.title } : fi; }
     case 'spotify': return { platform: 'spotify', title: 'Spotify Track', url: url };
     default: return { error: 'Unsupported platform: ' + platform };
   }
@@ -897,6 +951,7 @@ async function downloadMedia(url) {
     case 'youtube': return await getYouTubeVideo(url);
     case 'tiktok': return await downloadTikTokVideo(url);
     case 'instagram': return await downloadInstagramMedia(url);
+    case 'facebook': return await downloadFacebookVideo(url);
     case 'twitter': return await downloadTwitterVideo(url);
     case 'facebook': return await downloadFacebookVideo(url);
     default: return { error: 'No video download available for: ' + platform };

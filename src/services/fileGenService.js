@@ -22,6 +22,13 @@ function generateMd(content, filename) {
   return { success: true, filePath: filePath, filename: filename + '.md' };
 }
 
+function sanitizeForPdf(str) {
+  if (!str) return '';
+  // Strip emojis and non-WinAnsi characters that cause PDFKit font crashes
+  return str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '')
+            .replace(/[^\x00-\x7F]/g, function(ch) { return ch === '•' ? '•' : ''; });
+}
+
 async function generatePdf(content, filename) {
   try {
     var PDFDocument = require('pdfkit');
@@ -31,7 +38,8 @@ async function generatePdf(content, filename) {
     var stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    var lines = content.split('\n');
+    var cleanContent = sanitizeForPdf(content);
+    var lines = cleanContent.split('\n');
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
       if (line.startsWith('# ')) {

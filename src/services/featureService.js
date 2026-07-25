@@ -3,7 +3,7 @@ const { loadJson, saveJson } = require('../utils/helpers');
 
 const FEATURE_FILE = path.join(__dirname, '..', '..', 'storage', 'features.json');
 const PROTECTED_COMMANDS = ['disable', 'enable', 'disabled', 'toggle', 'togglefeature', 'access', 'setkey', 'help', 'ping'];
-const KNOWN_FEATURES = ['schedule', 'ai', 'status', 'viewonce', 'antibot', 'stealth'];
+const KNOWN_FEATURES = ['schedule', 'ai', 'agent', 'status', 'viewonce', 'antibot', 'stealth', 'download', 'generate', 'movie', 'music', 'search', 'apk', 'access'];
 
 function normalizeKey(str) {
   if (!str) return '';
@@ -14,11 +14,15 @@ function resolveCommandName(name) {
   var key = normalizeKey(name);
   if (!key) return '';
   try {
-    var commandHandler = require('../handlers/commandHandler');
-    if (commandHandler && typeof commandHandler.getCommandByName === 'function') {
-      var cmdObj = commandHandler.getCommandByName(key);
-      if (cmdObj && cmdObj.name) {
-        return cmdObj.name.toLowerCase();
+    // Avoid top-level circular dependency by using process.mainModule or late require
+    var cmdHandlerPath = path.join(__dirname, '..', 'handlers', 'commandHandler');
+    if (require.cache[require.resolve(cmdHandlerPath)]) {
+      var commandHandler = require(cmdHandlerPath);
+      if (commandHandler && typeof commandHandler.getCommandByName === 'function') {
+        var cmdObj = commandHandler.getCommandByName(key);
+        if (cmdObj && cmdObj.name) {
+          return cmdObj.name.toLowerCase();
+        }
       }
     }
   } catch (e) {}

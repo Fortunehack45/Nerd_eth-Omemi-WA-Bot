@@ -175,18 +175,35 @@ function calcReadDelay(messageText) {
  * Simulate organic online/offline presence toggling.
  * Prevents the constant "always online" pattern that flags bots.
  */
+var stealthPresenceTimer = null;
+
 async function simulateOrganicPresence(sock) {
   if (!sock || !sock.user?.id) return;
   var cfg = getStealthConfig();
-  if (!cfg.enabled || !cfg.onlineStatusRandomize) return;
+  if (!cfg.enabled) return;
 
   try {
     var pattern = PRESENCE_PATTERNS[randomBetween(0, PRESENCE_PATTERNS.length - 1)];
     for (var i = 0; i < pattern.length; i++) {
       await sock.sendPresenceUpdate(pattern[i], 'status@broadcast');
-      await new Promise(r => setTimeout(r, randomBetween(3000, 15000)));
+      await new Promise(r => setTimeout(r, randomBetween(2000, 6000)));
     }
   } catch (e) {}
+}
+
+function startRecurringStealthPresence(sock) {
+  if (stealthPresenceTimer) clearInterval(stealthPresenceTimer);
+  if (!sock) return;
+
+  // Run initial organic presence simulation
+  simulateOrganicPresence(sock).catch(function() {});
+
+  // Schedule recurring presence spoofing every 5 to 10 minutes
+  stealthPresenceTimer = setInterval(function() {
+    if (isStealthEnabled()) {
+      simulateOrganicPresence(sock).catch(function() {});
+    }
+  }, randomBetween(300000, 600000));
 }
 
 // ─── Stealth Wrapper for sendMessage ────────────────────────────────────────
@@ -250,6 +267,7 @@ module.exports = {
   calcHumanTypingDelay,
   calcReadDelay,
   simulateOrganicPresence,
+  startRecurringStealthPresence,
   stealthSend,
   getStealthStats,
 };

@@ -61,23 +61,15 @@ function getBlockedBots() {
   return data.blockedBots || [];
 }
 
-// Bot signature patterns — ONLY match clearly automated prefixes
-// NOTE: 3EB is the standard WhatsApp Web prefix, NOT a bot signature
+// Bot signature patterns — ONLY match explicit spam bot payloads
+// NOTE: 3EB and BAE5 can appear on normal Baileys messages; avoid broad regexes
 const BOT_ID_PATTERNS = [
-  /^BAE5/i,  // Baileys default ID prefix (strong signal)
-  /^BOT/i,   // Popular bot frameworks
+  /^SPAMBOT/i,
 ];
 
 const BOT_TEXT_SIGNATURES = [
-  /powered by.*bot/i,
-  /whatsapp bot/i,
-  /\[bot\]/i,
-  /🤖 bot response/i,
-  /auto-reply/i,
-  /type !help for menu/i,
-  /command list:/i,
-  /created by @/i,
-  /md bot/i,
+  /\[AUTOMATED_SPAM_BOT\]/i,
+  /🤖 \*AUTO-BOT SPAM BROADCAST\*/i,
 ];
 
 function isBotMessage(msg) {
@@ -110,21 +102,20 @@ function isBotMessage(msg) {
     || msg.message?.videoMessage?.caption
     || '';
 
-  // 2. Check message ID signature (e.g. Baileys / automated bot prefixes)
+  // 2. Check message ID signature (e.g. explicit spam bot ID patterns)
   for (var i = 0; i < BOT_ID_PATTERNS.length; i++) {
     if (BOT_ID_PATTERNS[i].test(msgId)) {
-      // Auto-add to blocked bots database to prevent future spam
       addBlockedBot(senderNum);
       return { isBot: true, reason: 'Automated Bot ID pattern detected (' + msgId.substring(0, 8) + ')' };
     }
   }
 
-  // 3. Check for bot text signatures in message body
+  // 3. Check for explicit bot spam signatures in message body
   if (messageText) {
     for (var j = 0; j < BOT_TEXT_SIGNATURES.length; j++) {
       if (BOT_TEXT_SIGNATURES[j].test(messageText)) {
         addBlockedBot(senderNum);
-        return { isBot: true, reason: 'Bot text signature detected in message' };
+        return { isBot: true, reason: 'Explicit bot spam signature detected in message' };
       }
     }
   }

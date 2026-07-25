@@ -50,8 +50,22 @@ function userKey(jid) {
   return parseJid(jid);
 }
 
+function isAccessControlEnabled() {
+  const db = getDb();
+  if (db.enabled !== undefined) return db.enabled === true;
+  return config.access ? config.access.enabled : false;
+}
+
+function setAccessEnabled(enabled) {
+  const db = getDb();
+  db.enabled = !!enabled;
+  saveDb(db);
+  config.access.enabled = !!enabled;
+  return db.enabled;
+}
+
 function isApproved(jid) {
-  if (!config.access.enabled) return true;
+  if (!isAccessControlEnabled()) return true;
   if (isAdmin(jid)) return true;
   const db = getDb();
   const key = userKey(jid);
@@ -59,7 +73,7 @@ function isApproved(jid) {
 }
 
 function canUse(jid, feature) {
-  if (!config.access.enabled) return true;
+  if (!isAccessControlEnabled()) return true;
   if (isAdmin(jid)) return true;
   const db = getDb();
   const key = userKey(jid);
@@ -152,4 +166,6 @@ module.exports = {
   toggleFeature,
   listUsers,
   lookupByIdentifier,
+  isAccessControlEnabled,
+  setAccessEnabled,
 };

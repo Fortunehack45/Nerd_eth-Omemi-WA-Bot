@@ -40,7 +40,8 @@ function generateId() {
 function createSchedule(name, type, timeConfig, message, target) {
   var schedules = getSchedules();
   var id = generateId();
-  var formattedTarget = cleanTargetJid(target, (config.ownerNumber || '') + '@s.whatsapp.net');
+  var defaultOwner = config.ownerNumber ? (config.ownerNumber.replace(/[^0-9]/g, '') + '@s.whatsapp.net') : (sockRef?.user?.id || '');
+  var formattedTarget = cleanTargetJid(target, defaultOwner);
 
   var schedule = {
     id: id,

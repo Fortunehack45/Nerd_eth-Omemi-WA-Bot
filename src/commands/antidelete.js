@@ -57,13 +57,32 @@ module.exports = {
       return sock.sendMessage(sender, { text: text, mentions: recent.map(r => r.sender + '@s.whatsapp.net') });
     }
 
+    if (sub === 'chat' || sub === 'notifychat') {
+      var cfg = getConfig();
+      var newNotify = !cfg.notifyChat;
+      setAntiDeleteEnabled(cfg.enabled, { notifyChat: newNotify });
+      return sock.sendMessage(sender, {
+        text: '📢 *Notify Source Chat:* ' + (newNotify ? '✅ ENABLED (Recovered messages will be posted in the chat)' : '❌ DISABLED (Recovered messages will only be sent to owner self-chat)')
+      });
+    }
+
+    if (sub === 'owner' || sub === 'forward') {
+      var cfg = getConfig();
+      var newOwner = !cfg.forwardToOwner;
+      setAntiDeleteEnabled(cfg.enabled, { forwardToOwner: newOwner });
+      return sock.sendMessage(sender, {
+        text: '👤 *Forward to Owner Self-Chat:* ' + (newOwner ? '✅ ENABLED' : '❌ DISABLED')
+      });
+    }
+
     // Default: status
     var currentCfg = getConfig();
     var statusText = '*🗑️ Anti-Delete Status*\n\n';
     statusText += '⚡ *Status:* ' + (currentCfg.enabled ? '✅ ACTIVE (ON)' : '❌ INACTIVE (OFF)') + '\n';
     statusText += '📊 *Total Recovered:* ' + (currentCfg.savedCount || 0) + ' messages\n';
-    statusText += '📥 *Forward to Owner:* ' + (currentCfg.forwardToOwner ? 'YES' : 'NO') + '\n\n';
-    statusText += '_Use `!antidel on` or `!antidel off` to toggle._';
+    statusText += '📥 *Forward to Owner Self-Chat:* ' + (currentCfg.forwardToOwner ? 'YES' : 'NO') + '\n';
+    statusText += '📢 *Post in Source Chat:* ' + (currentCfg.notifyChat ? 'YES' : 'NO') + '\n\n';
+    statusText += '_Subcommands: `!antidel on`, `!antidel off`, `!antidel chat`, `!antidel owner`, `!antidel list`_';
 
     return sock.sendMessage(sender, { text: statusText });
   },
