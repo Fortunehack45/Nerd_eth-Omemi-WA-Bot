@@ -5,8 +5,7 @@ module.exports = {
   alias: ['draw', 'img', 'image', 'dalle'],
   description: 'Generate an image from text description using AI',
   usage: '!imagine <description> [--size 1024x1024] [--count N]',
-  restricted: true,
-  restrictedFeature: 'imagine',
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
 

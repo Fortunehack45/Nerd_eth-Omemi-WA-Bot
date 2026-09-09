@@ -42,14 +42,14 @@ module.exports = {
   },
 
   antiBan: {
-    enabled: process.env.ANTI_BAN_ENABLED !== 'false',
+    enabled: process.env.ANTI_BAN_ENABLED === 'true', // Disabled by default for instant command response
     alwaysOnline: process.env.ALWAYS_ONLINE !== 'false',
-    maxMessagesPerChat: parseInt(process.env.MAX_MESSAGES_PER_CHAT) || 20,
-    maxBroadcastPerHour: parseInt(process.env.MAX_BROADCAST_PER_HOUR) || 2,
+    maxMessagesPerChat: parseInt(process.env.MAX_MESSAGES_PER_CHAT) || 100,
+    maxBroadcastPerHour: parseInt(process.env.MAX_BROADCAST_PER_HOUR) || 20,
     statusIntervalMin: parseInt(process.env.STATUS_INTERVAL_MIN) || 180,
-    humanTyping: process.env.HUMAN_TYPING !== 'false',
-    randomDelays: process.env.RANDOM_DELAYS !== 'false',
-    safeMode: process.env.SAFE_MODE !== 'false',
+    humanTyping: process.env.HUMAN_TYPING === 'true', // Zero typing lag
+    randomDelays: process.env.RANDOM_DELAYS === 'true',
+    safeMode: process.env.SAFE_MODE === 'true',
   },
 
   agentRouter: {

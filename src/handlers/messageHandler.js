@@ -146,11 +146,15 @@ function hasEmojiMatch(text, emojiListNorm) {
 async function handleMessage(sock, msg) {
   var sender = msg.key.remoteJid;
   var isPrivate = !sender.endsWith('@g.us');
-  var messageText = msg.message?.conversation
+  var inner = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message?.documentWithCaptionMessage?.message || msg.message;
+  var messageText = inner?.conversation
+    || inner?.extendedTextMessage?.text
+    || inner?.imageMessage?.caption
+    || inner?.videoMessage?.caption
+    || inner?.documentMessage?.caption
+    || inner?.reactionMessage?.text
+    || msg.message?.conversation
     || msg.message?.extendedTextMessage?.text
-    || msg.message?.imageMessage?.caption
-    || msg.message?.videoMessage?.caption
-    || msg.message?.reactionMessage?.text
     || '';
 
   // Anti-Delete Engine: Cache incoming message & handle Delete for Everyone (revoke)
@@ -348,11 +352,12 @@ async function handleMessage(sock, msg) {
     addToConversation(sender, 'user', messageText);
   }
 
-  // 6. Handle commands (with prefix '!' or emoji shortcuts with/without prefix)
-  var isCmd = isCommand(messageText);
+  // 6. Handle commands (with prefix '!' or emoji shortcuts or prefixless commands)
+  var trimmed = messageText.trim();
+  var isCmd = isCommand(trimmed);
 
   if (isCmd) {
-    var cmdText = messageText.slice(config.prefix.length).trim();
+    var cmdText = trimmed.slice(config.prefix.length).trim();
     var firstChar = Array.from(cmdText)[0] || '';
     // Only map emoji shortcut if the command starts with an emoji symbol
     if (firstChar && EMOJI_NORMALIZED_MAP.has(firstChar)) {
@@ -364,16 +369,28 @@ async function handleMessage(sock, msg) {
     }
     await handleCommand(sock, msg, cmdText);
     return;
-  } else if (!msg.key?.fromMe) {
-    var emojiCmd = getEmojiCommand(messageText);
-    if (emojiCmd) {
-      var trimmedMsg = messageText.trim();
-      var firstSymbol = Array.from(trimmedMsg)[0] || '';
-      var restArgs = trimmedMsg.slice(firstSymbol.length).trim();
-      var fullCmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
-      await handleCommand(sock, msg, fullCmdText);
-      return;
-    }
+  }
+
+  // Support prefixless commands for admin and users (e.g. getpp, get pp, ping, help)
+  var lowerTrimmed = trimmed.toLowerCase();
+  if (lowerTrimmed === 'getpp' || lowerTrimmed.startsWith('getpp ') || lowerTrimmed === 'get pp' || lowerTrimmed.startsWith('get pp ')) {
+    var rest = lowerTrimmed.replace(/^get\s*pp\s*/i, '').trim();
+    await handleCommand(sock, msg, 'getpp' + (rest ? ' ' + rest : ''));
+    return;
+  }
+  if (lowerTrimmed === 'ping' || lowerTrimmed === 'help') {
+    await handleCommand(sock, msg, lowerTrimmed);
+    return;
+  }
+
+  // Emoji shortcuts (works for both owner and users)
+  var emojiCmd = getEmojiCommand(trimmed);
+  if (emojiCmd) {
+    var firstSymbol = Array.from(trimmed)[0] || '';
+    var restArgs = trimmed.slice(firstSymbol.length).trim();
+    var fullCmdText = emojiCmd + (restArgs ? ' ' + restArgs : '');
+    await handleCommand(sock, msg, fullCmdText);
+    return;
   }
 
   // 7. Auto-AI response in private DM for non-command text messages (DISABLED by default)

@@ -39,7 +39,7 @@ module.exports = {
   alias: ['vo', 'saved', 'rvo', 'readviewonce', 'vv', 'reveal', 'getvo'],
   description: 'Manage and retrieve saved view-once media directly to your DM',
   usage: '!viewonce [show|list|delete|stats] [id] or reply with !vv',
-  adminOnly: false,
+  adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
     var senderId = ctx.senderId;

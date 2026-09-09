@@ -357,7 +357,7 @@ function getDashboardUrl() {
 function startSelfPing() {
   var http = require('http');
   var https = require('https');
-  var pingIntervalMs = 3 * 60 * 1000; // 3 minutes (Render sleeps at 15m)
+  var pingIntervalMs = 2 * 60 * 1000; // 2 minutes (Render sleeps at 15m)
 
   setInterval(function() {
     var port = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
@@ -372,7 +372,9 @@ function startSelfPing() {
     if (!selfUrl && process.env.RENDER_SERVICE_NAME) {
       selfUrl = 'https://' + process.env.RENDER_SERVICE_NAME + '.onrender.com';
     }
-    if (!selfUrl) return;
+    if (!selfUrl) {
+      selfUrl = 'https://nerd-eth-omemi-wa-bot-n540.onrender.com';
+    }
 
     try {
       var pingTarget = selfUrl.replace(/\/$/, '') + '/ping';

@@ -13,8 +13,7 @@ module.exports = {
   alias: ['ask', 'chat', 'gpt'],
   description: 'Chat with AI assistant. The bot remembers what it learns about you.',
   usage: '!ai <your question>',
-  restricted: true,
-  restrictedFeature: 'ai',
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
     var isPrivate = ctx.isGroup === false;

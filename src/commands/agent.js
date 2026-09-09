@@ -5,8 +5,7 @@ module.exports = {
   alias: ['agents', 'multiagent'],
   description: 'Manage AI agents for task execution',
   usage: '!agent create <name> <role> | !agent list | !agent ask <name> <task> | !agent kill <name> | !agent killall | !agent all <task>',
-  restricted: true,
-  restrictedFeature: 'agent',
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     const sender = ctx.sender;
     if (!args) {

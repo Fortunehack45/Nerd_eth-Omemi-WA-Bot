@@ -28,7 +28,7 @@ module.exports = {
   alias: ['pfp', 'profilepic', 'avatar', 'pp', '🖼️', '📷'],
   description: 'Fetch and send the profile picture of any contact, group, or tagged user',
   usage: '!getpp [@user | reply | phone_number | group | me]',
-  adminOnly: false,
+  adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
     var senderId = ctx.senderId;
@@ -36,24 +36,26 @@ module.exports = {
     var botJid = sock?.user?.id || sock?.user?.jid || '';
     var targetJid = null;
 
-    // Extract contextInfo from message payload if present
-    var contextInfo = msg.message?.extendedTextMessage?.contextInfo ||
-                      msg.message?.imageMessage?.contextInfo ||
-                      msg.message?.videoMessage?.contextInfo ||
-                      msg.message?.documentMessage?.contextInfo ||
-                      msg.message?.stickerMessage?.contextInfo ||
-                      msg.message?.audioMessage?.contextInfo;
+    // Extract contextInfo from message payload if present (including ephemeral wrappers)
+    var inner = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message;
+    var contextInfo = inner?.extendedTextMessage?.contextInfo ||
+                      inner?.imageMessage?.contextInfo ||
+                      inner?.videoMessage?.contextInfo ||
+                      inner?.documentMessage?.contextInfo ||
+                      inner?.stickerMessage?.contextInfo ||
+                      inner?.audioMessage?.contextInfo ||
+                      msg.message?.extendedTextMessage?.contextInfo;
 
     var mentionedJids = contextInfo?.mentionedJid || ctx.mentionedJids || [];
     var quotedParticipant = contextInfo?.participant || ctx.quoted?.participant || ctx.quoted?.key?.participant;
 
-    // 1. Check mentioned JIDs
-    if (mentionedJids && mentionedJids.length > 0) {
-      targetJid = mentionedJids[0];
-    }
-    // 2. Check quoted message participant
-    else if (quotedParticipant) {
+    // 1. Quoted message participant (swiping to reply to a user's message)
+    if (quotedParticipant) {
       targetJid = quotedParticipant;
+    }
+    // 2. Mentioned JIDs (@user tag)
+    else if (mentionedJids && mentionedJids.length > 0) {
+      targetJid = mentionedJids[0];
     }
     // 3. Check text args
     else if (args && args.trim()) {
@@ -69,11 +71,13 @@ module.exports = {
         }
       }
     }
-    // 4. Fallback in group chat: default to caller
+    // 4. In group chat without mention or reply: guide admin on how to target
     else if (isGroup) {
-      targetJid = senderId || sender;
+      return sock.sendMessage(sender, {
+        text: '💡 *How to use !getpp in groups:*\n• Swipe / reply to any user message and type `!getpp`\n• Tag a user: `!getpp @user`\n• Phone number: `!getpp 23480...`\n• Group icon: `!getpp group`\n• Your own profile: `!getpp me`'
+      });
     }
-    // 5. Fallback in private DM: default to sender
+    // 5. Fallback in private DM: default to contact
     else {
       targetJid = sender;
     }

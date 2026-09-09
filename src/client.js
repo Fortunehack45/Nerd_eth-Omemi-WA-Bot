@@ -113,17 +113,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   }
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
+  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1043857760] }));
 
-  // Use stealth rotating fingerprint when stealth mode is active, otherwise use stable macOS Desktop
-  var browser;
-  if (isStealthEnabled()) {
-    var stealthFp = getSessionFingerprint();
-    browser = stealthFp || Browsers.macOS('Desktop');
-    console.log('[CLIENT] 🥷 Stealth fingerprint active:', Array.isArray(browser) ? browser.join(' / ') : browser);
-  } else {
-    browser = Browsers.macOS('Desktop');
-  }
+  var browser = Browsers.ubuntu('Chrome');
 
   sock = makeWASocket({
     version,
@@ -135,7 +127,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     generateHighQualityLink: true,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 25000,      // Ping WA servers every 25s natively
-    connectTimeoutMs: 45000,
+    connectTimeoutMs: 60000,
     qrTimeout: 180000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
@@ -146,12 +138,23 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       if (global.msgStore && global.msgStore.has(key.id)) {
         return global.msgStore.get(key.id);
       }
-      return { conversation: 'Message' };
+      return undefined;
     },
   });
 
   if (!global.msgStore) global.msgStore = new Map();
   if (!global.processedMsgIds) global.processedMsgIds = new Set();
+
+  // Intercept sendMessage to automatically cache all outgoing bot messages for decryption retries
+  const origSendMessage = sock.sendMessage.bind(sock);
+  sock.sendMessage = async (jid, content, options) => {
+    const sent = await origSendMessage(jid, content, options);
+    if (sent?.key?.id && sent?.message) {
+      if (!global.msgStore) global.msgStore = new Map();
+      global.msgStore.set(sent.key.id, sent.message);
+    }
+    return sent;
+  };
 
   startTime = Date.now();
 
@@ -240,22 +243,19 @@ async function startClient(messageHandler, statusHandler, onConnected) {
           m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
         }
 
-        if (m.key?.id && global.msgStore) {
-          if (global.processedMsgIds.has(m.key.id)) continue;
-          global.processedMsgIds.add(m.key.id);
-          if (global.processedMsgIds.size > 3000) {
-            const arr = Array.from(global.processedMsgIds);
-            for (let i = 0; i < 1500; i++) global.processedMsgIds.delete(arr[i]);
-          }
+        if (m.key?.id) {
+          if (!global.msgStore) global.msgStore = new Map();
           global.msgStore.set(m.key.id, m.message);
+          if (global.msgStore.size > 2000) {
+            const keys = Array.from(global.msgStore.keys());
+            for (let i = 0; i < 500; i++) global.msgStore.delete(keys[i]);
+          }
         }
 
         // Cache all messages immediately for anti-delete recovery
         try { cacheMessage(m, sock); } catch (e) {}
 
         var remoteJid = m.key?.remoteJid || '';
-        var isFromMe = m.key?.fromMe;
-        var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
 
         // Status updates
         if (remoteJid === 'status@broadcast') {
@@ -267,22 +267,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
           continue;
         }
 
-        // Admin self-commands: allow owner to send commands to themselves or in any chat
-        if (isFromMe) {
-          var prefix = config.prefix || '!';
-          var { parseJid } = require('./utils/helpers');
-          var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
-          var isSelfChat = remoteJid ? (parseJid(remoteJid) === botNum) : false;
-          var hasPrefix = msgText && msgText.startsWith(prefix);
-          var isReaction = !!m.message?.reactionMessage;
-
-          if (hasPrefix || isReaction || isSelfChat) {
-            try { await messageHandler(sock, m); } catch (eH) { console.error('[MessageHandler Self Error]', eH.message); }
-          }
-          continue;
-        }
-
-        if (config.antiBan.enabled && isDuplicateMessage(m.key?.id)) continue;
+        // Process message (works for both owner commands and other user commands)
         try {
           await messageHandler(sock, m);
         } catch (eH) {

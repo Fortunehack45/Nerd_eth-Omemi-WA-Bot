@@ -106,7 +106,7 @@ async function handleCommand(sock, msg, text) {
     // Check if admin-only command
     if (cmd.adminOnly) {
       var { isAdmin } = require('../services/accessControl');
-      if (!isFromMe && !isAdmin(senderId, isFromMe) && !isAdmin(sender, isFromMe)) {
+      if (!isFromMe && !isAdmin(senderId, isFromMe, sock) && !isAdmin(sender, isFromMe, sock)) {
         await sock.sendMessage(sender, { text: '🔒 This command is for admins only.' });
         return true;
       }
