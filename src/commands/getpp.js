@@ -125,6 +125,22 @@ module.exports = {
         console.log('[getpp Debug] Default query failed for ' + cJid + ':', e3.message);
       }
 
+      // Strategy 4: If @lid failed, try phone JID @s.whatsapp.net
+      if (cJid.endsWith('@lid')) {
+        var numDigits = parseJid(rawJid);
+        if (numDigits && numDigits.length >= 7) {
+          var altJid = numDigits + '@s.whatsapp.net';
+          try {
+            const u = await sock.profilePictureUrl(altJid, 'image');
+            if (u) return { url: u, jid: altJid };
+          } catch (e4) {}
+          try {
+            const u = await sock.profilePictureUrl(altJid, 'preview');
+            if (u) return { url: u, jid: altJid };
+          } catch (e5) {}
+        }
+      }
+
       return null;
     }
 

@@ -17,11 +17,13 @@ var HELP = [
 module.exports = {
   name: 'savestatus',
   alias: ['sw', 'savestory', 'getstatus', 'statusdl', 'swdl', 'save'],
-  description: 'Save and forward WhatsApp status to owner self-chat (admin only)',
+  description: 'Save and forward WhatsApp status directly to your chat or DM',
   usage: '!savestatus (reply to a status message)',
-  adminOnly: true,
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
+    var senderId = ctx.senderId;
+    var isGroup = ctx.isGroup;
 
     if (args === '--help' || args === '-h' || args === 'help') {
       return sock.sendMessage(sender, { text: HELP });
@@ -35,7 +37,7 @@ module.exports = {
 
     if (!quotedMsg) {
       return sock.sendMessage(sender, {
-        text: '⚠️ Please reply to a WhatsApp status update with `!savestatus` or `!sw` or `!save` to save it.\n\n💡 You can also react or reply with a slightly smiling face emoji (`🙂`) to save any status.',
+        text: '⚠️ Please reply to a WhatsApp status update with `!savestatus` or `!sw` or `!save` to save it.\n\n💡 You can also react or reply with a smiling face emoji (`🙂` or `😊`) to save any status.',
       });
     }
 
@@ -45,13 +47,19 @@ module.exports = {
       participant: quotedParticipant || sender,
     };
 
-    var result = await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName);
+    // If used in a group chat, route media to caller's private DM so group isn't spammed
+    var cleanCaller = parseJid(senderId || sender);
+    var targetChat = isGroup && cleanCaller ? (cleanCaller + '@s.whatsapp.net') : sender;
+
+    var result = await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName, targetChat);
     if (!result) {
       return sock.sendMessage(sender, {
         text: '❌ Could not save status from reply. Make sure the quoted message is a valid image, video, audio, or text status.',
       });
     }
 
-    // 100% Silent — Media is delivered directly to owner self-chat!
+    if (isGroup) {
+      await sock.sendMessage(sender, { text: '✅ Status saved! I sent it directly to your DM 📥' });
+    }
   },
 };

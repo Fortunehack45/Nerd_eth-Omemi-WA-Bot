@@ -23,10 +23,10 @@ function detectPlatform(url) {
   if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
   if (u.includes('tiktok.com') || u.includes('vm.tiktok.com')) return 'tiktok';
   if (u.includes('instagram.com') || u.includes('instagr.am')) return 'instagram';
-  if (u.includes('spotify.com')) return 'spotify';
+  if (u.includes('spotify.com') || u.includes('spotify.link')) return 'spotify';
   if (u.includes('twitter.com') || u.includes('x.com')) return 'twitter';
-  if (u.includes('facebook.com') || u.includes('fb.watch')) return 'facebook';
-  if (u.match(/\.(mp4|mp3|webm|avi|mkv|mov)$/i)) return 'direct';
+  if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook';
+  if (u.match(/\.(mp4|mp3|webm|avi|mkv|mov|wav|ogg|m4a|aac)$/i)) return 'direct';
   return 'unknown';
 }
 
@@ -440,6 +440,39 @@ async function downloadTikTokVideo(url) {
       }
     }
   } catch (e) { log('TikTok tikwm fail: ' + e.message); }
+
+  // Engine 3: yt-dlp (Native extractor)
+  try {
+    log('TikTok — trying yt-dlp...');
+    var tsTt = Date.now();
+    var outPatternTt = path.join(tempDir, 'tiktok_ytdlp_' + tsTt + '.%(ext)s');
+    var expectedMp4Tt = path.join(tempDir, 'tiktok_ytdlp_' + tsTt + '.mp4');
+    var resTt = await runYtDlp([
+      '-f', 'b[ext=mp4]/b/best',
+      '-o', outPatternTt,
+      '--no-playlist',
+      '--no-warnings',
+      '--no-check-certificate',
+      url
+    ], 35000);
+
+    if (fs.existsSync(expectedMp4Tt)) {
+      var stYtTt = fs.statSync(expectedMp4Tt);
+      if (stYtTt.size > 10000) {
+        log('TikTok — yt-dlp success (' + (stYtTt.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: expectedMp4Tt, title: 'TikTok Video', size: stYtTt.size, author: 'TikTok' };
+      }
+    }
+    var filesTt = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('tiktok_ytdlp_' + tsTt); });
+    if (filesTt.length > 0) {
+      var fpTt0 = path.join(tempDir, filesTt[0]);
+      var stTt1 = fs.statSync(fpTt0);
+      if (stTt1.size > 10000) {
+        log('TikTok — yt-dlp file success (' + (stTt1.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpTt0, title: 'TikTok Video', size: stTt1.size, author: 'TikTok' };
+      }
+    }
+  } catch (e) { log('TikTok yt-dlp fail: ' + e.message); }
 
   // API 2: Cobalt
   try {
@@ -931,6 +964,26 @@ async function downloadFacebookVideo(url) {
   return { error: 'Facebook video download failed. Make sure the post or reel is public.' };
 }
 
+// ─── DIRECT DOWNLOAD ──────────────────────────────────────────────────────────
+
+async function downloadDirectMedia(url) {
+  var tempDir = ensureTempDir();
+  var parsedPath = url.split('?')[0];
+  var ext = path.extname(parsedPath) || '.mp4';
+  var fp = path.join(tempDir, 'direct_' + Date.now() + ext);
+  try {
+    var st = await downloadStream(url, fp);
+    if (st && st.size > 1000) {
+      return { success: true, filePath: fp, title: path.basename(parsedPath) || 'Direct Media', size: st.size };
+    }
+  } catch (e) {
+    safeUnlink(fp);
+    return { error: 'Direct download failed: ' + e.message };
+  }
+  safeUnlink(fp);
+  return { error: 'Direct download failed.' };
+}
+
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 
 async function processLink(url) {
@@ -941,6 +994,8 @@ async function processLink(url) {
     case 'instagram': { var ii = await downloadInstagramMedia(url); return ii.success ? { platform: 'instagram', title: ii.title } : ii; }
     case 'facebook': { var fi = await downloadFacebookVideo(url); return fi.success ? { platform: 'facebook', title: fi.title } : fi; }
     case 'spotify': return { platform: 'spotify', title: 'Spotify Track', url: url };
+    case 'twitter': { var tw = await downloadTwitterVideo(url); return tw.success ? { platform: 'twitter', title: tw.title } : tw; }
+    case 'direct': return { platform: 'direct', title: path.basename(url.split('?')[0]) || 'Direct Media', downloadUrl: url };
     default: return { error: 'Unsupported platform: ' + platform };
   }
 }
@@ -953,7 +1008,7 @@ async function downloadMedia(url) {
     case 'instagram': return await downloadInstagramMedia(url);
     case 'facebook': return await downloadFacebookVideo(url);
     case 'twitter': return await downloadTwitterVideo(url);
-    case 'facebook': return await downloadFacebookVideo(url);
+    case 'direct': return await downloadDirectMedia(url);
     default: return { error: 'No video download available for: ' + platform };
   }
 }
@@ -964,6 +1019,7 @@ async function downloadAudio(url) {
     case 'youtube': return await getYouTubeAudio(url);
     case 'spotify': return await downloadSpotifyAudio(url);
     case 'tiktok': return await downloadTikTokVideo(url);
+    case 'direct': return await downloadDirectMedia(url);
     default: return { error: 'Audio download not supported for: ' + platform };
   }
 }
@@ -1039,6 +1095,7 @@ module.exports = {
   processLink,
   downloadMedia,
   downloadAudio,
+  downloadDirectMedia,
   // legacy compat
   getYouTubeInfo: async function(url) {
     if (ytdl) { try { return await ytdl.getInfo(url); } catch (e) {} }

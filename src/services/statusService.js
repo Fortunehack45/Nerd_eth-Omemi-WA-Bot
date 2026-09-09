@@ -91,7 +91,7 @@ async function downloadStatusBuffer(sock, targetMsgKey, content) {
   return null;
 }
 
-async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
+async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName, targetRecipient) {
   try {
     ensureDirs();
     var norm = normalizeMessageContent(quotedMsg) || quotedMsg;
@@ -124,7 +124,8 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
     var caption = inner?.caption || norm?.extendedTextMessage?.text || norm?.conversation || '';
 
     var ownerJid = getOwnerJid(sock);
-    if (!ownerJid) return false;
+    var recipient = targetRecipient || ownerJid;
+    if (!recipient) return false;
 
     var timestamp = Date.now();
 
@@ -139,8 +140,8 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
         caption || 'No text content',
       ].join('\n');
 
-      await sock.sendMessage(ownerJid, { text: header });
-      console.log('[StatusSaver] Text status from ' + senderName + ' sent to owner self-chat');
+      await sock.sendMessage(recipient, { text: header });
+      console.log('[StatusSaver] Text status from ' + senderName + ' sent to recipient: ' + recipient);
       return true;
     }
 
@@ -168,12 +169,12 @@ async function saveAndForwardStatus(sock, targetMsgKey, quotedMsg, pushName) {
     ].filter(Boolean).join('\n');
 
     if (mediaType === 'image') {
-      await sock.sendMessage(ownerJid, { image: buffer, caption: statusCaption });
+      await sock.sendMessage(recipient, { image: buffer, caption: statusCaption });
     } else if (mediaType === 'video') {
-      await sock.sendMessage(ownerJid, { video: buffer, caption: statusCaption });
+      await sock.sendMessage(recipient, { video: buffer, caption: statusCaption });
     } else if (mediaType === 'audio') {
-      await sock.sendMessage(ownerJid, { audio: buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
-      await sock.sendMessage(ownerJid, { text: statusCaption });
+      await sock.sendMessage(recipient, { audio: buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true });
+      await sock.sendMessage(recipient, { text: statusCaption });
     }
 
     // Save to index

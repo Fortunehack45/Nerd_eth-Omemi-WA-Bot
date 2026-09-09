@@ -37,15 +37,18 @@ var HELP = [
 module.exports = {
   name: 'viewonce',
   alias: ['vo', 'saved', 'rvo', 'readviewonce', 'vv', 'reveal', 'getvo'],
-  description: 'Manage and retrieve saved view-once media (admin only)',
-  usage: '!viewonce [show|list|delete|stats] [id]',
-  adminOnly: true,
+  description: 'Manage and retrieve saved view-once media directly to your DM',
+  usage: '!viewonce [show|list|delete|stats] [id] or reply with !vv',
+  adminOnly: false,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
-    var ownerJid = getOwnerJid(sock);
-    var targetChat = ownerJid || sender; // Route revealed media directly to owner self-chat!
+    var senderId = ctx.senderId;
     var chatId = msg.key?.remoteJid;
     var isGroup = chatId && chatId.endsWith('@g.us');
+    var { parseJid } = require('../utils/helpers');
+    var cleanCaller = parseJid(senderId || sender);
+    // Route revealed media directly to caller's private chat
+    var targetChat = isGroup && cleanCaller ? (cleanCaller + '@s.whatsapp.net') : sender;
 
     if (args === '--help' || args === '-h' || args === 'help') {
       return sock.sendMessage(sender, { text: HELP });

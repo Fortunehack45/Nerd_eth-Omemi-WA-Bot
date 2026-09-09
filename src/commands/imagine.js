@@ -2,7 +2,7 @@ const { generateImage } = require('../services/aiService');
 
 module.exports = {
   name: 'imagine',
-  alias: ['draw', 'generate', 'img', 'image', 'dalle'],
+  alias: ['draw', 'img', 'image', 'dalle'],
   description: 'Generate an image from text description using AI',
   usage: '!imagine <description> [--size 1024x1024] [--count N]',
   restricted: true,

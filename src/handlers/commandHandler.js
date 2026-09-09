@@ -161,4 +161,4 @@ function getCommandByName(name) {
   return getCommand(name);
 }
 
-module.exports = { loadCommands, handleCommand, getCommandsList, getCommandByName, registerCommand };
+module.exports = { loadCommands, handleCommand, getCommandsList, getCommandByName, getCommand, registerCommand };

@@ -139,7 +139,7 @@ module.exports = {
     if (dlResult.filePath) {
       var fileStat = fs.statSync(dlResult.filePath);
       if (fileStat.size < config.download.maxSize * 1024 * 1024) {
-        var type = ['youtube', 'tiktok', 'instagram', 'twitter'].includes(platform) ? 'video' : 'media';
+        var type = ['youtube', 'tiktok', 'instagram', 'twitter', 'facebook'].includes(platform) ? 'video' : 'media';
         await sock.sendMessage(sender, { text: '✅ Sending media: *' + (dlResult.title || platform) + '*' + (dlResult.quality ? ' (' + dlResult.quality + ')' : '') });
         await sendFile(sock, sender, dlResult.filePath, { title: dlResult.title, type: type, quality: dlResult.quality });
       } else {

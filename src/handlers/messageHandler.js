@@ -171,7 +171,10 @@ async function handleMessage(sock, msg) {
     var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
-      var ownerJid = getOwnerJid(sock) || sender;
+      var { parseJid } = require('../utils/helpers');
+      var callerId = msg.key?.fromMe ? (sock.user?.id || sender) : (reaction.key?.participant || sender);
+      var cleanCallerNum = parseJid(callerId);
+      var ownerJid = cleanCallerNum ? (cleanCallerNum + '@s.whatsapp.net') : (getOwnerJid(sock) || sender);
 
       // View-Once trigger via Emoji Reaction (❤️, 😂, 👍)
       if (hasEmojiMatch(reactionEmoji, VIEWONCE_EMOJIS_NORM)) {
@@ -240,7 +243,10 @@ async function handleMessage(sock, msg) {
     var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
-      var ownerJid = getOwnerJid(sock) || sender;
+      var { parseJid } = require('../utils/helpers');
+      var callerId = msg.key?.fromMe ? (sock.user?.id || sender) : (msg.key?.participant || sender);
+      var cleanCallerNum = parseJid(callerId);
+      var ownerJid = cleanCallerNum ? (cleanCallerNum + '@s.whatsapp.net') : (getOwnerJid(sock) || sender);
       var contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
       var stanzaId = contextInfo.stanzaId;
       var quotedParticipant = contextInfo.participant;

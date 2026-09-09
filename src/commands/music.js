@@ -189,8 +189,8 @@ async function cmdPlay(sock, sender, args, flags) {
   var fs2 = require('fs');
 
   // ── Spotify URL ──────────────────────────────────────────────────────────
-  if (query.includes('spotify.com/track/')) {
-    await sock.sendMessage(sender, { text: '🎵 Downloading Spotify track...\n_Searching YouTube match, please wait..._' });
+  if (query.includes('spotify.com') || query.includes('spotify.link')) {
+    await sock.sendMessage(sender, { text: '🎵 Downloading Spotify track...\n_Fetching metadata & audio, please wait..._' });
     var spResult = await downloadSpotifyAudio(query);
     if (spResult.error) return sock.sendMessage(sender, { text: '❌ ' + spResult.error });
     if (spResult.filePath && fs2.existsSync(spResult.filePath)) {
