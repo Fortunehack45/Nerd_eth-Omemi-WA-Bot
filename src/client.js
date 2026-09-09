@@ -14,48 +14,36 @@ let sock = null;
 let startTime = null;
 let presenceInterval = null;
 let lastQR = null;
-let reconnectAttempts = 0;
-let lastReconnectTime = 0;
-let networkStormDetected = false;
 let consecutiveErrors = 0;
-let isReconnecting = false;
-let failedPingCount = 0;
+let isConnected = false;
+let reconnectTimeout = null;
 
-// Saved references for 24/7 zero-downtime auto-reconnects
+// Saved references for reliable auto-reconnects
 let savedMessageHandler = null;
 let savedStatusHandler = null;
 let savedOnConnected = null;
 
-function triggerSafeReconnect(reason, delayMs) {
-  delayMs = delayMs || 3000;
-  if (isReconnecting) {
-    return;
+function scheduleReconnect(reason, delayMs) {
+  delayMs = typeof delayMs === 'number' ? delayMs : 3000;
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
   }
-  isReconnecting = true;
-  console.log(`[CLIENT WATCHDOG] ⚡ 24/7 Auto-Reconnect triggered: ${reason} (in ${Math.round(delayMs / 1000)}s)`);
-
-  stopHeartbeat();
   stopPresenceKeepAlive();
+  console.log(`[CLIENT] 🔄 Reconnection scheduled: ${reason} (in ${Math.round(delayMs / 1000)}s)`);
 
-  if (sock) {
-    try { sock.ev.removeAllListeners(); } catch (e) {}
-    try { sock.ws?.terminate(); } catch (e) {}
-    try { sock.end(undefined); } catch (e) {}
-    sock = null;
-  }
-
-  setTimeout(async () => {
+  reconnectTimeout = setTimeout(async () => {
+    reconnectTimeout = null;
     try {
       await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
-      isReconnecting = false;
     } catch (err) {
-      console.error('[CLIENT WATCHDOG] Reconnection attempt failed:', err?.message || err);
-      isReconnecting = false;
-      // Exponential backoff retry (min 3s, max 15s) - NEVER stops retrying
-      const nextDelay = Math.min(3000 * Math.max(1, Math.min(consecutiveErrors, 5)), 15000);
-      triggerSafeReconnect('Retry after failed reconnect: ' + (err?.message || 'error'), nextDelay);
+      console.error('[CLIENT] ❌ Reconnection attempt failed:', err?.message || err);
+      scheduleReconnect('Retry after connection failure', 5000);
     }
   }, delayMs);
+}
+
+function triggerSafeReconnect(reason, delayMs) {
+  scheduleReconnect(reason || 'Manual reconnect requested', delayMs || 1000);
 }
 
 function getDashboardUrl() {
@@ -85,6 +73,11 @@ function clearSessionFolder() {
 
 function resetSession() {
   lastQR = null;
+  isConnected = false;
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
   clearSessionFolder();
   try {
     var { resetOnboarding } = require('./services/onboardingService');
@@ -98,6 +91,7 @@ function resetSession() {
     } catch (e) {}
     sock = null;
   }
+  scheduleReconnect('Session reset requested', 1000);
 }
 
 async function startClient(messageHandler, statusHandler, onConnected) {
@@ -134,14 +128,14 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   sock = makeWASocket({
     version,
     auth: state,
-    logger: pino({ level: process.env.RENDER ? 'error' : 'silent' }),
+    logger: pino({ level: 'silent' }),
     browser,
     syncFullHistory: false,
     markOnlineOnConnect: true,
     generateHighQualityLink: true,
     defaultQueryTimeoutMs: 60000,
-    keepAliveIntervalMs: 25000,      // Ping WA servers every 25s (prevents socket drops and timeouts)
-    connectTimeoutMs: 30000,
+    keepAliveIntervalMs: 25000,      // Ping WA servers every 25s natively
+    connectTimeoutMs: 45000,
     qrTimeout: 180000,
     shouldSyncHistoryMessage: () => false,
     fireInitQueries: true,
@@ -180,47 +174,35 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       });
     }
 
-    if (lastDisconnect?.error) {
-      const statusCode = (lastDisconnect.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
-      console.error('[CLIENT] Connection update disconnect:', lastDisconnect.error?.message || lastDisconnect.error, 'StatusCode:', statusCode);
-
-      // Handle 401 Unauthorized / Logged Out -> clear session for fresh QR code
-      if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
-        console.log('[CLIENT] Session logged out or invalid credentials. Resetting session...');
-        clearSessionFolder();
-      }
-    }
-
     if (connection === 'close') {
+      isConnected = false;
       try { require('../server').setDisconnected(); } catch(e) {}
+      stopPresenceKeepAlive();
+
       const statusCode = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
+      console.log(`[CLIENT] Connection closed. StatusCode: ${statusCode || 'unknown'}. Reason: ${lastDisconnect?.error?.message || 'none'}`);
+
       const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
 
       if (isLoggedOut) {
         console.log('[CLIENT] Logged out or unrecoverable error (401). Resetting session credentials for fresh pairing...');
         clearSessionFolder();
-        triggerSafeReconnect('Logged out / 401 fresh pairing', 2000);
+        scheduleReconnect('Logged out / 401 fresh pairing', 3000);
       } else {
         consecutiveErrors++;
-        const now = Date.now();
-        const timeSinceLastReconnect = now - lastReconnectTime;
-        if (timeSinceLastReconnect < 30000) {
-          networkStormDetected = true;
-        }
-        const delay = networkStormDetected
-          ? Math.min(4000 * Math.min(consecutiveErrors, 5), 20000)
-          : Math.min(1500 * Math.min(consecutiveErrors, 4), 6000);
-
-        lastReconnectTime = now;
-        triggerSafeReconnect(`Connection closed (${statusCode || 'Unknown reason'})`, delay);
+        const delay = Math.min(2500 * Math.min(consecutiveErrors, 4), 10000);
+        console.log(`[CLIENT] Auto-reconnecting in ${Math.round(delay / 1000)}s...`);
+        scheduleReconnect(`Connection closed (${statusCode || 'unknown'})`, delay);
       }
     }
 
     if (connection === 'open') {
-      isReconnecting = false;
+      isConnected = true;
       consecutiveErrors = 0;
-      failedPingCount = 0;
-      networkStormDetected = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
       console.log('\n====================================================');
       console.log('✅ WHATSAPP CONNECTED SUCCESSFULLY!');
       console.log(`👤 Logged in as: ${sock.user?.name || sock.user?.id || 'Unknown'}`);
@@ -236,8 +218,6 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         startRecurringStealthPresence(sock);
         console.log('[CLIENT] 🥷 Recurring organic presence simulation active.');
       }
-      // Start active 24/7 heartbeat watchdog to detect and heal dead sockets immediately
-      startHeartbeat();
 
       var { init: initScheduler } = require('./services/schedulerService');
       initScheduler(sock);
@@ -342,55 +322,14 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   return sock;
 }
 
-let heartbeatInterval = null;
-
-function startHeartbeat() {
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
-  failedPingCount = 0;
-
-  heartbeatInterval = setInterval(async () => {
-    if (!sock) return;
-
-    // Detect closed/broken websocket
-    if (!sock.ws || sock.ws.readyState !== 1) {
-      console.warn('[CLIENT WATCHDOG] WebSocket not in OPEN state (readyState=' + (sock.ws ? sock.ws.readyState : 'null') + '). Auto-healing...');
-      triggerSafeReconnect('WebSocket closed or non-ready state', 1000);
-      return;
-    }
-
-    try {
-      // 8-second timeout race on ping/presence update
-      await Promise.race([
-        (typeof sock.sendPing === 'function' ? sock.sendPing() : sock.sendPresenceUpdate('available')),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Ping timeout (8s)')), 8000))
-      ]);
-      failedPingCount = 0; // Ping succeeded, socket is 100% active
-    } catch (e) {
-      failedPingCount++;
-      console.warn(`[CLIENT WATCHDOG] Ping failed (${failedPingCount}/2):`, e.message);
-      if (failedPingCount >= 2) {
-        console.error('[CLIENT WATCHDOG] 🚨 2 consecutive heartbeat pings failed! Dead socket detected. Forcing immediate zero-downtime reconnect...');
-        failedPingCount = 0;
-        triggerSafeReconnect('Dead socket timeout detected by 24/7 watchdog', 500);
-      }
-    }
-  }, 15000); // 15s interval for zero downtime
-}
-
-function stopHeartbeat() {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-}
+function stopHeartbeat() {}
 
 function startPresenceKeepAlive() {
   if (presenceInterval) clearInterval(presenceInterval);
   presenceInterval = setInterval(async () => {
-    if (!sock?.user?.id) return;
+    if (!sock?.user?.id || !isConnected) return;
     try {
-      const jids = ['status@broadcast'];
-      await sock.sendPresenceUpdate('available', jids[0]);
+      await sock.sendPresenceUpdate('available');
     } catch (e) { }
   }, randomBetween(40000, 60000));
 }

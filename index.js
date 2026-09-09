@@ -69,13 +69,12 @@ async function startBotWithAutoHeal() {
       attempts++;
       await startClient(handleMessage, handleStatus, function(sock) {
         setConnected(sock);
-        startScheduler(sock);
         setTimeout(function() { startOnboarding(sock); }, 5000);
       });
-      break; // Successfully launched client; internal watchdog manages auto-reconnects
+      break; // Successfully launched client; connection.update manages all auto-reconnects
     } catch (err) {
-      console.error('[24/7 AUTO-HEAL] Initial client startup error (attempt #' + attempts + '):', err?.message || err);
-      console.log('[24/7 AUTO-HEAL] Auto-restarting in 4 seconds for zero downtime...');
+      console.error('[STARTUP] Initial client startup error (attempt #' + attempts + '):', err?.message || err);
+      console.log('[STARTUP] Auto-retrying in 4 seconds...');
       await new Promise(function(resolve) { setTimeout(resolve, 4000); });
     }
   }
@@ -83,17 +82,3 @@ async function startBotWithAutoHeal() {
 
 startBotWithAutoHeal();
 
-// 24/7 Global Supervisor Heartbeat: verifies bot health every 30s and auto-recovers if dead
-setInterval(function() {
-  try {
-    const { getClient, triggerSafeReconnect } = require('./src/client');
-    const s = getClient();
-    if (!s || !s.ws || s.ws.readyState !== 1) {
-      if (typeof triggerSafeReconnect === 'function') {
-        triggerSafeReconnect('24/7 Global Supervisor detected inactive socket', 1500);
-      }
-    }
-  } catch (e) {
-    console.error('[24/7 Global Supervisor Error]', e.message);
-  }
-}, 30000);
