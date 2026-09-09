@@ -64,6 +64,23 @@ async function handleCommand(sock, msg, text) {
   var command = extracted.command;
   var args = extracted.args;
 
+  // Build quoted / mention context so commands can target replied or mentioned users
+  var contextInfo = msg.message?.extendedTextMessage?.contextInfo || null;
+  var mentionedJids = (contextInfo && Array.isArray(contextInfo.mentionedJid)) ? contextInfo.mentionedJid : [];
+  var quoted = null;
+  if (contextInfo && contextInfo.quotedMessage) {
+    quoted = {
+      key: {
+        remoteJid: sender,
+        fromMe: false,
+        id: contextInfo.stanzaId || ('QUOTED_' + Date.now()),
+        participant: contextInfo.participant || undefined,
+      },
+      message: contextInfo.quotedMessage,
+      participant: contextInfo.participant || undefined,
+    };
+  }
+
   var cmd = getCommand(command);
   if (!cmd) return null;
 
@@ -122,6 +139,8 @@ async function handleCommand(sock, msg, text) {
       pushName: pushName,
       isGroup: isGroup,
       command: command,
+      mentionedJids: mentionedJids,
+      quoted: quoted,
     });
     logCommand(command, isNumber(senderId), 'ok');
   } catch (err) {

@@ -18,6 +18,8 @@ let reconnectAttempts = 0;
 let lastReconnectTime = 0;
 let networkStormDetected = false;
 let consecutiveErrors = 0;
+// Remember the active handlers so the client can be restarted (dashboard "Reset Session")
+var activeHandlers = { messageHandler: null, statusHandler: null, onConnected: null };
 
 function getDashboardUrl() {
   try {
@@ -47,6 +49,7 @@ function clearSessionFolder() {
 function resetSession() {
   lastQR = null;
   clearSessionFolder();
+  stopPresenceKeepAlive();
   if (sock) {
     try {
       sock.ev.removeAllListeners();
@@ -57,7 +60,20 @@ function resetSession() {
   }
 }
 
+// Restart the WhatsApp client using the handlers from the last startClient call
+function restartClient() {
+  if (!activeHandlers.messageHandler) {
+    throw new Error('Client was never started — cannot restart.');
+  }
+  return startClient(activeHandlers.messageHandler, activeHandlers.statusHandler, activeHandlers.onConnected);
+}
+
 async function startClient(messageHandler, statusHandler, onConnected) {
+  // Remember handlers for restartClient()
+  if (messageHandler) activeHandlers.messageHandler = messageHandler;
+  if (statusHandler) activeHandlers.statusHandler = statusHandler;
+  if (onConnected) activeHandlers.onConnected = onConnected;
+
   // Clean up previous socket if existing
   if (sock) {
     try {
@@ -129,8 +145,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       console.log('╚════════════════════════════════════════════════════════════════╝\n');
       QRCode.toString(qr, { type: 'terminal', small: true }, function(e, str) {
         if (!e && str) console.log(str);
-        var qrFile = path.join(__dirname, '..', 'storage', 'qr.png');
-        QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function() {});
+        try {
+          var storageDir = path.join(__dirname, '..', 'storage');
+          if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+          var qrFile = path.join(storageDir, 'qr.png');
+          QRCode.toFile(qrFile, qr, { type: 'png', width: 512, margin: 2, color: { dark: '#000', light: '#FFF' } }, function() {});
+        } catch (e2) {}
       });
     }
 
@@ -148,6 +168,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     if (connection === 'close') {
       const statusCode = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+
+      // Inform dashboard the bot is now disconnected
+      try { require('../server').setDisconnected(); } catch (e) {}
 
       if (shouldReconnect) {
         consecutiveErrors++;
@@ -301,4 +324,4 @@ async function requestPairingCode(phoneNumber) {
   }
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession };
+module.exports = { startClient, restartClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession };

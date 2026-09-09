@@ -67,7 +67,7 @@ module.exports = {
         if (result.success) {
           await sock.sendMessage(sender, { text: `*🤖 ${name}:*\n${result.response}` });
         } else {
-          await sock.sendMessage(sender, { text: `Error: ${result.error}` });
+          await sock.sendMessage(sender, { text: `❌ ${result.error || result.response || 'Agent request failed.'}` });
         }
         break;
       }

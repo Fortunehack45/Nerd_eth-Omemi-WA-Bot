@@ -63,6 +63,12 @@ module.exports = {
       });
 
       await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+      return;
     }
+
+    // Unknown subcommand — tell the user instead of staying silent
+    return sock.sendMessage(sender, {
+      text: 'Unknown subcommand: `' + subCmd + '`.\n\n*Usage:*\n  `!knowledge` — list all known users\n  `!knowledge search <query>` — search users',
+    });
   },
 };

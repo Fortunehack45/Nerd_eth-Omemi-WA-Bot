@@ -40,6 +40,7 @@ function providerName() {
   if (p === 'openai') return 'OpenAI (' + (m || 'gpt-4o-mini') + ')';
   if (p === 'agentrouter') return 'AgentRouter';
   if (p === 'openrouter') return 'OpenRouter';
+  if (p === 'public-free') return 'Public Free AI (zero setup, upgradeable with GROQ_API_KEY)';
   return 'None — Set GROQ_API_KEY in .env';
 }
 

@@ -1,5 +1,4 @@
 const { parseFlags, parseJid } = require('../utils/helpers');
-const { isAdmin } = require('../services/accessControl');
 const config = require('../../config');
 
 const HELP = `*👥 Group Management Commands* (Admin Only)
@@ -87,8 +86,8 @@ module.exports = {
 
       var targets = participants.filter(p => {
         var pNum = parseJid(p.id);
-        // Exclude bot and caller/owner
-        return pNum !== botNum && pNum !== callerNum && !isAdmin(p.id);
+        // Exclude bot, caller/owner, and group admins (group-level admin flag from metadata)
+        return pNum !== botNum && pNum !== callerNum && !p.admin;
       }).map(p => p.id);
 
       if (targets.length === 0) {

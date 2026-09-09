@@ -2,7 +2,7 @@ const { getUser, updateUser, addFact, addTag, removeTag, setPreference, getUserC
 
 module.exports = {
   name: 'profile',
-  alias: ['user', 'whoami', 'memory'],
+  alias: ['user', 'whoami'],
   description: 'View or manage your user profile and what the bot knows about you',
   usage: '!profile - view your profile\n!profile set <key> <value> - set profile info\n!profile fact <text> - add a fact\n!profile tag <tag> - add a tag',
   execute: async (sock, msg, args, ctx) => {

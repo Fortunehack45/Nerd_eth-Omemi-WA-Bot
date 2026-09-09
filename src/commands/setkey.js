@@ -29,7 +29,10 @@ function maskKey(key) {
 function updateEnvFile(provider, key) {
   try {
     var envPath = path.join(__dirname, '..', '..', '.env');
-    var content = fs.readFileSync(envPath, 'utf8');
+    var content = '';
+    if (fs.existsSync(envPath)) {
+      content = fs.readFileSync(envPath, 'utf8');
+    }
     var keyMap = {
       groq: 'GROQ_API_KEY',
       openai: 'OPENAI_API_KEY',

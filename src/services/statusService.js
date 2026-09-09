@@ -70,10 +70,9 @@ async function sendStatus(sock, text, options = {}) {
   }
 }
 
-async function sendImageStatus(sock, imagePath, caption = '') {
+async function sendImageStatus(sock, image, caption = '') {
   try {
-    const { readFileSync } = require('fs');
-    const img = readFileSync(imagePath);
+    var img = Buffer.isBuffer(image) ? image : require('fs').readFileSync(image);
     await sock.sendMessage('status@broadcast', {
       image: img,
       caption,
@@ -84,10 +83,9 @@ async function sendImageStatus(sock, imagePath, caption = '') {
   }
 }
 
-async function sendVideoStatus(sock, videoPath, caption = '') {
+async function sendVideoStatus(sock, video, caption = '') {
   try {
-    const { readFileSync } = require('fs');
-    const vid = readFileSync(videoPath);
+    var vid = Buffer.isBuffer(video) ? video : require('fs').readFileSync(video);
     await sock.sendMessage('status@broadcast', {
       video: vid,
       caption,

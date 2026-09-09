@@ -1,26 +1,40 @@
-const { getProvider, switchProvider, listAgentRouterModels } = require('../services/aiService');
+const { getProvider, switchProvider, listAgentRouterModels, getModel } = require('../services/aiService');
 const config = require('../../config');
+
+var PROVIDER_LABELS = {
+  groq: 'Groq',
+  openai: 'OpenAI',
+  openrouter: 'OpenRouter',
+  agentrouter: 'AgentRouter',
+  'public-free': 'Public Free AI (no key needed)',
+};
 
 module.exports = {
   name: 'provider',
-  alias: ['ai', 'model', 'switch'],
-  description: 'View or switch AI provider (OpenAI / AgentRouter)',
-  usage: '!provider - show current provider\n!provider switch agentrouter - switch to AgentRouter\n!provider switch openai - switch to OpenAI\n!provider models - list AgentRouter models',
+  alias: ['model', 'switch'],
+  description: 'View or switch AI provider (Groq / OpenAI / OpenRouter / AgentRouter)',
+  usage: '!provider - show current provider\n!provider switch <groq|openai|openrouter|agentrouter> - switch provider\n!provider models - list models for the active provider',
   execute: async (sock, msg, args, ctx) => {
     const sender = ctx.sender;
 
     if (!args) {
       const current = getProvider();
       let text = `*🤖 AI Provider*\n\n`;
-      text += `Current: *${current === 'agentrouter' ? 'AgentRouter' : current === 'openai' ? 'OpenAI' : 'Not configured'}*\n\n`;
-      text += `*Available:*\n`;
+      var currentLabel = PROVIDER_LABELS[current] || (current === 'none' ? 'Not initialized (Public Free AI on first use)' : current);
+      text += `Current: *${currentLabel}*\n`;
+      if (current && current !== 'none') text += `Model: *${getModel() || 'N/A'}*\n`;
+      text += `\n*Available:*\n`;
+      var groqKey = process.env.GROQ_API_KEY;
+      if (groqKey && groqKey !== 'gsk-demo-key') text += `▸ Groq (free — set with !setkey groq <key>)\n`;
       if (config.agentRouter.apiKey && config.agentRouter.apiKey !== 'ar-your-agentrouter-key') {
         text += `▸ AgentRouter (${config.agentRouter.baseUrl})\n`;
       }
       if (config.openai.apiKey && config.openai.apiKey !== 'sk-your-openai-api-key') {
         text += `▸ OpenAI\n`;
       }
-      text += `\nSwitch: !provider switch <name>`;
+      if (process.env.OPENROUTER_API_KEY) text += `▸ OpenRouter (free tier)\n`;
+      text += `▸ Public Free AI (always available fallback)\n`;
+      text += `\nSwitch: !provider switch <groq|openai|openrouter|agentrouter>`;
       return sock.sendMessage(sender, { text });
     }
 
@@ -30,14 +44,14 @@ module.exports = {
     switch (subCmd) {
       case 'switch': {
         const target = parts[1]?.toLowerCase();
-        if (!target || (target !== 'openai' && target !== 'agentrouter')) {
-          return sock.sendMessage(sender, { text: 'Usage: !provider switch <openai|agentrouter>' });
+        if (!target || ['openai', 'agentrouter', 'groq', 'openrouter'].indexOf(target) === -1) {
+          return sock.sendMessage(sender, { text: 'Usage: !provider switch <groq|openai|openrouter|agentrouter>' });
         }
         const success = switchProvider(target);
         if (success) {
-          await sock.sendMessage(sender, { text: `✅ Switched to ${target === 'agentrouter' ? 'AgentRouter' : 'OpenAI'}` });
+          await sock.sendMessage(sender, { text: `✅ Switched to ${PROVIDER_LABELS[target] || target}\n*Model:* ${getModel() || 'N/A'}` });
         } else {
-          await sock.sendMessage(sender, { text: `❌ Cannot switch to ${target}. Check API key in .env` });
+          await sock.sendMessage(sender, { text: `❌ Cannot switch to ${target}. Set its API key first with !setkey ${target} <key>` });
         }
         break;
       }

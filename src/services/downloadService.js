@@ -551,12 +551,46 @@ async function downloadFacebookVideo(url) {
   return { error: 'Facebook video download failed.' };
 }
 
+// ─── DIRECT FILE URL ──────────────────────────────────────────────────────────
+
+async function downloadDirectFile(url) {
+  var tempDir = ensureTempDir();
+  var urlPath = url.split('?')[0].split('#')[0];
+  var ext = (urlPath.match(/\.(mp4|mp3|webm|avi|mkv|mov)$/i) || [])[1] || 'mp4';
+  var fp = path.join(tempDir, 'direct_' + Date.now() + '.' + ext.toLowerCase());
+  try {
+    var stat = await downloadStream(url, fp);
+    if (stat.size < 1000) {
+      safeUnlink(fp);
+      return { error: 'Direct download failed — the file could not be retrieved (it may not exist or requires authentication).' };
+    }
+    var title = decodeURIComponent(urlPath.split('/').pop() || 'Direct Media');
+    return { success: true, filePath: fp, title: title, size: stat.size };
+  } catch (e) {
+    safeUnlink(fp);
+    return { error: 'Direct download failed: ' + (e.message || 'network error') };
+  }
+}
+
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 
 async function processLink(url) {
   var platform = detectPlatform(url);
   switch (platform) {
-    case 'youtube': return { platform: 'youtube', title: 'YouTube Video', url: url };
+    case 'youtube': {
+      var info = { platform: 'youtube', title: 'YouTube Video', url: url };
+      if (ytdl) {
+        try {
+          var ytInfo = await ytdl.getInfo(url);
+          info.title = ytInfo.videoDetails?.title || info.title;
+          info.author = ytInfo.videoDetails?.author?.name || 'Unknown';
+          info.duration = ytInfo.videoDetails?.lengthSeconds || null;
+          var fmt = ytInfo.formats?.find(function(f) { return f.hasVideo && f.hasAudio && f.contentLength; });
+          if (fmt) info.contentLength = fmt.contentLength;
+        } catch (e) { /* metadata is best-effort */ }
+      }
+      return info;
+    }
     case 'tiktok': { var ti = await downloadTikTokVideo(url); return ti.success ? { platform: 'tiktok', title: ti.title, downloadUrl: null } : ti; }
     case 'instagram': { var ii = await downloadInstagramMedia(url); return ii.success ? { platform: 'instagram', title: ii.title } : ii; }
     case 'spotify': return { platform: 'spotify', title: 'Spotify Track', url: url };
@@ -568,6 +602,7 @@ async function downloadMedia(url) {
   var platform = detectPlatform(url);
   switch (platform) {
     case 'youtube': return await getYouTubeVideo(url);
+    case 'direct': return await downloadDirectFile(url);
     case 'tiktok': return await downloadTikTokVideo(url);
     case 'instagram': return await downloadInstagramMedia(url);
     case 'twitter': return await downloadTwitterVideo(url);

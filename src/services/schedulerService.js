@@ -208,4 +208,6 @@ module.exports = {
   toggleSchedule,
   startScheduler,
   stopScheduler,
+  checkSchedules,
+  calculateNextRun,
 };

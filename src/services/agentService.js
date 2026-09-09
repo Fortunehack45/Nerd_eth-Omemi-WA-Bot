@@ -65,7 +65,7 @@ function killAllAgents() {
 async function askAgent(name, userMessage) {
   const agent = agents.get(name);
   if (!agent) {
-    return { success: false, error: `Agent "${name}" not found.` };
+    return { success: false, error: `Agent "${name}" not found.`, response: null };
   }
 
   agent.messages.push({ role: 'user', content: userMessage });
@@ -77,7 +77,7 @@ async function askAgent(name, userMessage) {
     agent.taskCount++;
   }
 
-  return { success: result.success, response: result.text };
+  return { success: result.success, response: result.text, error: result.success ? undefined : (result.text || 'AI request failed') };
 }
 
 async function runMultiAgentTask(task, agentNames) {

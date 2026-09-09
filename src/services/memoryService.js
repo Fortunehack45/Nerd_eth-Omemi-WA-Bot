@@ -25,6 +25,7 @@ function getUser(jid) {
   const uid = getUserId(jid);
   if (!db[uid]) {
     db[uid] = {
+      id: uid,
       firstSeen: Date.now(),
       lastSeen: Date.now(),
       name: '',
@@ -38,6 +39,11 @@ function getUser(jid) {
       interactionCount: 0,
       lastLearned: null,
     };
+    saveDb();
+  }
+  // Backfill id for profiles created before the field existed
+  if (!db[uid].id) {
+    db[uid].id = uid;
     saveDb();
   }
   db[uid].lastSeen = Date.now();

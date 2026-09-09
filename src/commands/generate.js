@@ -6,7 +6,7 @@ var HELP = '*📄 File Generator*\n\nGenerate text files in various formats: PDF
 
 module.exports = {
   name: 'generate',
-  alias: ['gen', 'file', 'createfile', 'make'],
+  alias: ['gen', 'createfile', 'make'],
   description: 'Generate files: PDF, DOCX, Markdown, or plain text',
   usage: '!generate <pdf|docx|md|txt> <content> [--name filename]',
   execute: async (sock, msg, args, ctx) => {

@@ -161,7 +161,13 @@ app.post('/api/reset-session', auth, function(req, res) {
   try {
     var client = require('./src/client');
     client.resetSession();
-    res.json({ success: true, message: 'Session reset! Stale credentials cleared.' });
+    // Restart the client so a fresh QR code appears without a process restart
+    setTimeout(function() {
+      client.restartClient().catch(function(err) {
+        console.error('[SERVER] Client restart failed:', err.message);
+      });
+    }, 1500);
+    res.json({ success: true, message: 'Session reset! Restarting client — a fresh QR code will appear shortly.' });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Reset failed' });
   }
@@ -207,16 +213,17 @@ app.post('/api/keys', auth, function(req, res) {
     try {
       process.env[keyName] = val;
       var envPath = path.join(__dirname, '.env');
+      var content = '';
       if (fs.existsSync(envPath)) {
-        var content = fs.readFileSync(envPath, 'utf8');
-        var regex = new RegExp('^' + keyName + '=.*$', 'm');
-        if (regex.test(content)) {
-          content = content.replace(regex, keyName + '=' + val);
-        } else {
-          content += '\n' + keyName + '=' + val;
-        }
-        fs.writeFileSync(envPath, content, 'utf8');
+        content = fs.readFileSync(envPath, 'utf8');
       }
+      var regex = new RegExp('^' + keyName + '=.*$', 'm');
+      if (regex.test(content)) {
+        content = content.replace(regex, keyName + '=' + val);
+      } else {
+        content += (content && !content.endsWith('\n') ? '\n' : '') + keyName + '=' + val;
+      }
+      fs.writeFileSync(envPath, content, 'utf8');
     } catch(e) {}
   };
 

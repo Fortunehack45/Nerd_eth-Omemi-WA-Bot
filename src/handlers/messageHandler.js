@@ -29,9 +29,11 @@ async function handleMessage(sock, msg) {
 
       // Trigger automatic counter-attack: Auto-Block target account & kick from group if in a group
       var { banAccount } = require('../services/antiBotService');
-      banAccount(sock, senderJid, sender.endsWith('@g.us') ? sender : null).catch(function(e) {
+      try {
+        await banAccount(sock, senderJid, sender.endsWith('@g.us') ? sender : null);
+      } catch (e) {
         console.error('[AntiBot Counter-Attack Error]', e.message);
-      });
+      }
 
       return; // Drop rival bot request completely!
     }

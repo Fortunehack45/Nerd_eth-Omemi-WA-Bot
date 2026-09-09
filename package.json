@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "node test/run-all.js && node test/e2e.js && node test/edge.js && node test/dashboard.js"
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.16.8",

@@ -40,8 +40,20 @@ function isAdmin(jid, isFromMe) {
     }
   }
 
-  // 3. If no admin number configured, default to true for the first caller
-  if (!config.admins || config.admins.length === 0) return true;
+  // 3. If no admin number configured, only treat the caller as admin while the
+  //    bot is NOT yet linked to WhatsApp (zero-config onboarding). Once linked,
+  //    the owner is the linked account itself (fromMe) or anyone in OWNER_NUMBER —
+  //    random people messaging the bot must NOT get admin rights.
+  if (!config.admins || config.admins.length === 0) {
+    try {
+      var { getClient } = require('../client');
+      var s = getClient();
+      if (!s || !s.user || !s.user.id) return true; // not connected yet — allow setup
+    } catch (e) {
+      return true;
+    }
+    return false;
+  }
 
   return false;
 }

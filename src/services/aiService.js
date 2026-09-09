@@ -164,10 +164,68 @@ async function listModels() {
   }
 }
 
+// Legacy alias used by !provider models — lists models for the active provider
+async function listAgentRouterModels() {
+  if (!aiClient) return { success: false, models: [], error: 'AI not configured. Set a key with !setkey <provider> <key>' };
+  return await listModels();
+}
+
+// Switch provider at runtime (used by !provider switch <name>)
+function switchProvider(target) {
+  var t = String(target || '').toLowerCase();
+  if (t !== 'openai' && t !== 'agentrouter' && t !== 'groq' && t !== 'openrouter') return false;
+
+  var key = null;
+  if (t === 'openai') key = runtimeKeys.openai || config.openai?.apiKey || process.env.OPENAI_API_KEY;
+  if (t === 'agentrouter') key = config.agentRouter.apiKey || process.env.AGENT_ROUTER_API_KEY;
+  if (t === 'groq') key = runtimeKeys.groq || config.groq?.apiKey || process.env.GROQ_API_KEY;
+  if (t === 'openrouter') key = runtimeKeys.openrouter || process.env.OPENROUTER_API_KEY;
+
+  if (!key || key.length < 8) return false;
+  runtimeKeys[t] = key;
+
+  aiClient = null;
+  provider = 'none';
+  currentModel = null;
+
+  // Force selection of the requested provider even if a higher-priority key exists
+  if (t === 'agentrouter') {
+    if (!OpenAI) return false;
+    aiClient = new OpenAI({ apiKey: key, baseURL: config.agentRouter.baseUrl });
+    provider = 'agentrouter';
+    currentModel = config.agentRouter.model || 'gpt-4o';
+    return true;
+  }
+  if (t === 'groq') {
+    if (!Groq) return false;
+    aiClient = new Groq({ apiKey: key });
+    provider = 'groq';
+    currentModel = config.groq?.model || 'llama-3.1-8b-instant';
+    return true;
+  }
+  if (t === 'openrouter') {
+    if (!OpenAI) return false;
+    aiClient = new OpenAI({
+      apiKey: key,
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: { 'X-Title': 'Nerd-eth WhatsApp Bot' }
+    });
+    provider = 'openrouter';
+    currentModel = 'meta-llama/llama-3.1-8b-instruct:free';
+    return true;
+  }
+  // openai
+  if (!OpenAI) return false;
+  aiClient = new OpenAI({ apiKey: key });
+  provider = 'openai';
+  currentModel = config.openai?.model || 'gpt-4o-mini';
+  return true;
+}
+
 // Test AI connectivity
 async function testConnection() {
   var result = await chatComplete([{ role: 'user', content: 'Reply with only: OK' }]);
   return result;
 }
 
-module.exports = { initAI, chatComplete, generateImage, getProvider, getModel, setRuntimeKey, listModels, testConnection };
+module.exports = { initAI, chatComplete, generateImage, getProvider, getModel, setRuntimeKey, listModels, testConnection, switchProvider, listAgentRouterModels };

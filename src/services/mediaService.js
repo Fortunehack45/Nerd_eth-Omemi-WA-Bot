@@ -119,7 +119,7 @@ async function searchLyrics(song, artist) {
 async function searchMovie(query, opts = {}) {
   const { year, type, limit = 10 } = opts;
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
+    const omdbKey = process.env.OMDB_API_KEY || config.omdb?.apiKey;
     if (omdbKey) {
       let q = query;
       if (year) q += `&y=${year}`;
@@ -154,7 +154,7 @@ async function searchMovie(query, opts = {}) {
 
 async function getMovieInfo(query) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
+    const omdbKey = process.env.OMDB_API_KEY || config.omdb?.apiKey;
     if (omdbKey) {
       const isId = query.startsWith('tt') && /^tt\d+$/.test(query);
       const param = isId ? `i=${query}` : `t=${encodeURIComponent(query)}`;
@@ -203,7 +203,7 @@ async function getMovieInfo(query) {
 
 async function getTrendingMovies(region = 'US', limit = 10) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
+    const omdbKey = process.env.OMDB_API_KEY || config.omdb?.apiKey;
     if (omdbKey) {
       const { data } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&s=2024&type=movie`, { timeout: 8000 });
       if (data.Response === 'True') {
@@ -231,7 +231,7 @@ async function getTrendingMovies(region = 'US', limit = 10) {
 
 async function getSimilarMovies(title, limit = 10) {
   try {
-    const omdbKey = process.env.OMDB_API_KEY;
+    const omdbKey = process.env.OMDB_API_KEY || config.omdb?.apiKey;
     if (omdbKey) {
       const { data: search } = await axios.get(`https://www.omdbapi.com/?apikey=${omdbKey}&t=${encodeURIComponent(title)}`, { timeout: 8000 });
       if (search.Response === 'True' && search.Genre) {
@@ -349,7 +349,7 @@ async function getMovieDownload(query) {
     var omdbDetails = null;
 
     if (!searchQuery.match(/^tt\d+$/)) {
-      var omdbKey = process.env.OMDB_API_KEY || 'trilogy';
+      var omdbKey = process.env.OMDB_API_KEY || config.omdb?.apiKey || 'trilogy';
       try {
         var { data: omdbData } = await axios.get('https://www.omdbapi.com/?apikey=' + omdbKey + '&t=' + encodeURIComponent(searchQuery) + '&type=movie', { timeout: 8000 });
         if (omdbData.Response === 'True') {
