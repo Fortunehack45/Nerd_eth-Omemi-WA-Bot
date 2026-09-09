@@ -18,6 +18,45 @@ let reconnectAttempts = 0;
 let lastReconnectTime = 0;
 let networkStormDetected = false;
 let consecutiveErrors = 0;
+let isReconnecting = false;
+let failedPingCount = 0;
+
+// Saved references for 24/7 zero-downtime auto-reconnects
+let savedMessageHandler = null;
+let savedStatusHandler = null;
+let savedOnConnected = null;
+
+function triggerSafeReconnect(reason, delayMs) {
+  delayMs = delayMs || 3000;
+  if (isReconnecting) {
+    return;
+  }
+  isReconnecting = true;
+  console.log(`[CLIENT WATCHDOG] ⚡ 24/7 Auto-Reconnect triggered: ${reason} (in ${Math.round(delayMs / 1000)}s)`);
+
+  stopHeartbeat();
+  stopPresenceKeepAlive();
+
+  if (sock) {
+    try { sock.ev.removeAllListeners(); } catch (e) {}
+    try { sock.ws?.terminate(); } catch (e) {}
+    try { sock.end(undefined); } catch (e) {}
+    sock = null;
+  }
+
+  setTimeout(async () => {
+    try {
+      await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
+      isReconnecting = false;
+    } catch (err) {
+      console.error('[CLIENT WATCHDOG] Reconnection attempt failed:', err?.message || err);
+      isReconnecting = false;
+      // Exponential backoff retry (min 3s, max 15s) - NEVER stops retrying
+      const nextDelay = Math.min(3000 * Math.max(1, Math.min(consecutiveErrors, 5)), 15000);
+      triggerSafeReconnect('Retry after failed reconnect: ' + (err?.message || 'error'), nextDelay);
+    }
+  }, delayMs);
+}
 
 function getDashboardUrl() {
   try {
@@ -62,6 +101,9 @@ function resetSession() {
 }
 
 async function startClient(messageHandler, statusHandler, onConnected) {
+  if (messageHandler) savedMessageHandler = messageHandler;
+  if (statusHandler) savedStatusHandler = statusHandler;
+  if (onConnected) savedOnConnected = onConnected;
   // Clean up previous socket if existing
   if (sock) {
     try {
@@ -152,34 +194,32 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     if (connection === 'close') {
       try { require('../server').setDisconnected(); } catch(e) {}
       const statusCode = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode : null;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
 
-      if (shouldReconnect) {
+      if (isLoggedOut) {
+        console.log('[CLIENT] Logged out or unrecoverable error (401). Resetting session credentials for fresh pairing...');
+        clearSessionFolder();
+        triggerSafeReconnect('Logged out / 401 fresh pairing', 2000);
+      } else {
         consecutiveErrors++;
         const now = Date.now();
         const timeSinceLastReconnect = now - lastReconnectTime;
-
         if (timeSinceLastReconnect < 30000) {
           networkStormDetected = true;
         }
-
         const delay = networkStormDetected
-          ? Math.min(5000 * Math.min(consecutiveErrors, 6), 30000)
-          : Math.min(2000 * Math.min(consecutiveErrors, 5), 10000);
+          ? Math.min(4000 * Math.min(consecutiveErrors, 5), 20000)
+          : Math.min(1500 * Math.min(consecutiveErrors, 4), 6000);
 
-        console.log(`[CLIENT] Connection closed (${statusCode || 'Unknown reason'}), reconnecting in ${Math.round(delay/1000)}s... (attempt #${consecutiveErrors})`);
         lastReconnectTime = now;
-
-        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), delay);
-      } else {
-        console.log('[CLIENT] Logged out or unrecoverable error (401). Resetting auth for fresh pairing...');
-        clearSessionFolder();
-        setTimeout(() => startClient(messageHandler, statusHandler, onConnected), 3000);
+        triggerSafeReconnect(`Connection closed (${statusCode || 'Unknown reason'})`, delay);
       }
     }
 
     if (connection === 'open') {
+      isReconnecting = false;
       consecutiveErrors = 0;
+      failedPingCount = 0;
       networkStormDetected = false;
       console.log('\n====================================================');
       console.log('✅ WHATSAPP CONNECTED SUCCESSFULLY!');
@@ -196,73 +236,81 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         startRecurringStealthPresence(sock);
         console.log('[CLIENT] 🥷 Recurring organic presence simulation active.');
       }
-      // Start WebSocket-level heartbeat to prevent silent 50-minute drops
+      // Start active 24/7 heartbeat watchdog to detect and heal dead sockets immediately
       startHeartbeat();
 
       var { init: initScheduler } = require('./services/schedulerService');
       initScheduler(sock);
 
       if (typeof onConnected === 'function') {
-        onConnected(sock);
+        try { onConnected(sock); } catch (e) { console.error('[CLIENT] onConnected error:', e.message); }
       }
     }
   });
 
   sock.ev.on('messages.upsert', async (msg) => {
-    if (!msg.messages || msg.messages.length === 0) return;
-    var { cacheMessage } = require('./services/antiDeleteService');
-    for (const m of msg.messages) {
-      if (!m.message) continue;
+    try {
+      if (!msg.messages || msg.messages.length === 0) return;
+      var { cacheMessage } = require('./services/antiDeleteService');
+      for (const m of msg.messages) {
+        if (!m.message) continue;
 
-      // Clean remoteJid: strip device suffix (e.g. :12) to prevent Baileys query timeouts
-      if (m.key?.remoteJid && !m.key.remoteJid.endsWith('@g.us') && m.key.remoteJid.includes(':')) {
-        m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
-      }
-
-      if (m.key?.id && global.msgStore) {
-        if (global.processedMsgIds.has(m.key.id)) continue;
-        global.processedMsgIds.add(m.key.id);
-        if (global.processedMsgIds.size > 3000) {
-          const arr = Array.from(global.processedMsgIds);
-          for (let i = 0; i < 1500; i++) global.processedMsgIds.delete(arr[i]);
+        // Clean remoteJid: strip device suffix (e.g. :12) to prevent Baileys query timeouts
+        if (m.key?.remoteJid && !m.key.remoteJid.endsWith('@g.us') && m.key.remoteJid.includes(':')) {
+          m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
         }
-        global.msgStore.set(m.key.id, m.message);
-      }
 
-      // Cache all messages immediately for anti-delete recovery
-      try { cacheMessage(m, sock); } catch (e) {}
-
-      var remoteJid = m.key?.remoteJid || '';
-      var isFromMe = m.key?.fromMe;
-      var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
-
-      // Status updates
-      if (remoteJid === 'status@broadcast') {
-        if (config.status.autoView || config.status.autoLike) {
-          statusHandler(sock, m).catch(function(e) {
-            console.error('[StatusHandler Error]', e.message);
-          });
+        if (m.key?.id && global.msgStore) {
+          if (global.processedMsgIds.has(m.key.id)) continue;
+          global.processedMsgIds.add(m.key.id);
+          if (global.processedMsgIds.size > 3000) {
+            const arr = Array.from(global.processedMsgIds);
+            for (let i = 0; i < 1500; i++) global.processedMsgIds.delete(arr[i]);
+          }
+          global.msgStore.set(m.key.id, m.message);
         }
-        continue;
-      }
 
-      // Admin self-commands: allow owner to send commands to themselves or in any chat
-      if (isFromMe) {
-        var prefix = config.prefix || '!';
-        var { parseJid } = require('./utils/helpers');
-        var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
-        var isSelfChat = remoteJid ? (parseJid(remoteJid) === botNum) : false;
-        var hasPrefix = msgText && msgText.startsWith(prefix);
-        var isReaction = !!m.message?.reactionMessage;
+        // Cache all messages immediately for anti-delete recovery
+        try { cacheMessage(m, sock); } catch (e) {}
 
-        if (hasPrefix || isReaction || isSelfChat) {
+        var remoteJid = m.key?.remoteJid || '';
+        var isFromMe = m.key?.fromMe;
+        var msgText = m.message?.conversation || m.message?.extendedTextMessage?.text || m.message?.imageMessage?.caption || m.message?.videoMessage?.caption || '';
+
+        // Status updates
+        if (remoteJid === 'status@broadcast') {
+          if (config.status.autoView || config.status.autoLike) {
+            statusHandler(sock, m).catch(function(e) {
+              console.error('[StatusHandler Error]', e.message);
+            });
+          }
+          continue;
+        }
+
+        // Admin self-commands: allow owner to send commands to themselves or in any chat
+        if (isFromMe) {
+          var prefix = config.prefix || '!';
+          var { parseJid } = require('./utils/helpers');
+          var botNum = parseJid(sock.user?.id || sock.user?.jid || '');
+          var isSelfChat = remoteJid ? (parseJid(remoteJid) === botNum) : false;
+          var hasPrefix = msgText && msgText.startsWith(prefix);
+          var isReaction = !!m.message?.reactionMessage;
+
+          if (hasPrefix || isReaction || isSelfChat) {
+            try { await messageHandler(sock, m); } catch (eH) { console.error('[MessageHandler Self Error]', eH.message); }
+          }
+          continue;
+        }
+
+        if (config.antiBan.enabled && isDuplicateMessage(m.key?.id)) continue;
+        try {
           await messageHandler(sock, m);
+        } catch (eH) {
+          console.error('[MessageHandler Error]', eH.message);
         }
-        continue;
       }
-
-      if (config.antiBan.enabled && isDuplicateMessage(m.key?.id)) continue;
-      await messageHandler(sock, m);
+    } catch (upsertErr) {
+      console.error('[CLIENT] messages.upsert top-level error caught:', upsertErr?.message || upsertErr);
     }
   });
 
@@ -298,18 +346,35 @@ let heartbeatInterval = null;
 
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
+  failedPingCount = 0;
+
   heartbeatInterval = setInterval(async () => {
-    if (!sock?.ws || sock.ws.readyState !== 1) return;
-    try {
-      if (typeof sock.sendPing === 'function') {
-        await sock.sendPing();
-      } else {
-        await sock.sendPresenceUpdate('available');
-      }
-    } catch (e) {
-      console.warn('[CLIENT HEARTBEAT] Ping failed:', e.message);
+    if (!sock) return;
+
+    // Detect closed/broken websocket
+    if (!sock.ws || sock.ws.readyState !== 1) {
+      console.warn('[CLIENT WATCHDOG] WebSocket not in OPEN state (readyState=' + (sock.ws ? sock.ws.readyState : 'null') + '). Auto-healing...');
+      triggerSafeReconnect('WebSocket closed or non-ready state', 1000);
+      return;
     }
-  }, 20000); // 20-second active heartbeat
+
+    try {
+      // 8-second timeout race on ping/presence update
+      await Promise.race([
+        (typeof sock.sendPing === 'function' ? sock.sendPing() : sock.sendPresenceUpdate('available')),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Ping timeout (8s)')), 8000))
+      ]);
+      failedPingCount = 0; // Ping succeeded, socket is 100% active
+    } catch (e) {
+      failedPingCount++;
+      console.warn(`[CLIENT WATCHDOG] Ping failed (${failedPingCount}/2):`, e.message);
+      if (failedPingCount >= 2) {
+        console.error('[CLIENT WATCHDOG] 🚨 2 consecutive heartbeat pings failed! Dead socket detected. Forcing immediate zero-downtime reconnect...');
+        failedPingCount = 0;
+        triggerSafeReconnect('Dead socket timeout detected by 24/7 watchdog', 500);
+      }
+    }
+  }, 15000); // 15s interval for zero downtime
 }
 
 function stopHeartbeat() {
@@ -380,4 +445,4 @@ async function requestPairingCode(phoneNumber) {
   }
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession };
+module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession, triggerSafeReconnect };

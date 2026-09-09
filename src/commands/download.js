@@ -5,7 +5,10 @@ const fs = require('fs');
 
 var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Instagram, and Spotify. The bot downloads the file and sends it directly.\n\n*Usage:* `!download <link> [flags]`\n\n*Flags:*\n  `--audio`, `-a`    Download as audio only (MP3/M4A)\n  `--info`, `-i`     Show info without downloading\n\n*Supported Platforms:*\n  ▸ *YouTube* — Videos in HD (1080p/720p default)\n  ▸ *TikTok* — HD videos without watermark\n  ▸ *Instagram* — Posts, Reels, Stories (public only)\n  ▸ *Spotify* — Track audio (MP3)\n\n*Examples:*\n  `!download https://youtu.be/abc123`\n  `!download https://youtu.be/abc123 --audio`\n  `!download https://vm.tiktok.com/abc123`\n  `!download https://open.spotify.com/track/abc123`\n  `!download https://instagram.com/p/abc123`\n  `!download https://youtu.be/abc123 --info`';
 
+const { optimizeVideoForWhatsApp } = require('../utils/helpers');
+
 async function sendFile(sock, sender, filePath, opts) {
+  opts = opts || {};
   try {
     if (!fs.existsSync(filePath)) {
       await sock.sendMessage(sender, { text: '❌ Downloaded file not found.' });
@@ -15,16 +18,20 @@ async function sendFile(sock, sender, filePath, opts) {
     var ext = filePath.split('.').pop().toLowerCase();
 
     if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'opus'].includes(ext)) {
-      await sendAudioMessage(sock, sender, filePath, opts.title || 'Audio', opts.author || 'Download');
+      await sendAudioMessage(sock, sender, filePath, opts.title || 'Audio', opts.author || 'Download', { asDocument: opts.asDocument });
       return;
     }
 
-    var buf = fs.readFileSync(filePath);
-    if (['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
+    if (opts.type === 'video' || ['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
+      // Ensure video is 100% WhatsApp Status compatible (H.264 yuv420p + AAC + faststart + even dimensions)
+      var optFp = await optimizeVideoForWhatsApp(filePath);
+      var sendFp = fs.existsSync(optFp) ? optFp : filePath;
+      var buf = fs.readFileSync(sendFp);
       var caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
       if (opts.quality) caption += '\n📺 Quality: ' + opts.quality;
       try {
         await sock.sendMessage(sender, { video: buf, caption: caption });
+        try { if (fs.existsSync(optFp) && optFp !== filePath) fs.unlinkSync(optFp); } catch (e) {}
         return;
       } catch (e1) {
         console.warn('[DOWNLOAD] Primary video send failed, falling back to document mode:', e1.message);
@@ -134,6 +141,28 @@ module.exports = {
 
     if (dlResult.error) {
       return sock.sendMessage(sender, { text: '❌ Error: ' + dlResult.error });
+    }
+
+    // Handle photo carousels (e.g. TikTok photos / slide posts)
+    if (dlResult.type === 'images' && Array.isArray(dlResult.images) && dlResult.images.length > 0) {
+      await sock.sendMessage(sender, { text: '📸 Sending ' + dlResult.images.length + ' photos from *' + (dlResult.title || 'TikTok') + '*...' });
+      for (var imgIdx = 0; imgIdx < dlResult.images.length; imgIdx++) {
+        var imgFp = dlResult.images[imgIdx];
+        if (fs.existsSync(imgFp)) {
+          var imgBuf = fs.readFileSync(imgFp);
+          var imgCap = (imgIdx === 0 && dlResult.title) ? ('📸 *' + dlResult.title + '*\n[1/' + dlResult.images.length + ']') : ('[' + (imgIdx + 1) + '/' + dlResult.images.length + ']');
+          try {
+            await sock.sendMessage(sender, { image: imgBuf, caption: imgCap });
+          } catch (eImg) {
+            console.warn('[DOWNLOAD] Failed to send carousel image ' + imgIdx, eImg.message);
+          }
+          try { fs.unlinkSync(imgFp); } catch (e) {}
+        }
+      }
+      if (dlResult.audioPath && fs.existsSync(dlResult.audioPath)) {
+        await sendAudioMessage(sock, sender, dlResult.audioPath, (dlResult.title || 'TikTok') + ' Audio', dlResult.author || 'TikTok');
+      }
+      return;
     }
 
     if (dlResult.filePath) {

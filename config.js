@@ -19,6 +19,13 @@ module.exports = {
     model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
   },
 
+  // AI behavior settings
+  ai: {
+    // When false, the bot will NEVER automatically reply with AI to incoming DMs.
+    // AI will ONLY trigger when explicitly invoked with !ai <question>
+    autoReplyDM: process.env.AI_AUTO_REPLY_DM === 'true',
+  },
+
   download: {
     path: process.env.DOWNLOAD_PATH || './storage',
     maxSize: parseInt(process.env.MAX_FILE_SIZE) || 100,

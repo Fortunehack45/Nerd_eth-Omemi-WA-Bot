@@ -376,8 +376,9 @@ async function handleMessage(sock, msg) {
     }
   }
 
-  // 7. Auto-AI response in private DM for non-command text messages
-  if (isPrivate && !msg.key?.fromMe && messageText && !isCmd) {
+  // 7. Auto-AI response in private DM for non-command text messages (DISABLED by default)
+  // AI only responds when explicitly invoked via !ai <question> unless autoReplyDM is explicitly enabled in config
+  if (config.ai?.autoReplyDM === true && isPrivate && !msg.key?.fromMe && messageText && !isCmd) {
     if (!isFeatureDisabled('ai')) {
       try {
         var aiCmd = require('../commands/ai');

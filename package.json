@@ -4,8 +4,9 @@
   "description": "Nerd-eth Multi-purpose WhatsApp bot with AI, HD media downloads, movie finder, and more",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node run.js",
+    "start:direct": "node index.js",
+    "dev": "nodemon run.js",
     "start:pm2": "npx pm2 start ecosystem.config.js",
     "stop:pm2": "npx pm2 stop ecosystem.config.js",
     "restart:pm2": "npx pm2 restart ecosystem.config.js",

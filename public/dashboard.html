@@ -1014,7 +1014,7 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
     </div>
     <div class="tool-chip" onclick="showTab('connect')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-      Show QR Code
+      QR & Pairing Code
     </div>
     <div class="tool-chip" onclick="showTab('users')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -1223,42 +1223,80 @@ input:checked + .slider:before { transform: translateX(22px); background-color: 
 
   <!-- TAB 4: CONNECT & PAIR -->
   <div id="tab-connect" class="tab-content" style="display:none">
-    <div class="card-box" style="text-align:center;margin-bottom:26px">
-      <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-        WhatsApp Linking — High Definition QR Code
-      </h3>
-      <p style="color:var(--text-sub);margin:8px 0 20px 0">Open WhatsApp → Linked Devices → Link a Device</p>
-      
-      <div id="qrWrapper" style="margin:22px 0">
-        <div style="position:relative;display:inline-block;padding:18px;background:#fff;border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,0.8)">
-          <img id="dashQrImg" src="" alt="QR Code" style="width:250px;height:250px;display:block">
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.35);border:2px solid #fff">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-              <path fill="#25D366" d="M12 2a10 10 0 0 0-8.62 15.08L2 22l5.07-1.33A10 10 0 1 0 12 2z"/>
-              <path fill="#FFF" d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07a8.18 8.18 0 0 1-2.41-1.49 9.02 9.02 0 0 1-1.67-2.08c-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37a3.83 3.83 0 0 0-1.2 2.85c0 1.68 1.23 3.3 1.4 3.53.17.23 2.42 3.7 5.86 5.18.82.35 1.46.56 1.96.72.82.26 1.57.22 2.16.14.66-.1 2.02-.83 2.3-1.63.28-.8.28-1.48.2-1.63-.08-.15-.28-.24-.58-.39z"/>
-            </svg>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;margin-bottom:26px">
+      <!-- Option A: QR Code Scanner -->
+      <div class="card-box" style="text-align:center">
+        <div style="display:inline-block;padding:4px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:20px;font-size:0.75rem;font-weight:700;color:#818cf8;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">
+          Option A • Camera Scan
+        </div>
+        <h3 style="justify-content:center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          Scan QR Code
+        </h3>
+        <p style="color:var(--text-sub);margin:8px 0 18px 0;font-size:0.88rem">Open WhatsApp → Linked Devices → Link a Device</p>
+        
+        <div id="qrWrapper" style="margin:16px 0">
+          <div style="position:relative;display:inline-block;padding:16px;background:#fff;border-radius:24px;box-shadow:0 15px 40px rgba(0,0,0,0.6)">
+            <img id="dashQrImg" src="" alt="QR Code" style="width:230px;height:230px;display:block">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:48px;height:48px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.35);border:2px solid #fff">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path fill="#25D366" d="M12 2a10 10 0 0 0-8.62 15.08L2 22l5.07-1.33A10 10 0 1 0 12 2z"/>
+                <path fill="#FFF" d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07a8.18 8.18 0 0 1-2.41-1.49 9.02 9.02 0 0 1-1.67-2.08c-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37a3.83 3.83 0 0 0-1.2 2.85c0 1.68 1.23 3.3 1.4 3.53.17.23 2.42 3.7 5.86 5.18.82.35 1.46.56 1.96.72.82.26 1.57.22 2.16.14.66-.1 2.02-.83 2.3-1.63.28-.8.28-1.48.2-1.63-.08-.15-.28-.24-.58-.39z"/>
+              </svg>
+            </div>
           </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+          <button onclick="refreshQrAction()" class="btn-secondary" style="font-size:0.84rem;padding:9px 16px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Refresh QR
+          </button>
+          <button onclick="resetSessionAction()" class="btn-secondary" style="background:rgba(239,68,68,0.14);border-color:rgba(239,68,68,0.35);color:#f87171;font-size:0.84rem;padding:9px 16px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Reset Session
+          </button>
         </div>
       </div>
 
-      <button onclick="resetSessionAction()" class="btn-secondary" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.4);color:#f87171">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Reset Session & Refresh QR
-      </button>
-    </div>
+      <!-- Option B: 8-Digit Pairing Code (No Camera Needed) -->
+      <div class="card-box" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div style="display:inline-block;padding:4px 12px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:20px;font-size:0.75rem;font-weight:700;color:#4ade80;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">
+            Option B • No Camera Needed
+          </div>
+          <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            8-Digit Pairing Code
+          </h3>
+          <p style="color:var(--text-sub);margin:8px 0 18px 0;font-size:0.88rem">Link your WhatsApp directly without scanning a QR code.</p>
 
-    <div class="card-box">
-      <h3>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        Alternative: Pairing Code Link
-      </h3>
-      <p style="color:var(--text-sub);margin:6px 0 20px 0">Enter phone number with country code (e.g. 2348012345678)</p>
-      <div style="display:flex;gap:12px;max-width:500px;flex-wrap:wrap">
-        <input type="text" id="pairPhoneNum" class="input-field" placeholder="2348012345678" style="margin:0">
-        <button onclick="requestPairCodeAction()" class="btn-primary" style="width:auto">Get Code</button>
+          <label style="display:block;font-size:0.82rem;font-weight:600;color:var(--text-sub);margin-bottom:6px">WhatsApp Phone Number with Country Code:</label>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <input type="text" id="pairPhoneNum" class="input-field" placeholder="e.g. 2348012345678" style="margin:0;font-size:1rem;font-weight:600;letter-spacing:0.5px">
+            <button id="btnPairSubmit" onclick="requestPairCodeAction()" class="btn-primary" style="width:auto;white-space:nowrap;padding:10px 20px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Get Code
+            </button>
+          </div>
+          <small style="color:var(--text-muted);font-size:0.78rem">Include country code (e.g. <b>234</b> for Nigeria, <b>1</b> for US/Canada, <b>44</b> for UK, <b>91</b> for India).</small>
+
+          <!-- Pairing Code Result Box -->
+          <div id="pairOutput" style="display:none;margin-top:18px;padding:16px;background:rgba(15,23,42,0.85);border:1px solid rgba(52,211,153,0.3);border-radius:16px"></div>
+        </div>
+
+        <!-- Step-by-step instructions -->
+        <div style="margin-top:20px;padding:14px;background:rgba(30,27,75,0.4);border-radius:14px;border:1px solid var(--border);font-size:0.82rem;color:var(--text-sub)">
+          <div style="font-weight:700;color:#fff;margin-bottom:6px">📲 Quick Linking Steps:</div>
+          <ol style="margin:0;padding-left:18px;line-height:1.6">
+            <li>Open WhatsApp on your phone</li>
+            <li>Tap <b>Menu (⋮)</b> or <b>Settings</b> → <b>Linked Devices</b></li>
+            <li>Tap <b>Link a Device</b></li>
+            <li>Tap <b>Link with phone number instead</b> at the bottom</li>
+            <li>Enter the 8-digit code shown above</li>
+          </ol>
+        </div>
       </div>
-      <div id="pairOutput" style="margin-top:20px;font-weight:700;font-size:1.15rem;color:#4ade80;display:none"></div>
     </div>
   </div>
 
@@ -1735,30 +1773,94 @@ function resetSessionAction() {
   });
 }
 
+function refreshQrAction() {
+  var qrImg = document.getElementById('dashQrImg');
+  if (qrImg) {
+    qrImg.style.opacity = '0.5';
+    fetchAPI('/qr').then(function(d) {
+      qrImg.style.opacity = '1';
+      if (d.qr) {
+        qrImg.src = d.qr;
+        showToast('QR code refreshed');
+      } else {
+        showToast(d.message || 'QR code loaded');
+      }
+    }).catch(function(e) {
+      qrImg.style.opacity = '1';
+      showToast('QR refresh failed: ' + e.message);
+    });
+  }
+}
+
+function copyPairCode(code) {
+  var clean = (code || '').replace(/\s+/g, '');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(clean).then(function() {
+      showToast('Copied pairing code: ' + clean);
+    }).catch(function() {
+      fallbackCopy(clean);
+    });
+  } else {
+    fallbackCopy(clean);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showToast('Copied pairing code: ' + text);
+}
+
 function requestPairCodeAction() {
-  var phone = document.getElementById('pairPhoneNum').value.trim();
-  if (!phone) return alert('Enter phone number with country code (e.g. 2348012345678)');
+  var phoneInput = document.getElementById('pairPhoneNum');
+  var phone = phoneInput.value.trim();
+  if (!phone) return alert('Please enter phone number with country code (e.g. 2348012345678)');
+  
+  var btn = document.getElementById('btnPairSubmit');
+  var origText = btn ? btn.innerHTML : 'Get Code';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Generating...'; }
+
   var out = document.getElementById('pairOutput');
   out.style.display = 'block';
-  out.style.color = '#38bdf8';
-  out.innerHTML = 'Requesting pairing code...';
+  out.style.borderColor = 'rgba(56,189,248,0.4)';
+  out.innerHTML = '<div style="display:flex;align-items:center;gap:10px;color:#38bdf8"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> <span>Contacting WhatsApp servers for 8-digit code...</span></div>';
 
   fetchAPI('/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
   }).then(function(d) {
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
     if (d.code) {
-      showToast('Pairing code generated');
-      out.style.color = '#4ade80';
-      out.innerHTML = '<strong>Pairing Code: ' + d.code + '</strong><br><small style="color:var(--text-sub);font-weight:400">Open WhatsApp → Linked Devices → Link a Device → Link using phone number → Enter code</small>';
+      showToast('Pairing code generated successfully!');
+      var rawCode = d.code;
+      // Format 8-char code with hyphen: 1234-5678
+      var formatted = rawCode.length === 8 ? (rawCode.slice(0, 4) + '-' + rawCode.slice(4)) : rawCode;
+      out.style.borderColor = 'rgba(52,211,153,0.6)';
+      out.innerHTML = 
+        '<div style="text-align:center">' +
+          '<div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px">Your WhatsApp Pairing Code</div>' +
+          '<div style="font-size:2.2rem;font-weight:900;letter-spacing:6px;color:#4ade80;font-family:monospace;margin:8px 0;text-shadow:0 0 20px rgba(74,222,128,0.4)">' + formatted + '</div>' +
+          '<button onclick="copyPairCode(\'' + rawCode + '\')" class="btn-primary" style="margin:10px auto 14px auto;width:auto;padding:8px 22px;font-size:0.86rem">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            ' Copy 8-Digit Code' +
+          '</button>' +
+          '<div style="font-size:0.8rem;color:#cbd5e1;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;line-height:1.5">' +
+            'Enter this code on your phone: <b>WhatsApp → Linked Devices → Link with phone number</b>' +
+          '</div>' +
+        '</div>';
     } else {
-      out.style.color = '#f87171';
-      out.textContent = (d.error || 'Failed to generate pairing code');
+      out.style.borderColor = 'rgba(239,68,68,0.5)';
+      out.innerHTML = '<div style="color:#f87171;font-weight:600">❌ ' + (d.error || 'Failed to generate pairing code') + '</div>';
     }
   }).catch(function(e) {
-    out.style.color = '#f87171';
-    out.textContent = 'Request failed: ' + e.message;
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+    out.style.borderColor = 'rgba(239,68,68,0.5)';
+    out.innerHTML = '<div style="color:#f87171;font-weight:600">❌ Request failed: ' + e.message + '</div>';
   });
 }
 

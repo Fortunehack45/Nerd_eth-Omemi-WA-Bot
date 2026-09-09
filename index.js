@@ -58,14 +58,42 @@ loadCommands();
 startServer();
 
 console.log('');
-console.log('Starting WhatsApp client...');
+console.log('Starting WhatsApp client with 24/7 Zero-Downtime Supervisor...');
 console.log('');
 
-startClient(handleMessage, handleStatus, function(sock) {
-  setConnected(sock);
-  startScheduler(sock);
-  setTimeout(function() { startOnboarding(sock); }, 5000);
-}).catch(function(err) {
-  console.error('Failed to start client:', err);
-  process.exit(1);
-});
+// 24/7 Resilient Startup & Auto-Heal Watchdog Loop (NEVER EXITS)
+async function startBotWithAutoHeal() {
+  var attempts = 0;
+  while (true) {
+    try {
+      attempts++;
+      await startClient(handleMessage, handleStatus, function(sock) {
+        setConnected(sock);
+        startScheduler(sock);
+        setTimeout(function() { startOnboarding(sock); }, 5000);
+      });
+      break; // Successfully launched client; internal watchdog manages auto-reconnects
+    } catch (err) {
+      console.error('[24/7 AUTO-HEAL] Initial client startup error (attempt #' + attempts + '):', err?.message || err);
+      console.log('[24/7 AUTO-HEAL] Auto-restarting in 4 seconds for zero downtime...');
+      await new Promise(function(resolve) { setTimeout(resolve, 4000); });
+    }
+  }
+}
+
+startBotWithAutoHeal();
+
+// 24/7 Global Supervisor Heartbeat: verifies bot health every 30s and auto-recovers if dead
+setInterval(function() {
+  try {
+    const { getClient, triggerSafeReconnect } = require('./src/client');
+    const s = getClient();
+    if (!s || !s.ws || s.ws.readyState !== 1) {
+      if (typeof triggerSafeReconnect === 'function') {
+        triggerSafeReconnect('24/7 Global Supervisor detected inactive socket', 1500);
+      }
+    }
+  } catch (e) {
+    console.error('[24/7 Global Supervisor Error]', e.message);
+  }
+}, 30000);

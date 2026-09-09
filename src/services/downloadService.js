@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../../config');
 const { execFile } = require('child_process');
+const { optimizeVideoForWhatsApp } = require('../utils/helpers');
 
 // Try loading ytdl-core
 var ytdl = null;
@@ -337,7 +338,59 @@ async function getYouTubeVideo(url) {
     } catch (e) {}
   }
 
-  // Engine 1: btch-downloader direct YouTube Video API
+  // Engine 1: yt-dlp (Primary Full HD / 720p with format merging + WhatsApp Status optimization)
+  try {
+    log('YT Video — trying yt-dlp Full HD extractor...');
+    var res = await runYtDlp([
+      '-f', 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*+ba/b/best',
+      '--merge-output-format', 'mp4',
+      '--no-playlist',
+      '--no-warnings',
+      '--no-check-certificate',
+      '-o', outPattern,
+      url
+    ], 180000);
+
+    var targetFp = null;
+    if (fs.existsSync(expectedMp4)) {
+      targetFp = expectedMp4;
+    } else {
+      var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_video_' + ts); });
+      if (files.length > 0) targetFp = path.join(tempDir, files[0]);
+    }
+
+    if (targetFp && fs.existsSync(targetFp)) {
+      var st0 = fs.statSync(targetFp);
+      if (st0.size > 10000) {
+        log('YT Video — yt-dlp raw download success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing for WhatsApp Status...');
+        var optFp = await optimizeVideoForWhatsApp(targetFp);
+        var finalStat = fs.existsSync(optFp) ? fs.statSync(optFp) : st0;
+        log('YT Video — WhatsApp-ready (' + (finalStat.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: optFp, title: title, size: finalStat.size, quality: 'Full HD' };
+      }
+    }
+  } catch (e) { log('YT Video yt-dlp fail: ' + e.message); }
+
+  // Engine 2: Cobalt (HD 1080/720)
+  try {
+    log('YT Video — trying Cobalt HD...');
+    var fpCob = path.join(tempDir, 'yt_video_cobalt_' + ts + '.mp4');
+    var cobalt = await cobaltRequest(url, false, { videoQuality: '1080' });
+    if (!cobalt.success || !cobalt.url) {
+      cobalt = await cobaltRequest(url, false, { videoQuality: '720' });
+    }
+    if (cobalt.success && cobalt.url) {
+      var stC = await downloadStream(cobalt.url, fpCob);
+      if (stC.size > 50000) {
+        log('YT Video — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing for WhatsApp Status...');
+        var optCob = await optimizeVideoForWhatsApp(fpCob);
+        var finalCobStat = fs.existsSync(optCob) ? fs.statSync(optCob) : stC;
+        return { success: true, filePath: optCob, title: title, size: finalCobStat.size, quality: 'HD' };
+      }
+    }
+  } catch (e) { log('YT Video Cobalt fail: ' + e.message); }
+
+  // Engine 3: btch-downloader direct YouTube Video API fallback
   try {
     log('YT Video — trying btch-downloader...');
     var { youtube: btchYtV } = require('btch-downloader');
@@ -346,55 +399,13 @@ async function getYouTubeVideo(url) {
       var fpBtchV = path.join(tempDir, 'yt_video_btch_' + ts + '.mp4');
       var stBtchV = await downloadStream(ytVRes.mp4, fpBtchV);
       if (stBtchV.size > 20000) {
-        log('YT Video — btch-downloader success (' + (stBtchV.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpBtchV, title: ytVRes.title || title, size: stBtchV.size, quality: 'HD' };
+        log('YT Video — btch-downloader success (' + (stBtchV.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing...');
+        var optBtch = await optimizeVideoForWhatsApp(fpBtchV);
+        var finalBtchStat = fs.existsSync(optBtch) ? fs.statSync(optBtch) : stBtchV;
+        return { success: true, filePath: optBtch, title: ytVRes.title || title, size: finalBtchStat.size, quality: 'HD' };
       }
     }
   } catch (e) { log('YT Video btch-downloader fail: ' + e.message); }
-
-  // Engine 2: yt-dlp
-  try {
-    log('YT Video — trying yt-dlp...');
-    var res = await runYtDlp([
-      '-f', 'b[ext=mp4]/best[ext=mp4]/best',
-      '-o', outPattern,
-      '--no-playlist',
-      '--no-warnings',
-      url
-    ], 180000);
-
-    if (fs.existsSync(expectedMp4)) {
-      var st0 = fs.statSync(expectedMp4);
-      if (st0.size > 10000) {
-        log('YT Video — yt-dlp success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: expectedMp4, title: title, size: st0.size, quality: 'HD' };
-      }
-    }
-
-    var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_video_' + ts); });
-    if (files.length > 0) {
-      var fp0 = path.join(tempDir, files[0]);
-      var st1 = fs.statSync(fp0);
-      if (st1.size > 10000) {
-        log('YT Video — yt-dlp fallback file success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp0, title: title, size: st1.size, quality: 'HD' };
-      }
-    }
-  } catch (e) { log('YT Video yt-dlp fail: ' + e.message); }
-
-  // Engine 2: Cobalt
-  try {
-    log('YT Video — trying Cobalt...');
-    var fpCob = path.join(tempDir, 'yt_video_cobalt_' + ts + '.mp4');
-    var cobalt = await cobaltRequest(url, false, { videoQuality: '720' });
-    if (cobalt.success && cobalt.url) {
-      var stC = await downloadStream(cobalt.url, fpCob);
-      if (stC.size > 50000) {
-        log('YT Video — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpCob, title: title, size: stC.size, quality: '720p' };
-      }
-    }
-  } catch (e) { log('YT Video Cobalt fail: ' + e.message); }
 
   return { error: 'YouTube video download failed.' };
 }
@@ -403,50 +414,114 @@ async function getYouTubeVideo(url) {
 
 async function downloadTikTokVideo(url) {
   var tempDir = ensureTempDir();
-  var fp = path.join(tempDir, 'tiktok_' + Date.now() + '.mp4');
+  var ts = Date.now();
+  var fp = path.join(tempDir, 'tiktok_' + ts + '.mp4');
 
-  // Engine 1: btch-downloader TikTok API (Watermark-free)
-  try {
-    log('TikTok — trying btch-downloader...');
-    var { ttdl: btchTt } = require('btch-downloader');
-    var ttRes = await btchTt(url);
-    if (ttRes && ttRes.status && ttRes.video && ttRes.video.length > 0) {
-      var stBtchTt = await downloadStream(ttRes.video[0], fp);
-      if (stBtchTt.size > 10000) {
-        log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp, title: ttRes.title || 'TikTok Video', size: stBtchTt.size, author: 'TikTok' };
-      }
-    }
-  } catch (e) { log('TikTok btch-downloader fail: ' + e.message); }
-
-  // API 2: tikwm.com (fast & reliable)
+  // Engine 1: tikwm.com (Fast, HD, and supports BOTH videos & photo carousels/slides)
   try {
     log('TikTok — trying tikwm.com...');
     var r1 = await axios.get('https://www.tikwm.com/api/', {
       params: { url: url, hd: 1 },
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 20000,
+      timeout: 25000,
     });
     if (r1.data && r1.data.code === 0 && r1.data.data) {
       var d = r1.data.data;
+
+      // Check if this is a TikTok PHOTO CAROUSEL / SLIDE POST
+      if (d.images && Array.isArray(d.images) && d.images.length > 0) {
+        log('TikTok — detected photo carousel with ' + d.images.length + ' images');
+        var imgPaths = [];
+        for (var i = 0; i < d.images.length; i++) {
+          var imgUrl = d.images[i];
+          if (!imgUrl.startsWith('http')) imgUrl = 'https://www.tikwm.com' + imgUrl;
+          var imgFp = path.join(tempDir, 'tiktok_img_' + ts + '_' + (i + 1) + '.jpg');
+          try {
+            var stImg = await downloadStream(imgUrl, imgFp);
+            if (stImg.size > 1000) imgPaths.push(imgFp);
+          } catch (eImg) {}
+        }
+        if (imgPaths.length > 0) {
+          var audioFp = null;
+          if (d.music) {
+            try {
+              var mUrl = d.music.startsWith('http') ? d.music : ('https://www.tikwm.com' + d.music);
+              var mFp = path.join(tempDir, 'tiktok_audio_' + ts + '.mp3');
+              var stM = await downloadStream(mUrl, mFp);
+              if (stM.size > 2000) audioFp = mFp;
+            } catch (eM) {}
+          }
+          return {
+            success: true,
+            type: 'images',
+            images: imgPaths,
+            title: d.title || 'TikTok Photos',
+            author: d.author?.nickname || 'TikTok',
+            audioPath: audioFp,
+          };
+        }
+      }
+
+      // If it is a video
       var dlUrl = d.hdplay || d.play;
       if (dlUrl) {
         if (!dlUrl.startsWith('http')) dlUrl = 'https://www.tikwm.com' + dlUrl;
         var st1 = await downloadStream(dlUrl, fp);
         if (st1.size > 10000) {
-          log('TikTok — tikwm success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fp, title: d.title || 'TikTok Video', size: st1.size, author: d.author?.nickname || 'TikTok' };
+          log('TikTok — tikwm success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing for WhatsApp Status...');
+          var optTt = await optimizeVideoForWhatsApp(fp);
+          var stTtOpt = fs.existsSync(optTt) ? fs.statSync(optTt) : st1;
+          return { success: true, filePath: optTt, title: d.title || 'TikTok Video', size: stTtOpt.size, author: d.author?.nickname || 'TikTok', quality: 'HD' };
         }
       }
     }
   } catch (e) { log('TikTok tikwm fail: ' + e.message); }
 
-  // Engine 3: yt-dlp (Native extractor)
+  // Engine 2: btch-downloader TikTok API (Supports photos & video)
+  try {
+    log('TikTok — trying btch-downloader...');
+    var { ttdl: btchTt } = require('btch-downloader');
+    var ttRes = await btchTt(url);
+    if (ttRes && ttRes.status) {
+      if (ttRes.images && Array.isArray(ttRes.images) && ttRes.images.length > 0) {
+        log('TikTok — btch detected photo carousel with ' + ttRes.images.length + ' images');
+        var imgPathsBtch = [];
+        for (var j = 0; j < ttRes.images.length; j++) {
+          var imgUrlBtch = ttRes.images[j];
+          var imgFpBtch = path.join(tempDir, 'tiktok_btch_img_' + ts + '_' + (j + 1) + '.jpg');
+          try {
+            var stImgBtch = await downloadStream(imgUrlBtch, imgFpBtch);
+            if (stImgBtch.size > 1000) imgPathsBtch.push(imgFpBtch);
+          } catch (eImgBtch) {}
+        }
+        if (imgPathsBtch.length > 0) {
+          return {
+            success: true,
+            type: 'images',
+            images: imgPathsBtch,
+            title: ttRes.title || 'TikTok Photos',
+            author: 'TikTok',
+          };
+        }
+      }
+
+      if (ttRes.video && ttRes.video.length > 0) {
+        var stBtchTt = await downloadStream(ttRes.video[0], fp);
+        if (stBtchTt.size > 10000) {
+          log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing...');
+          var optBtchTt = await optimizeVideoForWhatsApp(fp);
+          var stBtchOpt = fs.existsSync(optBtchTt) ? fs.statSync(optBtchTt) : stBtchTt;
+          return { success: true, filePath: optBtchTt, title: ttRes.title || 'TikTok Video', size: stBtchOpt.size, author: 'TikTok', quality: 'HD' };
+        }
+      }
+    }
+  } catch (e) { log('TikTok btch-downloader fail: ' + e.message); }
+
+  // Engine 3: yt-dlp
   try {
     log('TikTok — trying yt-dlp...');
-    var tsTt = Date.now();
-    var outPatternTt = path.join(tempDir, 'tiktok_ytdlp_' + tsTt + '.%(ext)s');
-    var expectedMp4Tt = path.join(tempDir, 'tiktok_ytdlp_' + tsTt + '.mp4');
+    var outPatternTt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.%(ext)s');
+    var expectedMp4Tt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.mp4');
     var resTt = await runYtDlp([
       '-f', 'b[ext=mp4]/b/best',
       '-o', outPatternTt,
@@ -456,56 +531,39 @@ async function downloadTikTokVideo(url) {
       url
     ], 35000);
 
-    if (fs.existsSync(expectedMp4Tt)) {
-      var stYtTt = fs.statSync(expectedMp4Tt);
-      if (stYtTt.size > 10000) {
-        log('TikTok — yt-dlp success (' + (stYtTt.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: expectedMp4Tt, title: 'TikTok Video', size: stYtTt.size, author: 'TikTok' };
-      }
+    var targetTtFp = fs.existsSync(expectedMp4Tt) ? expectedMp4Tt : null;
+    if (!targetTtFp) {
+      var filesTt = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('tiktok_ytdlp_' + ts); });
+      if (filesTt.length > 0) targetTtFp = path.join(tempDir, filesTt[0]);
     }
-    var filesTt = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('tiktok_ytdlp_' + tsTt); });
-    if (filesTt.length > 0) {
-      var fpTt0 = path.join(tempDir, filesTt[0]);
-      var stTt1 = fs.statSync(fpTt0);
-      if (stTt1.size > 10000) {
-        log('TikTok — yt-dlp file success (' + (stTt1.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpTt0, title: 'TikTok Video', size: stTt1.size, author: 'TikTok' };
+    if (targetTtFp && fs.existsSync(targetTtFp)) {
+      var stYtTt = fs.statSync(targetTtFp);
+      if (stYtTt.size > 10000) {
+        log('TikTok — yt-dlp success. Optimizing for WhatsApp Status...');
+        var optYtTt = await optimizeVideoForWhatsApp(targetTtFp);
+        var stFinalTt = fs.existsSync(optYtTt) ? fs.statSync(optYtTt) : stYtTt;
+        return { success: true, filePath: optYtTt, title: 'TikTok Video', size: stFinalTt.size, author: 'TikTok', quality: 'HD' };
       }
     }
   } catch (e) { log('TikTok yt-dlp fail: ' + e.message); }
 
-  // API 2: Cobalt
+  // Engine 4: Cobalt
   try {
     log('TikTok — trying Cobalt...');
     var cobalt = await cobaltRequest(url, false);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
-        log('TikTok — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp, title: 'TikTok Video', size: stC.size, author: 'TikTok' };
+        log('TikTok — Cobalt success. Optimizing...');
+        var optC = await optimizeVideoForWhatsApp(fp);
+        var stCOpt = fs.existsSync(optC) ? fs.statSync(optC) : stC;
+        return { success: true, filePath: optC, title: 'TikTok Video', size: stCOpt.size, author: 'TikTok', quality: 'HD' };
       }
     }
   } catch (e) { log('TikTok Cobalt fail: ' + e.message); }
 
-  // API 3: tikcdn.io
-  try {
-    log('TikTok — trying tikcdn.io...');
-    var r3 = await axios.post('https://tikcdn.io/api/download', { url: url }, {
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-      timeout: 20000,
-    });
-    if (r3.data && (r3.data.video || r3.data.videoHD)) {
-      var vidUrl = r3.data.videoHD || r3.data.video;
-      var st3 = await downloadStream(vidUrl, fp);
-      if (st3.size > 10000) {
-        log('TikTok — tikcdn success (' + (st3.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fp, title: r3.data.title || 'TikTok Video', size: st3.size, author: 'TikTok' };
-      }
-    }
-  } catch (e) { log('TikTok tikcdn fail: ' + e.message); }
-
   safeUnlink(fp);
-  return { error: 'TikTok download failed. Ensure the video is public and try again.' };
+  return { error: 'TikTok download failed. Ensure the video or photos are public and try again.' };
 }
 
 // ─── INSTAGRAM ────────────────────────────────────────────────────────────────
