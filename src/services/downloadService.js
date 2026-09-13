@@ -26,6 +26,7 @@ function detectPlatform(url) {
   if (u.includes('instagram.com') || u.includes('instagr.am')) return 'instagram';
   if (u.includes('spotify.com') || u.includes('spotify.link')) return 'spotify';
   if (u.includes('twitter.com') || u.includes('x.com')) return 'twitter';
+  if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest';
   if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook';
   if (u.match(/\.(mp4|mp3|webm|avi|mkv|mov|wav|ogg|m4a|aac)$/i)) return 'direct';
   return 'unknown';
@@ -943,8 +944,28 @@ async function downloadTwitterVideo(url) {
     }
   } catch (e) { log('Twitter twitsave fail: ' + e.message); }
 
+  // Engine 4: Twitter Photos / Image fallback (if tweet has pictures instead of video)
+  try {
+    log('Twitter/X — checking for tweet photos...');
+    await runYtDlp([
+      '--write-thumbnail',
+      '--skip-download',
+      '-o', path.join(tempDir, 'twitter_photo_' + ts + '.%(ext)s'),
+      url
+    ], 20000);
+    var photoFiles = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('twitter_photo_' + ts); });
+    if (photoFiles.length > 0) {
+      var photoFp = path.join(tempDir, photoFiles[0]);
+      var stP = fs.statSync(photoFp);
+      if (stP.size > 2000) {
+        log('Twitter/X — photo thumbnail success (' + (stP.size / 1024).toFixed(0) + 'KB)');
+        return { success: true, filePath: photoFp, title: 'Twitter/X Photo', type: 'image', size: stP.size, author: 'Twitter' };
+      }
+    }
+  } catch (ePhoto) {}
+
   safeUnlink(fp);
-  return { error: 'Twitter video download failed. Ensure the tweet contains a video.' };
+  return { error: 'Twitter/X download failed. Ensure the tweet contains public video or photos.' };
 }
 
 // ─── FACEBOOK ─────────────────────────────────────────────────────────────────
@@ -1022,6 +1043,128 @@ async function downloadFacebookVideo(url) {
   return { error: 'Facebook video download failed. Make sure the post or reel is public.' };
 }
 
+// ─── PINTEREST ────────────────────────────────────────────────────────────────
+
+async function downloadPinterestMedia(url) {
+  var tempDir = ensureTempDir();
+  var ts = Date.now();
+  var finalUrl = (url || '').trim();
+
+  // Resolve shortened pin.it URLs
+  if (finalUrl.includes('pin.it')) {
+    try {
+      var rHead = await axios.get(finalUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        maxRedirects: 5,
+        timeout: 10000
+      });
+      finalUrl = rHead.request?.res?.responseUrl || rHead.config?.url || finalUrl;
+    } catch (e) {}
+  }
+
+  // Engine 1: Native yt-dlp (handles Pinterest video and photo pins)
+  try {
+    log('Pinterest — trying yt-dlp...');
+    var outPattern = path.join(tempDir, 'pinterest_' + ts + '.%(ext)s');
+    await runYtDlp([
+      '-o', outPattern,
+      '--no-playlist',
+      '--no-warnings',
+      '--no-check-certificate',
+      finalUrl
+    ], 35000);
+
+    var pinFiles = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('pinterest_' + ts); });
+    if (pinFiles.length > 0) {
+      var fp0 = path.join(tempDir, pinFiles[0]);
+      var st0 = fs.statSync(fp0);
+      if (st0.size > 2000) {
+        var ext0 = fp0.split('.').pop().toLowerCase();
+        var isImg0 = ['jpg', 'jpeg', 'png', 'webp'].includes(ext0);
+        if (!isImg0 && ['mp4', 'webm', 'mov'].includes(ext0)) {
+          var optFp = await optimizeVideoForWhatsApp(fp0);
+          var sendFp = fs.existsSync(optFp) ? optFp : fp0;
+          return { success: true, filePath: sendFp, title: 'Pinterest Video', type: 'video', size: fs.statSync(sendFp).size, author: 'Pinterest' };
+        }
+        return { success: true, filePath: fp0, title: 'Pinterest Image', type: 'image', size: st0.size, author: 'Pinterest' };
+      }
+    }
+  } catch (e) { log('Pinterest yt-dlp fail: ' + e.message); }
+
+  // Engine 2: Cheerio scrape for og:video and high-res og:image
+  try {
+    log('Pinterest — trying HTML scrape...');
+    var pageResp = await axios.get(finalUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 12000,
+      maxRedirects: 5
+    });
+
+    var cheerio = require('cheerio');
+    var $ = cheerio.load(pageResp.data || '');
+    var ogVideo = $('meta[property="og:video"]').attr('content') || $('meta[property="og:video:secure_url"]').attr('content') || $('video source').attr('src');
+    var ogImage = $('meta[property="og:image"]').attr('content') || $('meta[name="og:image"]').attr('content');
+    var ogTitle = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Pinterest Media';
+
+    if (ogVideo && ogVideo.startsWith('http')) {
+      var fpV = path.join(tempDir, 'pinterest_vid_' + ts + '.mp4');
+      var stV = await downloadStream(ogVideo, fpV);
+      if (stV.size > 2000) {
+        var optV = await optimizeVideoForWhatsApp(fpV);
+        var finalV = fs.existsSync(optV) ? optV : fpV;
+        return { success: true, filePath: finalV, title: ogTitle, type: 'video', size: fs.statSync(finalV).size, author: 'Pinterest' };
+      }
+    }
+
+    if (ogImage && ogImage.startsWith('http')) {
+      var highResImg = ogImage.replace(/\/(236x|474x|736x)\//, '/originals/');
+      var fpI = path.join(tempDir, 'pinterest_img_' + ts + '.jpg');
+      try {
+        var stI = await downloadStream(highResImg, fpI);
+        if (stI.size > 2000) {
+          return { success: true, filePath: fpI, title: ogTitle, type: 'image', size: stI.size, author: 'Pinterest' };
+        }
+      } catch (eUp) {
+        var stI2 = await downloadStream(ogImage, fpI);
+        if (stI2.size > 2000) {
+          return { success: true, filePath: fpI, title: ogTitle, type: 'image', size: stI2.size, author: 'Pinterest' };
+        }
+      }
+    }
+  } catch (e) { log('Pinterest scrape fail: ' + e.message); }
+
+  // Engine 3: btch-downloader Pinterest API
+  try {
+    log('Pinterest — trying btch-downloader...');
+    var { pinterest: btchPin } = require('btch-downloader');
+    if (btchPin) {
+      var pinRes = await btchPin(finalUrl);
+      var mediaUrl = null;
+      if (pinRes && pinRes.result) {
+        if (typeof pinRes.result === 'string') mediaUrl = pinRes.result;
+        else if (pinRes.result.url) mediaUrl = pinRes.result.url;
+        else if (Array.isArray(pinRes.result) && pinRes.result.length > 0) {
+          mediaUrl = pinRes.result[0]?.url || pinRes.result[0];
+        }
+      }
+      if (mediaUrl && typeof mediaUrl === 'string' && mediaUrl.startsWith('http')) {
+        var isVid = mediaUrl.includes('.mp4');
+        var fpB = path.join(tempDir, 'pinterest_btch_' + ts + (isVid ? '.mp4' : '.jpg'));
+        var stB = await downloadStream(mediaUrl, fpB);
+        if (stB.size > 2000) {
+          return { success: true, filePath: fpB, title: 'Pinterest Media', type: isVid ? 'video' : 'image', size: stB.size, author: 'Pinterest' };
+        }
+      }
+    }
+  } catch (e) { log('Pinterest btch fail: ' + e.message); }
+
+  return { error: 'Pinterest download failed. Ensure the pin is public and accessible.' };
+}
+
 // ─── DIRECT DOWNLOAD ──────────────────────────────────────────────────────────
 
 async function downloadDirectMedia(url) {
@@ -1053,6 +1196,7 @@ async function processLink(url) {
     case 'facebook': { var fi = await downloadFacebookVideo(url); return fi.success ? { platform: 'facebook', title: fi.title } : fi; }
     case 'spotify': return { platform: 'spotify', title: 'Spotify Track', url: url };
     case 'twitter': { var tw = await downloadTwitterVideo(url); return tw.success ? { platform: 'twitter', title: tw.title } : tw; }
+    case 'pinterest': return { platform: 'pinterest', title: 'Pinterest Media', url: url };
     case 'direct': return { platform: 'direct', title: path.basename(url.split('?')[0]) || 'Direct Media', downloadUrl: url };
     default: return { error: 'Unsupported platform: ' + platform };
   }
@@ -1066,6 +1210,7 @@ async function downloadMedia(url) {
     case 'instagram': return await downloadInstagramMedia(url);
     case 'facebook': return await downloadFacebookVideo(url);
     case 'twitter': return await downloadTwitterVideo(url);
+    case 'pinterest': return await downloadPinterestMedia(url);
     case 'direct': return await downloadDirectMedia(url);
     default: return { error: 'No video download available for: ' + platform };
   }
@@ -1077,6 +1222,7 @@ async function downloadAudio(url) {
     case 'youtube': return await getYouTubeAudio(url);
     case 'spotify': return await downloadSpotifyAudio(url);
     case 'tiktok': return await downloadTikTokVideo(url);
+    case 'pinterest': return await downloadPinterestMedia(url);
     case 'direct': return await downloadDirectMedia(url);
     default: return { error: 'Audio download not supported for: ' + platform };
   }
@@ -1148,6 +1294,7 @@ module.exports = {
   downloadInstagramMedia,
   downloadSpotifyAudio,
   downloadTwitterVideo,
+  downloadPinterestMedia,
   downloadFacebookVideo,
   searchYouTubeAndDownloadAudio,
   processLink,

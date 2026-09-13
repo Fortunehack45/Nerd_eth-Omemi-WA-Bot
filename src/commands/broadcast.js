@@ -34,14 +34,47 @@ module.exports = {
     let failed = 0;
     const chats = {};
 
+    // 1. In-memory chats if available
     var chatsRaw = sock.chats;
-if (!chatsRaw) chatsRaw = {};
-var chatList = chatsRaw instanceof Map ? Array.from(chatsRaw.values()) : Object.values(chatsRaw);
-for (const chat of chatList) {
-      const jid = chat.id || chat.jid;
-      if (!jid || jid === 'status@broadcast') continue;
-      chats[jid] = true;
+    if (chatsRaw) {
+      var chatList = chatsRaw instanceof Map ? Array.from(chatsRaw.values()) : Object.values(chatsRaw);
+      for (const chat of chatList) {
+        const jid = chat.id || chat.jid;
+        if (!jid || jid === 'status@broadcast') continue;
+        chats[jid] = true;
+      }
     }
+
+    // 2. Fetch all groups the bot participates in via Baileys API
+    try {
+      if (typeof sock.groupFetchAllParticipating === 'function') {
+        const groups = await sock.groupFetchAllParticipating();
+        if (groups && typeof groups === 'object') {
+          for (const gid of Object.keys(groups)) {
+            if (gid && gid.endsWith('@g.us')) chats[gid] = true;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Known users from memory service
+    try {
+      var mem = require('../services/memoryService');
+      var users = mem.getAllUsers();
+      for (const u of users) {
+        var jid = u.id || (u.number ? u.number + '@s.whatsapp.net' : null);
+        if (jid && jid !== 'status@broadcast') chats[jid] = true;
+      }
+    } catch (e) {}
+
+    // 4. Known approved users from access control
+    try {
+      var acSvc = require('../services/accessControl');
+      var acUsers = acSvc.listUsers();
+      for (const u of acUsers) {
+        if (u.number) chats[u.number + '@s.whatsapp.net'] = true;
+      }
+    } catch (e) {}
 
     const chatIds = Object.keys(chats);
 

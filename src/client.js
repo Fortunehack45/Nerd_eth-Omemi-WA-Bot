@@ -14,6 +14,8 @@ let sock = null;
 let startTime = null;
 let presenceInterval = null;
 let lastQR = null;
+let lastPairingCode = null;
+let pairingCodeRequested = false;
 let consecutiveErrors = 0;
 let isConnected = false;
 let reconnectTimeout = null;
@@ -73,6 +75,8 @@ function clearSessionFolder() {
 
 function resetSession() {
   lastQR = null;
+  lastPairingCode = null;
+  pairingCodeRequested = false;
   isConnected = false;
   if (reconnectTimeout) {
     clearTimeout(reconnectTimeout);
@@ -144,14 +148,23 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
   if (!global.msgStore) global.msgStore = new Map();
   if (!global.processedMsgIds) global.processedMsgIds = new Set();
+  if (!global.botSentMessageIds) global.botSentMessageIds = new Set();
 
-  // Intercept sendMessage to automatically cache all outgoing bot messages for decryption retries
+  // Intercept sendMessage to track bot-sent messages and cache for decryption retries
   const origSendMessage = sock.sendMessage.bind(sock);
   sock.sendMessage = async (jid, content, options) => {
     const sent = await origSendMessage(jid, content, options);
-    if (sent?.key?.id && sent?.message) {
-      if (!global.msgStore) global.msgStore = new Map();
-      global.msgStore.set(sent.key.id, sent.message);
+    if (sent?.key?.id) {
+      if (!global.botSentMessageIds) global.botSentMessageIds = new Set();
+      global.botSentMessageIds.add(sent.key.id);
+      if (global.botSentMessageIds.size > 2000) {
+        const ids = Array.from(global.botSentMessageIds);
+        for (let i = 0; i < 500; i++) global.botSentMessageIds.delete(ids[i]);
+      }
+      if (sent?.message) {
+        if (!global.msgStore) global.msgStore = new Map();
+        global.msgStore.set(sent.key.id, sent.message);
+      }
     }
     return sent;
   };
@@ -164,6 +177,31 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
       lastQR = qr;
+      var autoPairNumber = (process.env.PAIRING_NUMBER || config.pairingNumber || '').replace(/[^0-9]/g, '');
+      if (autoPairNumber && autoPairNumber.length >= 10 && !pairingCodeRequested && !sock?.authState?.creds?.registered) {
+        pairingCodeRequested = true;
+        setTimeout(async () => {
+          try {
+            if (!sock || isConnected || sock.authState?.creds?.registered) return;
+            var code = await sock.requestPairingCode(autoPairNumber);
+            var formatted = (code && code.length === 8) ? (code.slice(0, 4) + '-' + code.slice(4)) : code;
+            lastPairingCode = formatted;
+            console.log('\n╔════════════════════════════════════════════════════════════════╗');
+            console.log('║  🔢 WHATSAPP PAIRING CODE GENERATED                           ║');
+            console.log('║  Phone: ' + autoPairNumber.padEnd(52) + ' ║');
+            console.log('║  Pairing Code: ' + formatted.padEnd(45) + ' ║');
+            console.log('║                                                                ║');
+            console.log('║  1. Open WhatsApp on phone                                     ║');
+            console.log('║  2. Go to Linked Devices → Link a Device                       ║');
+            console.log('║  3. Tap "Link with phone number instead"                       ║');
+            console.log('║  4. Enter the pairing code above                               ║');
+            console.log('╚════════════════════════════════════════════════════════════════╝\n');
+          } catch (pairErr) {
+            console.warn('[CLIENT] Auto pairing code failed:', pairErr.message);
+          }
+        }, 1500);
+      }
+
       const dashUrl = getDashboardUrl();
       console.log('\n╔════════════════════════════════════════════════════════════════╗');
       console.log('║  📲 SCAN QR CODE TO CONNECT WHATSAPP                          ║');
@@ -201,6 +239,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
     if (connection === 'open') {
       isConnected = true;
+      lastPairingCode = null;
+      pairingCodeRequested = false;
       consecutiveErrors = 0;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
@@ -213,6 +253,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       console.log('====================================================\n');
 
       if (config.antiBan.alwaysOnline) {
+        sock.sendPresenceUpdate('available').catch(() => {});
         startPresenceKeepAlive();
       }
       // Start recurring organic presence simulation if stealth mode active
@@ -254,6 +295,11 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
         // Cache all messages immediately for anti-delete recovery
         try { cacheMessage(m, sock); } catch (e) {}
+
+        // Never allow bot-sent programmatic messages to trigger command handler / AI loop
+        if (m.key?.id && global.botSentMessageIds && global.botSentMessageIds.has(m.key.id)) {
+          continue;
+        }
 
         var remoteJid = m.key?.remoteJid || '';
 
@@ -311,12 +357,17 @@ function stopHeartbeat() {}
 
 function startPresenceKeepAlive() {
   if (presenceInterval) clearInterval(presenceInterval);
+  if (sock?.user?.id && isConnected) {
+    sock.sendPresenceUpdate('available').catch(() => {});
+  }
+  // Native Baileys keepAliveIntervalMs: 25000 handles socket TCP ping silently.
+  // Refresh presence status every 2.5 minutes (150s) instead of 25s to avoid WhatsApp server kicks/disconnects.
   presenceInterval = setInterval(async () => {
     if (!sock?.user?.id || !isConnected) return;
     try {
       await sock.sendPresenceUpdate('available');
     } catch (e) { }
-  }, randomBetween(40000, 60000));
+  }, 150000);
 }
 
 function stopPresenceKeepAlive() {
@@ -336,6 +387,10 @@ function getUptime() {
 
 function getLastQR() {
   return lastQR;
+}
+
+function getLastPairingCode() {
+  return lastPairingCode;
 }
 
 async function requestPairingCode(phoneNumber) {
@@ -360,13 +415,15 @@ async function requestPairingCode(phoneNumber) {
   }
 
   try {
-    const code = await sock.requestPairingCode(cleanPhone);
-    console.log('[CLIENT] Pairing code generated for:', cleanPhone, 'Code:', code);
-    return code;
+    const rawCode = await sock.requestPairingCode(cleanPhone);
+    const formatted = (rawCode && rawCode.length === 8) ? (rawCode.slice(0, 4) + '-' + rawCode.slice(4)) : rawCode;
+    lastPairingCode = formatted;
+    console.log('[CLIENT] Pairing code generated for:', cleanPhone, 'Code:', formatted);
+    return formatted;
   } catch (err) {
     console.error('[CLIENT] Pairing code error:', err.message);
     throw new Error('Pairing code failed: ' + (err.message || 'Unknown error'));
   }
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR, requestPairingCode, resetSession, triggerSafeReconnect };
+module.exports = { startClient, getClient, getUptime, getLastQR, getLastPairingCode, requestPairingCode, resetSession, triggerSafeReconnect };

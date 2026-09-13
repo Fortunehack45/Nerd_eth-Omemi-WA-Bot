@@ -1,5 +1,5 @@
 const config = require('../../config');
-const { chatComplete } = require('./aiService');
+const aiService = require('./aiService');
 
 const agents = new Map();
 const agentResults = new Map();
@@ -71,7 +71,7 @@ async function askAgent(name, userMessage) {
   agent.messages.push({ role: 'user', content: userMessage });
   agent.lastActive = Date.now();
 
-  const result = await chatComplete(agent.messages);
+  const result = await aiService.chatComplete(agent.messages);
   if (result.success) {
     agent.messages.push({ role: 'assistant', content: result.text });
     agent.taskCount++;

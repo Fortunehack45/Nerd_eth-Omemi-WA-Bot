@@ -23,7 +23,7 @@ function isAdmin(jid, isFromMe, sock) {
     sock = sock || require('../client').getClient();
     if (sock && sock.user) {
       var botNum = parseJid(sock.user.id || sock.user.jid || '');
-      if (botNum && (botNum === sender || sender.endsWith(botNum) || botNum.endsWith(sender))) {
+      if (botNum && botNum === sender) {
         return true;
       }
     }
@@ -33,7 +33,7 @@ function isAdmin(jid, isFromMe, sock) {
   if (config.admins && config.admins.length > 0) {
     for (var i = 0; i < config.admins.length; i++) {
       var adminNum = parseJid(config.admins[i]);
-      if (adminNum && (adminNum === sender || sender.endsWith(adminNum) || adminNum.endsWith(sender))) {
+      if (adminNum && adminNum === sender) {
         return true;
       }
     }

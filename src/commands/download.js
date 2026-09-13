@@ -3,7 +3,7 @@ const { parseFlags, formatBytes, sendAudioMessage } = require('../utils/helpers'
 const config = require('../../config');
 const fs = require('fs');
 
-var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Instagram, and Spotify. The bot downloads the file and sends it directly.\n\n*Usage:* `!download <link> [flags]`\n\n*Flags:*\n  `--audio`, `-a`    Download as audio only (MP3/M4A)\n  `--info`, `-i`     Show info without downloading\n\n*Supported Platforms:*\n  ▸ *YouTube* — Videos in HD (1080p/720p default)\n  ▸ *TikTok* — HD videos without watermark\n  ▸ *Instagram* — Posts, Reels, Stories (public only)\n  ▸ *Spotify* — Track audio (MP3)\n\n*Examples:*\n  `!download https://youtu.be/abc123`\n  `!download https://youtu.be/abc123 --audio`\n  `!download https://vm.tiktok.com/abc123`\n  `!download https://open.spotify.com/track/abc123`\n  `!download https://instagram.com/p/abc123`\n  `!download https://youtu.be/abc123 --info`';
+var HELP = '*📥 Download Command*\n\nDownload media from YouTube, TikTok, Instagram, Spotify, Twitter/X, Pinterest, and Facebook in HD.\n\n*Usage:* `!download <link> [flags]`\n\n*Flags:*\n  `--audio`, `-a`    Download as audio only (MP3/M4A)\n  `--info`, `-i`     Show info without downloading\n\n*Supported Platforms:*\n  ▸ *YouTube* — Videos in HD & Audio (1080p/720p/MP3)\n  ▸ *TikTok* — HD videos without watermark & photo carousels\n  ▸ *Instagram* — Posts, Reels, Stories & Photos (public only)\n  ▸ *Spotify* — Full track audio (MP3 320kbps)\n  ▸ *Twitter / X* — Videos & photos in HD\n  ▸ *Pinterest* — Videos & high-res images\n  ▸ *Facebook* — Public videos & reels\n\n*Examples:*\n  `!download https://youtu.be/abc123`\n  `!download https://pin.it/abc123`\n  `!download https://x.com/user/status/123`\n  `!download https://open.spotify.com/track/abc123`';
 
 const { optimizeVideoForWhatsApp } = require('../utils/helpers');
 
@@ -19,6 +19,13 @@ async function sendFile(sock, sender, filePath, opts) {
 
     if (opts.type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'opus'].includes(ext)) {
       await sendAudioMessage(sock, sender, filePath, opts.title || 'Audio', opts.author || 'Download', { asDocument: opts.asDocument });
+      return;
+    }
+
+    if (opts.type === 'image' || ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+      var imgBuf = fs.readFileSync(filePath);
+      var imgCap = opts.title ? '📸 *' + opts.title.substring(0, 100) + '*' : '📸 Image';
+      await sock.sendMessage(sender, { image: imgBuf, caption: imgCap });
       return;
     }
 
@@ -87,7 +94,7 @@ module.exports = {
 
     var platform = detectPlatform(url);
     if (platform === 'unknown') {
-      return sock.sendMessage(sender, { text: '❌ Unsupported platform.\n\n*Supported:* YouTube, TikTok, Instagram, Spotify, Twitter, Facebook' });
+      return sock.sendMessage(sender, { text: '❌ Unsupported platform.\n\n*Supported:* YouTube, TikTok, Instagram, Spotify, Twitter/X, Pinterest, Facebook' });
     }
 
     // ── INFO MODE ────────────────────────────────────────────────────────────
@@ -168,7 +175,8 @@ module.exports = {
     if (dlResult.filePath) {
       var fileStat = fs.statSync(dlResult.filePath);
       if (fileStat.size < config.download.maxSize * 1024 * 1024) {
-        var type = ['youtube', 'tiktok', 'instagram', 'twitter', 'facebook'].includes(platform) ? 'video' : 'media';
+        var isImage = dlResult.type === 'image' || ['jpg', 'jpeg', 'png', 'webp'].includes(dlResult.filePath.split('.').pop().toLowerCase());
+        var type = isImage ? 'image' : (['youtube', 'tiktok', 'instagram', 'twitter', 'facebook', 'pinterest'].includes(platform) ? 'video' : 'media');
         await sock.sendMessage(sender, { text: '✅ Sending media: *' + (dlResult.title || platform) + '*' + (dlResult.quality ? ' (' + dlResult.quality + ')' : '') });
         await sendFile(sock, sender, dlResult.filePath, { title: dlResult.title, type: type, quality: dlResult.quality });
       } else {

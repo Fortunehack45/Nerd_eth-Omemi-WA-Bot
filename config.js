@@ -1,8 +1,9 @@
 require('dotenv').config();
 
 module.exports = {
-  botName: process.env.BOT_NAME || 'Nerd-eth',
+  botName: process.env.BOT_NAME || 'Nerd',
   ownerNumber: process.env.OWNER_NUMBER || '',
+  pairingNumber: process.env.PAIRING_NUMBER || '',
   prefix: process.env.PREFIX || '!',
   dashboardPassword: process.env.DASHBOARD_PASSWORD || 'Omemi',
 
@@ -16,7 +17,7 @@ module.exports = {
   // Groq — free AI provider (https://console.groq.com)
   groq: {
     apiKey: process.env.GROQ_API_KEY || '',
-    model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+    model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
   },
 
   // AI behavior settings

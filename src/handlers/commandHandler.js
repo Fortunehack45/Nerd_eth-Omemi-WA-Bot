@@ -77,7 +77,7 @@ async function handleCommand(sock, msg, text) {
 
   var { isCommandDisabled } = require('../services/featureService');
   if (isCommandDisabled(cmd.name) || isCommandDisabled(command)) {
-    await sock.sendMessage(sender, { text: '⚠️ The command `!' + command + '` has been disabled by the Admin.' });
+    await sock.sendMessage(sender, { text: '⚠️ The command `!' + command + '` has been blocked by the Admin.' });
     return true;
   }
 

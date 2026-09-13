@@ -166,17 +166,23 @@ async function handleMessage(sock, msg) {
     if (isRevoked) return;
   }
 
-
+  // Never allow bot-sent programmatic messages to trigger commands or loops
+  if (msg.key?.id && global.botSentMessageIds && global.botSentMessageIds.has(msg.key.id)) {
+    return;
+  }
 
   // 1. Emoji Reaction Trigger (Admin reacting to View-Once or Status)
   var reaction = msg.message?.reactionMessage;
   if (reaction) {
+    // Ignore reactions sent by the bot itself
+    if (msg.key?.fromMe) return;
+
     var reactionEmoji = reaction.text || '';
-    var isCallerAdmin = msg.key?.fromMe ? true : isAdmin(msg.key?.participant || sender, false);
+    var isCallerAdmin = isAdmin(msg.key?.participant || sender, false);
 
     if (isCallerAdmin) {
       var { parseJid } = require('../utils/helpers');
-      var callerId = msg.key?.fromMe ? (sock.user?.id || sender) : (reaction.key?.participant || sender);
+      var callerId = reaction.key?.participant || sender;
       var cleanCallerNum = parseJid(callerId);
       var ownerJid = cleanCallerNum ? (cleanCallerNum + '@s.whatsapp.net') : (getOwnerJid(sock) || sender);
 
@@ -232,14 +238,22 @@ async function handleMessage(sock, msg) {
     return;
   }
 
-  // 3. Admin Emoji & Keyword Triggers (with or without '!' prefix, standalone or reply)
+  // 3. Admin Emoji & Keyword Triggers (MUST be explicit reply or exact keyword, not loose text)
   var cleanText = messageText.trim();
   var cleanCmdKey = cleanText.toLowerCase().replace(/^!/, '');
   var isViewOnceKeyword = ['vv', 'rvo', 'viewonce', 'reveal', 'getvo'].includes(cleanCmdKey);
-  var isStatusKeyword = ['sw', 'save', 'savestatus', 'savestory', 'getstatus', 'swdl'].includes(cleanCmdKey);
+  var isStatusKeyword = ['sw', 'savestatus', 'savestory', 'getstatus', 'swdl'].includes(cleanCmdKey);
 
-  var isEmojiOrKeywordTrigger = hasEmojiMatch(cleanText, VIEWONCE_EMOJIS_NORM)
-    || hasEmojiMatch(cleanText, STATUS_EMOJIS_NORM)
+  var contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
+  var stanzaId = contextInfo.stanzaId;
+  var isQuotingMessage = !!(stanzaId || contextInfo.quotedMessage);
+
+  // Strictly require exact keyword, or exact single emoji while replying to a message
+  var isSingleViewOnceEmoji = isQuotingMessage && VIEWONCE_EMOJIS_NORM.includes(normalizeEmojiStr(cleanText));
+  var isSingleStatusEmoji = isQuotingMessage && STATUS_EMOJIS_NORM.includes(normalizeEmojiStr(cleanText));
+
+  var isEmojiOrKeywordTrigger = isSingleViewOnceEmoji
+    || isSingleStatusEmoji
     || isViewOnceKeyword
     || isStatusKeyword;
 
@@ -257,8 +271,8 @@ async function handleMessage(sock, msg) {
       var quotedRemoteJid = contextInfo.remoteJid || sender;
       var quotedMsg = contextInfo.quotedMessage;
 
-      // --- VIEW-ONCE HANDLER (❤️, 😂, 👍, vv, rvo, viewonce) ---
-      if (hasEmojiMatch(cleanText, VIEWONCE_EMOJIS_NORM) || isViewOnceKeyword) {
+      // --- VIEW-ONCE HANDLER (isSingleViewOnceEmoji, vv, rvo, viewonce) ---
+      if (isSingleViewOnceEmoji || isViewOnceKeyword) {
         // 1. If replying to a saved message by stanzaId
         if (stanzaId) {
           var savedItem = findByMessageId(stanzaId);
@@ -303,14 +317,14 @@ async function handleMessage(sock, msg) {
         if (recentSaved && ownerJid) {
           await sendMediaItem(sock, ownerJid, recentSaved);
           console.log('[Emoji/Keyword Trigger] Delivered recent viewonce ' + recentSaved.id + ' to owner self-chat');
-        } else {
+        } else if (isViewOnceKeyword) {
           await sock.sendMessage(ownerJid, { text: '⚠️ No saved view-once media found in storage.' });
         }
         return; // 100% Silent in source chat!
       }
 
-      // --- STATUS SAVER HANDLER (🙂, 😊, sw, save, savestatus) ---
-      if (hasEmojiMatch(cleanText, STATUS_EMOJIS_NORM) || isStatusKeyword) {
+      // --- STATUS SAVER HANDLER (isSingleStatusEmoji, sw, save, savestatus) ---
+      if (isSingleStatusEmoji || isStatusKeyword) {
         if (quotedMsg) {
           var statusMsgKey = {
             remoteJid: quotedRemoteJid || 'status@broadcast',
@@ -318,7 +332,7 @@ async function handleMessage(sock, msg) {
             participant: quotedParticipant || sender,
           };
           await saveAndForwardStatus(sock, statusMsgKey, quotedMsg, contextInfo.pushName || msg.pushName, sender);
-        } else {
+        } else if (isStatusKeyword) {
           var statusMsgKey = {
             remoteJid: 'status@broadcast',
             id: 'STATUS_' + Date.now(),
@@ -356,6 +370,13 @@ async function handleMessage(sock, msg) {
   var trimmed = messageText.trim();
   var isCmd = isCommand(trimmed);
 
+  // CRITICAL: If the message is from the bot's own account (fromMe: true),
+  // ONLY process if it starts with the command prefix (e.g. !ping, !help).
+  // NEVER allow prefixless commands or emoji shortcuts on fromMe: true!
+  if (msg.key?.fromMe && !isCmd) {
+    return;
+  }
+
   if (isCmd) {
     var cmdText = trimmed.slice(config.prefix.length).trim();
     var firstChar = Array.from(cmdText)[0] || '';
@@ -371,8 +392,13 @@ async function handleMessage(sock, msg) {
     return;
   }
 
-  // Support prefixless commands for admin and users (e.g. getpp, get pp, ping, help)
+  // Support prefixless commands for admin and users (e.g. ai, ask, gpt, getpp, get pp, ping, help)
   var lowerTrimmed = trimmed.toLowerCase();
+  if (lowerTrimmed === 'ai' || lowerTrimmed.startsWith('ai ') || lowerTrimmed === 'ask' || lowerTrimmed.startsWith('ask ') || lowerTrimmed === 'gpt' || lowerTrimmed.startsWith('gpt ')) {
+    var restAi = trimmed.replace(/^(ai|ask|gpt)\s*/i, '').trim();
+    await handleCommand(sock, msg, 'ai' + (restAi ? ' ' + restAi : ''));
+    return;
+  }
   if (lowerTrimmed === 'getpp' || lowerTrimmed.startsWith('getpp ') || lowerTrimmed === 'get pp' || lowerTrimmed.startsWith('get pp ')) {
     var rest = lowerTrimmed.replace(/^get\s*pp\s*/i, '').trim();
     await handleCommand(sock, msg, 'getpp' + (rest ? ' ' + rest : ''));
@@ -393,7 +419,72 @@ async function handleMessage(sock, msg) {
     return;
   }
 
-  // 7. Auto-AI response in private DM for non-command text messages (DISABLED by default)
+  // 7. Natural Language & URL Auto-Downloader
+  // Automatically detects media URLs and downloads them if:
+  // - The user says "download this", "save this", "dl this", "get this", etc.
+  // - OR the message consists primarily of the media URL
+  // - OR the user quoted/replied to a message containing a media URL with a download request
+  if (!msg.key?.fromMe && !isFeatureDisabled('download')) {
+    var urlRegex = /(https?:\/\/[^\s]+)/gi;
+    var matchedUrls = trimmed.match(urlRegex) || [];
+    var contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+    var quotedText = '';
+    if (contextInfo?.quotedMessage) {
+      var qInner = contextInfo.quotedMessage?.ephemeralMessage?.message
+        || contextInfo.quotedMessage?.viewOnceMessage?.message
+        || contextInfo.quotedMessage?.viewOnceMessageV2?.message
+        || contextInfo.quotedMessage;
+      quotedText = qInner?.conversation
+        || qInner?.extendedTextMessage?.text
+        || qInner?.imageMessage?.caption
+        || qInner?.videoMessage?.caption
+        || '';
+    }
+
+    var targetUrl = null;
+    var detectedPlat = null;
+    var { detectPlatform } = require('../services/downloadService');
+
+    // Check URLs in the incoming message
+    for (var u of matchedUrls) {
+      var clean = u.replace(/[.,!?;:)>\]]+$/, '');
+      var plat = detectPlatform(clean);
+      if (plat && plat !== 'unknown') {
+        targetUrl = clean;
+        detectedPlat = plat;
+        break;
+      }
+    }
+
+    // Check quoted message if current message expresses download intent
+    var hasDownloadIntent = /\b(download|save|dl|get|grab|rip|load)\b/i.test(trimmed);
+    if (!targetUrl && quotedText && hasDownloadIntent) {
+      var quotedUrls = quotedText.match(urlRegex) || [];
+      for (var qu of quotedUrls) {
+        var cleanQu = qu.replace(/[.,!?;:)>\]]+$/, '');
+        var qPlat = detectPlatform(cleanQu);
+        if (qPlat && qPlat !== 'unknown') {
+          targetUrl = cleanQu;
+          detectedPlat = qPlat;
+          break;
+        }
+      }
+    }
+
+    if (targetUrl) {
+      // Check if message is essentially just the URL or has explicit download intent
+      var remainingText = trimmed.replace(urlRegex, '').trim();
+      var isBareUrl = remainingText.length <= 20;
+      if (hasDownloadIntent || isBareUrl) {
+        var hasAudioIntent = /\b(audio|sound|song|mp3|music)\b/i.test(trimmed);
+        var downloadCmdText = 'download ' + targetUrl + (hasAudioIntent ? ' --audio' : '');
+        await handleCommand(sock, msg, downloadCmdText);
+        return;
+      }
+    }
+  }
+
+  // 8. Auto-AI response in private DM for non-command text messages (DISABLED by default)
   // AI only responds when explicitly invoked via !ai <question> unless autoReplyDM is explicitly enabled in config
   if (config.ai?.autoReplyDM === true && isPrivate && !msg.key?.fromMe && messageText && !isCmd) {
     if (!isFeatureDisabled('ai')) {

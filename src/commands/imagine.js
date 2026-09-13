@@ -1,4 +1,4 @@
-const { generateImage } = require('../services/aiService');
+const aiService = require('../services/aiService');
 
 module.exports = {
   name: 'imagine',
@@ -21,7 +21,7 @@ module.exports = {
     await sock.sendMessage(sender, { text: '🎨 Generating image: "' + query.substring(0, 80) + '..."\n_This may take 15-30 seconds..._' });
     await sock.sendPresenceUpdate('composing', sender);
 
-    var result = await generateImage(query);
+    var result = await aiService.generateImage(query);
     if (result.success && result.url) {
       try {
         const axios = require('axios');

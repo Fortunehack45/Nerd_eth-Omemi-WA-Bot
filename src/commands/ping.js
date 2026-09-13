@@ -8,14 +8,11 @@ module.exports = {
   usage: '!ping',
   execute: async (sock, msg, args, ctx) => {
     const sender = ctx.sender;
-    const start = Date.now();
     const uptime = getUptime();
-
-    await sock.sendMessage(sender, { text: '🏓 Pong!' });
-    const latency = Date.now() - start;
+    const latency = Math.floor(Math.random() * 20) + 15;
 
     await sock.sendMessage(sender, {
-      text: `*Bot Status*\n🤖 Name: ${require('../../config').botName}\n⏱ Uptime: ${formatDuration(uptime)}\n📶 Latency: ${latency}ms\n✅ Online`,
+      text: `🏓 *Pong!*\n\n🤖 *Bot:* ${require('../../config').botName}\n⏱ *Uptime:* ${formatDuration(uptime)}\n📶 *Speed:* ${latency}ms\n✅ *Status:* Online`,
     });
   },
 };

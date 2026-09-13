@@ -11,6 +11,7 @@ module.exports = {
   alias: ['extract', 'zip', 'archive', 'compress'],
   description: 'Extract compressed files: ZIP, RAR, TAR, GZ',
   usage: '!unzip <filepath> [--output dir] [--list]',
+  adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
 
@@ -94,20 +95,28 @@ async function handleRar(sock, sender, filePath, flags, listOnly) {
 
 async function handleTarGz(sock, sender, filePath, flags, listOnly) {
   try {
-    var outputDir = flags.output || flags.o || filePath.replace(/\.(tar|gz|tgz)$/i, '_extracted');
+    var storageDir = path.resolve(path.join(__dirname, '..', '..', 'storage'));
+    var defaultOutput = filePath.replace(/\.(tar|gz|tgz)$/i, '_extracted');
+    var rawOutput = flags.output || flags.o;
+    var outputDir = rawOutput ? path.resolve(storageDir, path.basename(rawOutput)) : path.resolve(defaultOutput);
+    if (!outputDir.startsWith(storageDir)) {
+      outputDir = path.resolve(defaultOutput);
+    }
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-    var cmd = filePath.endsWith('.gz') && !filePath.endsWith('.tar.gz') && !filePath.endsWith('.tgz')
-      ? 'tar -xzf "' + filePath + '" -C "' + outputDir + '"'
-      : 'tar -xzf "' + filePath + '" -C "' + outputDir + '"';
-
     if (listOnly) {
-      await sock.sendMessage(sender, { text: '📄 Listing TAR contents. Use: `!terminal tar -tzf "' + filePath + '"`' });
+      const { execFile } = require('child_process');
+      execFile('tar', ['-tzf', filePath], { timeout: 15000 }, async function(error, stdout) {
+        if (error || !stdout) {
+          return sock.sendMessage(sender, { text: 'Failed to list archive contents: ' + (error ? error.message : 'No output') });
+        }
+        return sock.sendMessage(sender, { text: ('*📦 Archive Contents:*\n\n' + stdout).substring(0, 4000) });
+      });
     } else {
-      var { exec } = require('child_process');
-      exec(cmd, { timeout: 30000 }, async function(error, stdout, stderr) {
+      const { execFile } = require('child_process');
+      execFile('tar', ['-xzf', filePath, '-C', outputDir], { timeout: 30000 }, async function(error, stdout, stderr) {
         if (error) {
-          await sock.sendMessage(sender, { text: 'Extraction failed: ' + error.message + '\n\nOn Windows, use: `!terminal 7z x "' + filePath + '" -o"' + outputDir + '"`' });
+          await sock.sendMessage(sender, { text: 'Extraction failed: ' + error.message });
         } else {
           await sock.sendMessage(sender, { text: '✅ Extracted to: `' + outputDir + '`\nView with: `!media list ' + outputDir + '`' });
         }

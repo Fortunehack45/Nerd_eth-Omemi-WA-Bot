@@ -5,13 +5,13 @@ var PERSONA_FILE = path.join(__dirname, '..', '..', 'storage', 'persona.json');
 
 var PERSONAS = {
   male: {
-    name: 'Nerd-eth',
+    name: 'Nerd',
     pronoun: 'he',
     pronounCap: 'He',
     possessive: 'his',
     possessiveCap: 'His',
     emoji: '🤖',
-    greeting: "Hey there! I'm Nerd-eth, your WhatsApp assistant!",
+    greeting: "Hey there! I'm Nerd, your WhatsApp assistant!",
     description: 'A helpful, knowledgeable assistant who loves solving problems.',
     footer: 'Built with ❤️ by Fortune Adebayo Esho',
   },
@@ -86,10 +86,26 @@ function getSystemPrompt(extraContext) {
   lines.push('If the user is being playful or joking, match their tone appropriately.');
   lines.push('Never make up information — say "I don\'t know" if unsure.');
   lines.push('Do not mention that you are an AI unless asked directly.');
+  lines.push('');
+  lines.push('Multilingual & Universal Language Understanding:');
+  lines.push('• You fluently understand and communicate in EVERY human language (English, Spanish, French, Arabic, Yoruba, Igbo, Hausa, Portuguese, German, Russian, Hindi, Mandarin, Japanese, Swahili, etc.).');
+  lines.push('• If the user specifies a preferred language: ALWAYS formulate your entire response in that language.');
+  lines.push('• If no explicit language preference is set: ALWAYS detect the language of the user\'s incoming message and reply naturally in that exact same language.');
 
   if (extraContext) {
-    lines.push('');
-    lines.push(extraContext);
+    if (typeof extraContext === 'object') {
+      if (extraContext.userLanguage && extraContext.userLanguage.toLowerCase() !== 'auto') {
+        lines.push('');
+        lines.push('User Preferred Language: The user has selected ' + extraContext.userLanguage + ' as their preferred language. You MUST formulate your entire response in ' + extraContext.userLanguage + '.');
+      }
+      if (extraContext.customContext) {
+        lines.push('');
+        lines.push(extraContext.customContext);
+      }
+    } else {
+      lines.push('');
+      lines.push(extraContext);
+    }
   }
 
   return lines.join('\n');

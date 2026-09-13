@@ -6,7 +6,7 @@ const https = require('https');
 const EXE_PATH = path.join(__dirname, '..', '..', 'SpeedTestEngine.exe');
 
 async function runSpeedTest() {
-  if (fs.existsSync(EXE_PATH)) {
+  if (process.platform === 'win32' && fs.existsSync(EXE_PATH)) {
     try {
       const result = await new Promise((resolve) => {
         execFile(EXE_PATH, { timeout: 35000 }, (err, stdout, stderr) => {

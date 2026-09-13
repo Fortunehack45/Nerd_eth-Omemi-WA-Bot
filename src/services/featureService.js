@@ -3,7 +3,7 @@ const { loadJson, saveJson } = require('../utils/helpers');
 
 const FEATURE_FILE = path.join(__dirname, '..', '..', 'storage', 'features.json');
 const PROTECTED_COMMANDS = ['disable', 'enable', 'disabled', 'toggle', 'togglefeature', 'access', 'setkey', 'help', 'ping'];
-const KNOWN_FEATURES = ['schedule', 'ai', 'agent', 'status', 'viewonce', 'antibot', 'stealth', 'download', 'generate', 'movie', 'music', 'search', 'apk', 'access'];
+const KNOWN_FEATURES = ['schedule', 'ai', 'agent', 'status', 'autoviewstatus', 'savestatus', 'viewonce', 'antibot', 'stealth', 'download', 'generate', 'movie', 'music', 'search', 'apk', 'access'];
 
 function normalizeKey(str) {
   if (!str) return '';
@@ -61,6 +61,9 @@ function isFeatureDisabled(featureName) {
   var disabledFeats = cfg.disabledFeatures || [];
 
   if (disabledFeats.includes(rawKey) || disabledCmds.includes(rawKey)) return true;
+
+  if (rawKey === 'status' && (disabledFeats.includes('autoviewstatus') || disabledCmds.includes('autoviewstatus'))) return true;
+  if (rawKey === 'autoviewstatus' && (disabledFeats.includes('status') || disabledCmds.includes('status'))) return true;
 
   var canonical = resolveCommandName(rawKey);
   if (canonical && (disabledFeats.includes(canonical) || disabledCmds.includes(canonical))) return true;

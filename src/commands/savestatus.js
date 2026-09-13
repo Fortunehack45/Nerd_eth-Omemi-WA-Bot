@@ -16,7 +16,7 @@ var HELP = [
 
 module.exports = {
   name: 'savestatus',
-  alias: ['sw', 'savestory', 'getstatus', 'statusdl', 'swdl', 'save'],
+  alias: ['sw', 'savestory', 'getstatus', 'statusdl', 'swdl'],
   description: 'Save and forward WhatsApp status directly to your chat or DM',
   usage: '!savestatus (reply to a status message)',
   adminOnly: false,

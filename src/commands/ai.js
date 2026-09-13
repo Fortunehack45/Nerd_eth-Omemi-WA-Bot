@@ -1,4 +1,4 @@
-const { chatComplete } = require('../services/aiService');
+const aiService = require('../services/aiService');
 const { getUserContext, addToConversation } = require('../services/memoryService');
 const { getSystemPrompt } = require('../services/personaService');
 const config = require('../../config');
@@ -26,23 +26,27 @@ module.exports = {
 
     await sock.sendPresenceUpdate('composing', sender);
 
+    var callerJid = ctx.senderId || sender;
     var userCtx = null;
-    if (config.memory.enabled && isPrivate) {
-      var ctxData = getUserContext(sender);
+    if (config.memory.enabled) {
+      var ctxData = getUserContext(callerJid);
       if (ctxData && ctxData.summary) userCtx = ctxData.summary;
+      if (ctxData && ctxData.language && ctxData.language !== 'auto') {
+        userCtx = (userCtx ? userCtx + '\n' : '') + 'CRITICAL INSTRUCTION: The user has selected ' + ctxData.language + ' as their preferred language. Formulate your entire response in ' + ctxData.language + '.';
+      }
     }
 
     var systemMessages = [{ role: 'system', content: getProfessionalSystemPrompt(config.botName, userCtx) }];
 
     if (config.memory.enabled && isPrivate) {
-      var history = getUserContext(sender);
+      var history = getUserContext(callerJid);
       if (history && history.history) {
         systemMessages.push({ role: 'system', content: 'Recent conversation:\n' + history.history.substring(0, 1500) });
       }
-      addToConversation(sender, 'user', args);
+      addToConversation(callerJid, 'user', args);
     }
 
-    var result = await chatComplete([...systemMessages, { role: 'user', content: args }]);
+    var result = await aiService.chatComplete([...systemMessages, { role: 'user', content: args }]);
     await sock.sendMessage(sender, { text: result.text });
 
     if (config.memory.enabled && isPrivate) {

@@ -30,6 +30,7 @@ function getUser(jid) {
       name: '',
       pushName: '',
       about: '',
+      language: 'auto',
       messageCount: 0,
       facts: [],
       preferences: {},
@@ -42,6 +43,18 @@ function getUser(jid) {
   }
   db[uid].lastSeen = Date.now();
   return db[uid];
+}
+
+function getLanguage(jid) {
+  const user = getUser(jid);
+  return user.language || 'auto';
+}
+
+function setLanguage(jid, lang) {
+  const user = getUser(jid);
+  user.language = lang ? lang.trim() : 'auto';
+  saveDb();
+  return user.language;
 }
 
 function updateUser(jid, updates) {
@@ -121,6 +134,7 @@ function getUserContext(jid) {
   }
   if (user.tags && user.tags.length > 0) parts.push('Tags: ' + user.tags.join(', '));
   if (user.notes) parts.push('Notes: ' + user.notes);
+  if (user.language && user.language !== 'auto') parts.push('Preferred Language: ' + user.language);
 
   parts.push('Total interactions: ' + (user.interactionCount || 0));
   parts.push('Messages sent: ' + (user.messageCount || 0));
@@ -130,6 +144,7 @@ function getUserContext(jid) {
   return {
     summary: parts.join('\n'),
     history: historyText,
+    language: user.language || 'auto',
   };
 }
 
@@ -266,4 +281,6 @@ module.exports = {
   getNotes,
   clearNotes,
   getRecentLearnings,
+  getLanguage,
+  setLanguage,
 };

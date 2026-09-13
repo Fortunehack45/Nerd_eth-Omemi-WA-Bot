@@ -3,8 +3,9 @@ var { switchPersona, getPersona, listPersonas } = require('../services/personaSe
 module.exports = {
   name: 'persona',
   alias: ['mode', 'gender', 'identity', 'botname'],
-  description: 'Switch bot persona between Nerd-eth (male) and Omemi (female)',
-  usage: '!persona — show current persona\n!persona male — switch to Nerd-eth (male)\n!persona female — switch to Omemi (female)\n!persona list — list all available personas',
+  description: 'Switch bot persona between Nerd (male) and Omemi (female)',
+  usage: '!persona — show current persona\n!persona male — switch to Nerd (male)\n!persona female — switch to Omemi (female)\n!persona list — list all available personas',
+  adminOnly: true,
   execute: async (sock, msg, args, ctx) => {
     var sender = ctx.sender;
 

@@ -51,9 +51,9 @@ app.get('/health', function(req, res) {
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
-var validPasscodes = new Set(['Omemi']);
+var validPasscodes = new Set();
 
-app.post('/api/generate-access-key', function(req, res) {
+app.post('/api/generate-access-key', auth, function(req, res) {
   var key = Math.floor(100000 + Math.random() * 900000).toString();
   validPasscodes.add(key);
   res.json({ success: true, key: key });
@@ -63,10 +63,11 @@ function isValidPassword(inputPwd) {
   if (!inputPwd) return false;
   var trimmed = String(inputPwd).trim();
 
-  // 1. Master Password (always secret & valid)
-  if (trimmed === 'Omemi' || trimmed === DASHBOARD_PASSWORD) return true;
+  // 1. Configured Dashboard Password
+  var expected = process.env.DASHBOARD_PASSWORD || config.dashboardPassword || 'Omemi';
+  if (trimmed === expected) return true;
 
-  // 2. Dynamic 6-digit generated follower passcodes
+  // 2. Dynamic generated passcodes (issued by authenticated admin)
   if (validPasscodes.has(trimmed)) return true;
 
   // 3. Custom per-user passwords from storage/user_passwords.json
@@ -77,9 +78,6 @@ function isValidPassword(inputPwd) {
       if (Object.values(userPasses).includes(trimmed)) return true;
     }
   } catch(e) {}
-
-  // 4. Any 6-digit numeric passcode
-  if (/^\d{6}$/.test(trimmed)) return true;
 
   return false;
 }
@@ -115,6 +113,7 @@ app.get('/api/status', auth, function(req, res) {
     facts: totalFacts,
     commands: require('./src/handlers/commandHandler').getCommandsList().length,
     prefix: config.prefix,
+    pairingCode: (typeof require('./src/client').getLastPairingCode === 'function') ? require('./src/client').getLastPairingCode() : null,
     recentMessages: recentMessages.slice(0, 10),
     commandLog: commandLog.slice(0, 10),
   });
@@ -162,13 +161,14 @@ app.post('/api/speedtest', auth, async function(req, res) {
 app.get('/api/qrdata', auth, async function(req, res) {
   var client = require('./src/client');
   var qr = client.getLastQR();
-  if (!qr) return res.json({ qr: null, dataUrl: null });
+  var pairingCode = (typeof client.getLastPairingCode === 'function') ? client.getLastPairingCode() : null;
+  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode });
   try {
     var QRCode = require('qrcode');
     var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'H' });
-    res.json({ qr: qr, dataUrl: dataUrl });
+    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode });
   } catch (e) {
-    res.json({ qr: qr, dataUrl: null, error: e.message });
+    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, error: e.message });
   }
 });
 
@@ -403,4 +403,4 @@ function startServer() {
   });
 }
 
-module.exports = { startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl, botStatus };
+module.exports = { app, startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl, botStatus };
