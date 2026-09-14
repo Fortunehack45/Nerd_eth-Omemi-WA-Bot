@@ -286,6 +286,259 @@ class FirebaseService {
   }
 
   /**
+   * Dynamically reconfigure Firebase at runtime
+   */
+  configure(options = {}) {
+    if (options.projectId) this.projectId = options.projectId;
+    if (options.databaseUrl) this.databaseUrl = options.databaseUrl;
+    if (options.apiKey) this.apiKey = options.apiKey;
+    if (options.serviceAccount) this.serviceAccount = options.serviceAccount;
+    this._init();
+    return this.getStatus();
+  }
+
+  /**
+   * Save WhatsApp authentication files (creds.json and keys) to cloud database
+   * @param {string} sessionId
+   * @param {Object} filesMap Map of filename -> JSON string content
+   */
+  async saveCredentials(sessionId, filesMap = {}) {
+    if (!this.isAvailable()) return null;
+    const safeId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const docData = {
+      files: filesMap,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (this.firestore) {
+      try {
+        await this.firestore.collection('whatsapp_credentials').doc(safeId).set(docData, { merge: true });
+        return true;
+      } catch (err) {
+        console.error(`[FIREBASE] saveCredentials failed for ${safeId}:`, err.message);
+        return false;
+      }
+    }
+
+    if (this.databaseUrl) {
+      try {
+        const url = `${this.databaseUrl.replace(/\/$/, '')}/whatsapp_credentials/${safeId}.json${this.apiKey ? `?auth=${this.apiKey}` : ''}`;
+        await axios.put(url, docData);
+        return true;
+      } catch (err) {
+        console.error(`[FIREBASE] RTDB saveCredentials failed for ${safeId}:`, err.message);
+        return false;
+      }
+    }
+
+    if (this.projectId) {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/whatsapp_credentials/${safeId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+        const fields = this._serializeToFirestoreFields(docData);
+        await axios.patch(url, { fields });
+        return true;
+      } catch (err) {
+        console.error(`[FIREBASE] Firestore REST saveCredentials failed for ${safeId}:`, err.message);
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Retrieve WhatsApp credentials document
+   * @param {string} sessionId
+   */
+  async getCredentials(sessionId) {
+    if (!this.isAvailable()) return null;
+    const safeId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    if (this.firestore) {
+      try {
+        const doc = await this.firestore.collection('whatsapp_credentials').doc(safeId).get();
+        return doc.exists ? doc.data() : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    if (this.databaseUrl) {
+      try {
+        const url = `${this.databaseUrl.replace(/\/$/, '')}/whatsapp_credentials/${safeId}.json${this.apiKey ? `?auth=${this.apiKey}` : ''}`;
+        const res = await axios.get(url);
+        return res.data;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    if (this.projectId) {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/whatsapp_credentials/${safeId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+        const res = await axios.get(url);
+        const data = this._deserializeFirestoreFields(res.data.fields || {});
+        if (data && typeof data.files === 'string') {
+          try { data.files = JSON.parse(data.files); } catch (e) {}
+        }
+        return data;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Delete WhatsApp credentials document from cloud database
+   * @param {string} sessionId
+   */
+  async deleteCredentials(sessionId) {
+    if (!this.isAvailable()) return false;
+    const safeId = String(sessionId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    if (this.firestore) {
+      try {
+        await this.firestore.collection('whatsapp_credentials').doc(safeId).delete();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    if (this.databaseUrl) {
+      try {
+        const url = `${this.databaseUrl.replace(/\/$/, '')}/whatsapp_credentials/${safeId}.json${this.apiKey ? `?auth=${this.apiKey}` : ''}`;
+        await axios.delete(url);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    if (this.projectId) {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/whatsapp_credentials/${safeId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+        await axios.delete(url);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * List all session IDs currently stored in cloud database
+   * @returns {Promise<Array<string>>}
+   */
+  async listAllCredentialSessionIds() {
+    if (!this.isAvailable()) return [];
+
+    if (this.firestore) {
+      try {
+        const snap = await this.firestore.collection('whatsapp_credentials').get();
+        return snap.docs.map(d => d.id);
+      } catch (err) {
+        return [];
+      }
+    }
+
+    if (this.databaseUrl) {
+      try {
+        const url = `${this.databaseUrl.replace(/\/$/, '')}/whatsapp_credentials.json?shallow=true${this.apiKey ? `&auth=${this.apiKey}` : ''}`;
+        const res = await axios.get(url);
+        return res.data ? Object.keys(res.data) : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    if (this.projectId) {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/whatsapp_credentials${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+        const res = await axios.get(url);
+        if (!res.data?.documents) return [];
+        return res.data.documents.map(d => d.name.split('/').pop());
+      } catch (err) {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Backup all session files from local disk to Firebase
+   * @param {string} sessionId
+   * @param {string} sessionDir
+   */
+  async backupSessionFiles(sessionId, sessionDir) {
+    if (!this.isAvailable() || !fs.existsSync(sessionDir)) return false;
+    try {
+      const files = fs.readdirSync(sessionDir);
+      const filesMap = {};
+      let hasCreds = false;
+
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+        const filePath = path.join(sessionDir, file);
+        try {
+          const content = fs.readFileSync(filePath, 'utf8');
+          filesMap[file] = content;
+          if (file === 'creds.json') hasCreds = true;
+        } catch (e) {}
+      }
+
+      if (!hasCreds) return false;
+      return await this.saveCredentials(sessionId, filesMap);
+    } catch (err) {
+      console.error(`[FIREBASE] backupSessionFiles failed for ${sessionId}:`, err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Restore all session files from Firebase to local disk
+   * @param {string} sessionId
+   * @param {string} targetDir
+   */
+  async restoreSessionFiles(sessionId, targetDir) {
+    if (!this.isAvailable()) return false;
+    try {
+      const credDoc = await this.getCredentials(sessionId);
+      if (!credDoc || !credDoc.files) return false;
+
+      let files = credDoc.files;
+      if (typeof files === 'string') {
+        try { files = JSON.parse(files); } catch (e) {}
+      }
+      if (typeof files !== 'object' || files === null) return false;
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      let restoredCount = 0;
+      for (const [filename, content] of Object.entries(files)) {
+        if (!/^[a-zA-Z0-9_.-]+$/.test(filename) || filename.includes('..')) continue;
+        const destPath = path.join(targetDir, filename);
+        const strContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+        fs.writeFileSync(destPath, strContent, 'utf8');
+        restoredCount++;
+      }
+
+      console.log(`[FIREBASE] 📦 Restored ${restoredCount} file(s) for session "${sessionId}"`);
+      return restoredCount > 0;
+    } catch (err) {
+      console.error(`[FIREBASE] restoreSessionFiles failed for ${sessionId}:`, err.message);
+      return false;
+    }
+  }
+
+  /**
    * Helper to format JavaScript objects into Firestore REST fields
    */
   _serializeToFirestoreFields(obj) {

@@ -468,24 +468,70 @@ app.post('/api/speedtest', adminAuth, async function(req, res) {
   res.json(result);
 });
 
-app.get('/api/qrdata', adminAuth, async function(req, res) {
-  var client = require('./src/client');
-  var qr = client.getLastQR();
-  var pairingCode = (typeof client.getLastPairingCode === 'function') ? client.getLastPairingCode() : null;
-  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user) });
+// Helper to generate QR code response
+async function generateQrResponse(sessionId, res) {
+  var mgr = getActiveSessionManager();
+  var session = (mgr && typeof mgr.getSession === 'function') ? mgr.getSession(sessionId) : null;
+
+  var qr = session?.lastQR;
+  if (!qr) {
+    try {
+      var client = require('./src/client');
+      qr = (typeof client.getLastQR === 'function') ? client.getLastQR(sessionId) : null;
+    } catch (e) {}
+  }
+  var isConnected = session?.status === 'connected' || (sessionId === 'default' && botStatus.connected);
+  var userStr = session?.user?.id || (sessionId === 'default' ? botStatus.user : null);
+
+  if (isConnected) {
+    return res.json({ qr: null, dataUrl: null, connected: true, status: 'connected', user: maskPhoneNumber(userStr) });
+  }
+
+  // If session is unstarted or idle, boot it to generate fresh QR
+  if (!qr && mgr && (!session || session.status === 'idle' || session.status === 'disconnected')) {
+    mgr.startSession(sessionId).catch(function() {});
+  }
+
+  if (!qr) {
+    return res.json({ qr: null, dataUrl: null, connected: false, status: session?.status || 'starting' });
+  }
+
   try {
     var QRCode = require('qrcode');
-    var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'H' });
-    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user) });
+    var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'M' });
+    res.json({ qr: qr, dataUrl: dataUrl, connected: false, status: 'waiting_for_scan' });
   } catch (e) {
-    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user), error: e.message });
+    res.json({ qr: qr, dataUrl: null, connected: false, status: 'error', error: e.message });
   }
+}
+
+// Public QR Code endpoint for pairing: Allows any user to scan and link WhatsApp
+app.get('/api/pair/qr', async function(req, res) {
+  var sessionId = req.query.sessionId ? String(req.query.sessionId).trim() : 'default';
+  return generateQrResponse(sessionId, res);
 });
 
-app.post('/api/refresh-qr', adminAuth, function(req, res) {
+// Admin QR Code endpoint (Protected)
+app.get('/api/qrdata', adminAuth, async function(req, res) {
+  var sessionId = req.query.sessionId ? String(req.query.sessionId).trim() : 'default';
+  return generateQrResponse(sessionId, res);
+});
+
+app.post('/api/refresh-qr', adminAuth, async function(req, res) {
+  var sessionId = req.query.sessionId || (req.body && req.body.sessionId) || 'default';
+  var mgr = getActiveSessionManager();
+  if (mgr) {
+    try {
+      await mgr.stopSession(sessionId).catch(function() {});
+      await mgr.startSession(sessionId).catch(function() {});
+      return res.json({ success: true, message: 'QR Code refreshed. Generating fresh handshake...' });
+    } catch (err) {
+      return res.status(500).json({ error: err.message || 'Refresh failed' });
+    }
+  }
   try {
     var client = require('./src/client');
-    client.resetSession();
+    client.resetSession(sessionId);
     res.json({ success: true, message: 'QR Code refreshed. Generating fresh handshake...' });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Refresh failed' });
@@ -500,6 +546,41 @@ app.post('/api/reset-session', adminAuth, function(req, res) {
   } catch (err) {
     res.status(500).json({ error: err.message || 'Reset failed' });
   }
+});
+
+app.post('/api/admin/firebase/sync', adminAuth, async function(req, res) {
+  var fb = null;
+  try { fb = require('./src/services/firebaseService'); } catch(e) {}
+  var mgr = getActiveSessionManager();
+  if (!fb || !fb.isAvailable()) {
+    return res.status(400).json({ success: false, error: 'Firebase is not configured or available' });
+  }
+  if (!mgr) {
+    return res.status(500).json({ success: false, error: 'SessionManager not available' });
+  }
+
+  try {
+    var backedUp = 0;
+    for (const [id, session] of mgr.sessions.entries()) {
+      if (session.dir && fs.existsSync(path.join(session.dir, 'creds.json'))) {
+        await fb.backupSessionFiles(id, session.dir);
+        backedUp++;
+      }
+    }
+    return res.json({ success: true, message: `Successfully synced ${backedUp} session(s) to Firebase Cloud Database` });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/firebase/config', adminAuth, function(req, res) {
+  var fb = null;
+  try { fb = require('./src/services/firebaseService'); } catch(e) {}
+  if (!fb) return res.status(500).json({ success: false, error: 'Firebase service not loaded' });
+
+  var { projectId, databaseUrl, apiKey } = req.body || {};
+  var status = fb.configure({ projectId, databaseUrl, apiKey });
+  res.json({ success: true, ...status });
 });
 
 app.get('/api/keys', adminAuth, function(req, res) {

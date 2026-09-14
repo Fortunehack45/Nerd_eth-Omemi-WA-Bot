@@ -65,6 +65,67 @@ class SessionManager extends EventEmitter {
     if (!fs.existsSync(this.sessionsRoot)) {
       fs.mkdirSync(this.sessionsRoot, { recursive: true });
     }
+
+    this.backupTimers = new Map();
+    this.watchdogInterval = null;
+    this.startWatchdog();
+  }
+
+  /**
+   * Continuous 24/7 Supervisor Watchdog
+   * Checks socket health and resurrects dead/stranded sessions.
+   */
+  startWatchdog() {
+    if (this.watchdogInterval) return;
+    this.watchdogInterval = setInterval(async () => {
+      for (const [sessionId, session] of this.sessions.entries()) {
+        if (session.status === 'connected') {
+          const ws = session.sock?.ws;
+          if (ws && (ws.readyState === 2 || ws.readyState === 3 || ws.isClosed)) {
+            console.warn(`[WATCHDOG] Session "${sessionId}" marked connected but socket is closed. Resurrecting...`);
+            this.handleConnectionClose(sessionId, { error: new Error('Watchdog detected closed socket') });
+          }
+        } else if (session.status === 'reconnecting') {
+          if (!session.reconnectTimer) {
+            console.warn(`[WATCHDOG] Session "${sessionId}" stranded in reconnecting without timer. Rescheduling...`);
+            this.scheduleReconnect(sessionId, 'Watchdog recovery');
+          }
+        }
+      }
+    }, 45000);
+    if (this.watchdogInterval.unref) {
+      this.watchdogInterval.unref();
+    }
+  }
+
+  /**
+   * Stop supervisor watchdog
+   */
+  stopWatchdog() {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+      this.watchdogInterval = null;
+    }
+  }
+
+  /**
+   * Debounced backup of session credentials and keys to Firebase
+   * @param {string} sessionId
+   * @param {string} sessionDir
+   */
+  debounceBackupSession(sessionId, sessionDir) {
+    if (!firebaseService || typeof firebaseService.isAvailable !== 'function' || !firebaseService.isAvailable()) return;
+    if (!this.backupTimers) this.backupTimers = new Map();
+    if (this.backupTimers.has(sessionId)) {
+      clearTimeout(this.backupTimers.get(sessionId));
+    }
+    const timer = setTimeout(() => {
+      this.backupTimers.delete(sessionId);
+      firebaseService.backupSessionFiles(sessionId, sessionDir).catch(err => {
+        console.warn(`[SESSION-MGR] Firebase backup failed for ${sessionId}:`, err.message);
+      });
+    }, 2500);
+    this.backupTimers.set(sessionId, timer);
   }
 
   /**
@@ -295,6 +356,7 @@ class SessionManager extends EventEmitter {
           try {
             fs.writeFileSync(credsPath, JSON.stringify(state.creds, null, 2), 'utf8');
           } catch (e) {}
+          this.debounceBackupSession(validId, session.dir);
         }
         if (typeof saveCreds === 'function') {
           await saveCreds(...args);
@@ -434,6 +496,7 @@ class SessionManager extends EventEmitter {
         session.lastQR = null;
         session.pairingCodeRequested = false;
         session.consecutiveErrors = 0;
+        session.consecutive401Count = 0;
         session.reconnectAttempts = 0;
         session.startedAt = Date.now();
 
@@ -456,10 +519,14 @@ class SessionManager extends EventEmitter {
           }).catch(() => {});
         }
 
-        if (config.antiBan?.alwaysOnline && typeof sock.sendPresenceUpdate === 'function') {
+        // Active TCP keep-alive and presence ping to prevent 2-3 hour idle disconnections
+        if (typeof sock.sendPresenceUpdate === 'function') {
           sock.sendPresenceUpdate('available').catch(() => {});
-          this.startPresenceKeepAlive(session);
         }
+        this.startPresenceKeepAlive(session);
+
+        // Immediate cloud backup upon successful connection
+        this.debounceBackupSession(validId, session.dir);
 
         const onConnected = handlers.onConnected || this.handlers.onConnected;
         if (typeof onConnected === 'function') {
@@ -562,10 +629,13 @@ class SessionManager extends EventEmitter {
 
     // 1. Logged Out (401) or Multidevice Mismatch (411) -> Purge credentials, do not auto-reconnect
     if (statusCode === 401 || statusCode === 411) {
-      console.log(`[SESSION-MGR] [${sessionId}] Logged out (401). Purging credential store.`);
+      console.log(`[SESSION-MGR] [${sessionId}] Logged out (${statusCode}). Purging credential store.`);
       session.status = 'loggedOut';
       session.sock = null;
       this.clearSessionCredentials(sessionId);
+      if (firebaseService && typeof firebaseService.isAvailable === 'function' && firebaseService.isAvailable()) {
+        firebaseService.deleteCredentials(sessionId).catch(() => {});
+      }
       this.emit('session.loggedOut', { sessionId, statusCode });
       this.emit('session:loggedOut', { sessionId, statusCode });
       return;
@@ -657,20 +727,39 @@ class SessionManager extends EventEmitter {
   }
 
   /**
-   * Start presence keep-alive.
+   * Start presence and WebSocket TCP keep-alive (35s interval).
+   * Actively pings WebSocket frame and presence to prevent 2-3 hour idle disconnections.
    * @param {Object} session
    */
   startPresenceKeepAlive(session) {
     this.stopPresenceKeepAlive(session);
-    if (session.sock?.user?.id && session.status === 'connected') {
-      session.sock.sendPresenceUpdate?.('available').catch(() => {});
-    }
-    session.presenceInterval = setInterval(async () => {
-      if (!session.sock?.user?.id || session.status !== 'connected') return;
+    if (!session) return;
+
+    const sendPingAndPresence = async () => {
+      if (!session || session.status !== 'connected' || !session.sock) return;
       try {
-        await session.sock.sendPresenceUpdate?.('available');
-      } catch (e) {}
-    }, 150000);
+        // 1. Raw WebSocket Frame Ping (keeps TCP connection and cloud NAT translation tables active)
+        if (session.sock.ws && typeof session.sock.ws.ping === 'function') {
+          session.sock.ws.ping();
+        }
+        // 2. WhatsApp protocol presence signal
+        if (typeof session.sock.sendPresenceUpdate === 'function') {
+          await session.sock.sendPresenceUpdate('available');
+        }
+      } catch (e) {
+        if (session.sock?.ws && (session.sock.ws.readyState === 2 || session.sock.ws.readyState === 3)) {
+          console.warn(`[SESSION-MGR] [${session.id}] Zombie socket detected by keep-alive. Triggering recovery...`);
+          this.handleConnectionClose(session.id, { error: new Error('Keep-alive detected zombie socket') });
+        }
+      }
+    };
+
+    sendPingAndPresence();
+
+    session.presenceInterval = setInterval(sendPingAndPresence, 35000);
+    if (session.presenceInterval.unref) {
+      session.presenceInterval.unref();
+    }
   }
 
   /**
@@ -855,6 +944,7 @@ class SessionManager extends EventEmitter {
 
     if (deleteStorage && firebaseService && typeof firebaseService.isAvailable === 'function' && firebaseService.isAvailable()) {
       firebaseService.deleteSession(validId).catch(() => {});
+      firebaseService.deleteCredentials(validId).catch(() => {});
     }
 
     this.emit('session.destroyed', { sessionId: validId, deletedStorage: !!deleteStorage });
@@ -877,6 +967,7 @@ class SessionManager extends EventEmitter {
 
   /**
    * Cold startup scan of sessions/ directory rehydrating valid credentials.
+   * Restores sessions from Firebase Cloud Database if available.
    * @param {Object} [handlers]
    */
   async init(handlers = {}) {
@@ -886,6 +977,29 @@ class SessionManager extends EventEmitter {
 
     if (!fs.existsSync(this.sessionsRoot)) {
       fs.mkdirSync(this.sessionsRoot, { recursive: true });
+    }
+
+    // 0. Cloud Database Discovery & Rehydration
+    if (firebaseService && typeof firebaseService.isAvailable === 'function' && firebaseService.isAvailable()) {
+      try {
+        console.log('[SESSION-MGR] ☁️ Checking Firebase Cloud Database for stored sessions...');
+        const remoteSessionIds = await firebaseService.listAllCredentialSessionIds();
+        for (const remId of remoteSessionIds) {
+          try {
+            this.validateSessionId(remId);
+            const localDir = this.getSafeSessionDir(remId);
+            const localCreds = path.join(localDir, 'creds.json');
+            if (!fs.existsSync(localCreds)) {
+              console.log(`[SESSION-MGR] 📥 Restoring session "${remId}" from Firebase Cloud Database...`);
+              await firebaseService.restoreSessionFiles(remId, localDir);
+            }
+          } catch (e) {
+            console.warn(`[SESSION-MGR] ⚠️ Skipping remote session ID "${remId}":`, e.message);
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('[SESSION-MGR] Firebase session discovery note:', cloudErr.message);
+      }
     }
 
     // Check for legacy migration: if creds.json is directly in root sessions/

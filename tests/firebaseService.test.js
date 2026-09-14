@@ -61,4 +61,38 @@ describe('Firebase Service Unit Tests', () => {
     const res = await firebaseService.saveSession('sess/../../../evil*name', { test: true });
     assert.strictEqual(res, null); // when unconfigured
   });
+
+  it('should handle credentials methods safely when unconfigured', async () => {
+    const credSave = await firebaseService.saveCredentials('sess_1', { 'creds.json': '{}' });
+    assert.strictEqual(credSave, null);
+
+    const credGet = await firebaseService.getCredentials('sess_1');
+    assert.strictEqual(credGet, null);
+
+    const credDel = await firebaseService.deleteCredentials('sess_1');
+    assert.strictEqual(credDel, false);
+
+    const credList = await firebaseService.listAllCredentialSessionIds();
+    assert.deepStrictEqual(credList, []);
+
+    const backupRes = await firebaseService.backupSessionFiles('sess_1', '/non/existent/dir');
+    assert.strictEqual(backupRes, false);
+
+    const restoreRes = await firebaseService.restoreSessionFiles('sess_1', '/non/existent/dir');
+    assert.strictEqual(restoreRes, false);
+  });
+
+  it('should support dynamic reconfiguration via configure()', () => {
+    const origStatus = firebaseService.getStatus();
+    const confStatus = firebaseService.configure({ projectId: 'test-project-123' });
+    assert.strictEqual(confStatus.available, true);
+    assert.strictEqual(confStatus.mode, 'firestore-rest');
+    assert.ok(confStatus.projectId.includes('tes'));
+
+    // Reset back
+    firebaseService.projectId = null;
+    firebaseService.databaseUrl = null;
+    firebaseService.apiKey = null;
+    firebaseService._init();
+  });
 });

@@ -1541,6 +1541,26 @@ input:checked + .slider:before {
 
       <div id="adminSessionsList" class="sessions-grid" style="display:none;">
       </div>
+
+      <!-- Firebase Cloud Persistence & 24/7 Zero-Downtime Status Card -->
+      <div style="margin-top:24px; padding:22px; background:var(--bg-card-subtle); border:1px solid var(--border-subtle); border-radius:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-weight:700; font-size:1rem; display:flex; align-items:center; gap:8px;">
+              <span>🔥</span> Firebase Cloud Database & 24/7 Resilience
+              <span id="firebaseStatusBadge" style="font-size:0.75rem; padding:3px 10px; border-radius:999px; background:#ecfdf5; color:#065f46; font-weight:600;">Active</span>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+              Session credentials and multi-device keys are backed up to Firebase. Reboots & container updates maintain 100% persistent uptime with 0 downtime.
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-pill btn-pill-subtle" style="font-size:0.82rem; padding:8px 16px;" onclick="syncFirebaseSessions()">
+              <span>☁️</span> Backup Sessions to Cloud
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1820,8 +1840,15 @@ function requestPairCode(fromTab) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
-  }).then(function(res) {
-    return res.json();
+  }).then(async function(res) {
+    var text = await res.text();
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Server response (' + res.status + '): ' + (text.substring(0, 100) || 'Invalid JSON'));
+    }
+    return data;
   }).then(function(res) {
     if (btn) btn.innerHTML = oldText;
     if (res.success && res.code) {
@@ -1832,7 +1859,7 @@ function requestPairCode(fromTab) {
     }
   }).catch(function(err) {
     if (btn) btn.innerHTML = oldText;
-    alert('Network error requesting pairing code: ' + err.message);
+    alert('Pairing request error: ' + err.message);
   });
 }
 
@@ -1959,6 +1986,7 @@ function pollPublicStats() {
 
 function loadAdminSessions() {
   if (!isAdmin) return;
+  checkFirebaseStatus();
   var loadingEl = document.getElementById('adminSessionsLoading');
   var emptyEl = document.getElementById('adminSessionsEmpty');
   var listEl = document.getElementById('adminSessionsList');
@@ -2041,32 +2069,74 @@ function restartAllSessions() {
 }
 
 function pollQR() {
-  if (!isAdmin) return;
-  apiCall('/qrdata').then(function(res) {
-    var wrap1 = document.getElementById('qrImageWrapper');
-    var wrap2 = document.getElementById('qrImageWrapperTab');
-    var html = '';
-    if (res.connected) {
-      html = '<div class="qr-scan-card" style="padding:28px 20px; text-align:center;">' +
-        '<div style="font-size:2.4rem; margin-bottom:8px;">✅</div>' +
-        '<div style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom:4px;">WhatsApp Connected</div>' +
-        '<div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">Status: Active</div>' +
-        '</div>';
-    } else if (res.dataUrl) {
-      html = '<div class="qr-scan-card"><img src="' + res.dataUrl + '" alt="WhatsApp QR Code"></div>';
-    } else {
-      html = '<div style="color:var(--text-muted); font-size:0.9rem; padding:40px 20px;"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Loading QR Code...</div>';
-    }
-    if (wrap1 && html) wrap1.innerHTML = html;
-    if (wrap2 && html) wrap2.innerHTML = html;
-  }).catch(function() {});
+  var baseUrl = getBaseUrl();
+  var qrEndpoint = isAdmin ? (baseUrl + '/api/qrdata?pwd=' + encodeURIComponent(pwd || '')) : (baseUrl + '/api/pair/qr');
+  fetch(qrEndpoint)
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      var wrap1 = document.getElementById('qrImageWrapper');
+      var wrap2 = document.getElementById('qrImageWrapperTab');
+      var html = '';
+      if (res.connected) {
+        html = '<div class="qr-scan-card" style="padding:28px 20px; text-align:center;">' +
+          '<div style="font-size:2.4rem; margin-bottom:8px;">✅</div>' +
+          '<div style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom:4px;">WhatsApp Connected</div>' +
+          '<div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">Status: Active' + (res.user ? ' (' + escapeHtml(res.user) + ')' : '') + '</div>' +
+          '</div>';
+      } else if (res.dataUrl) {
+        html = '<div class="qr-scan-card"><img src="' + res.dataUrl + '" alt="WhatsApp QR Code"></div>';
+      } else {
+        html = '<div style="color:var(--text-muted); font-size:0.9rem; padding:40px 20px;"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Loading live QR code...</div>';
+      }
+      if (wrap1 && html) wrap1.innerHTML = html;
+      if (wrap2 && html) wrap2.innerHTML = html;
+    }).catch(function() {});
 }
 
 function refreshQRCode() {
+  var btn = document.getElementById('btnRefreshQr');
+  if (btn) btn.innerHTML = '<span>⏳</span> Refreshing...';
+  if (isAdmin) {
+    apiCall('/refresh-qr', { method: 'POST' }).then(function() {
+      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
+      setTimeout(pollQR, 1000);
+    }).catch(function() {
+      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
+    });
+  } else {
+    setTimeout(function() {
+      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
+      pollQR();
+    }, 1000);
+  }
+}
+
+function checkFirebaseStatus() {
   if (!isAdmin) return;
-  apiCall('/refresh-qr', { method: 'POST' }).then(function() {
-    pollQR();
+  apiCall('/admin/firebase/status').then(function(res) {
+    var badge = document.getElementById('firebaseStatusBadge');
+    if (badge) {
+      if (res.available) {
+        badge.style.background = '#ecfdf5';
+        badge.style.color = '#065f46';
+        badge.textContent = '🔥 Cloud Synced (' + (res.mode || 'REST') + ')';
+      } else {
+        badge.style.background = '#fef3c7';
+        badge.style.color = '#92400e';
+        badge.textContent = '⚡ Local Disk Active';
+      }
+    }
   }).catch(function() {});
+}
+
+function syncFirebaseSessions() {
+  if (!isAdmin) return;
+  apiCall('/admin/firebase/sync', { method: 'POST' }).then(function(res) {
+    alert(res.message || 'Firebase sync complete');
+    checkFirebaseStatus();
+  }).catch(function(err) {
+    alert('Firebase sync note: ' + err.message);
+  });
 }
 
 function updateStatusUI(d) {
@@ -2229,6 +2299,7 @@ function clearLogs() {
 
 function refreshAll() {
   pollPublicStats();
+  if (activePairMode === 'qr') pollQR();
   if (isAdmin) {
     apiCall('/status').then(updateStatusUI).catch(function() {});
     if (activeTab === 'sessions') loadAdminSessions();
