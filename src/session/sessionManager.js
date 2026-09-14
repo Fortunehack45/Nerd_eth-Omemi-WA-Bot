@@ -326,6 +326,20 @@ class SessionManager extends EventEmitter {
     const msgStore = new Map();
     const retryCache = new Map();
 
+    // Hydrate persistent message store from disk if available
+    try {
+      const msgStoreFile = path.join(sessionDir, 'messages_store.json');
+      if (fs.existsSync(msgStoreFile)) {
+        const raw = fs.readFileSync(msgStoreFile, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const [k, v] of parsed) {
+            msgStore.set(k, v);
+          }
+        }
+      }
+    } catch (e) {}
+
     const session = {
       id: validId,
       dir: sessionDir,
@@ -346,8 +360,9 @@ class SessionManager extends EventEmitter {
       messagesCount: 0,
       options,
 
-      // Isolated per-session NodeCaches
+      // Isolated per-session NodeCaches (strictly separated to prevent counter vs placeholder pollution)
       msgRetryCounterCache: NodeCache ? new NodeCache({ stdTTL: 3600, useClones: false }) : null,
+      placeholderResendCache: NodeCache ? new NodeCache({ stdTTL: 3600, useClones: false }) : null,
       userDevicesCache: NodeCache ? new NodeCache({ stdTTL: 300, useClones: false }) : null,
       signalKeyStoreCache: NodeCache ? new NodeCache({ stdTTL: 300, useClones: false, deleteOnExpire: true }) : null,
 
@@ -459,8 +474,29 @@ class SessionManager extends EventEmitter {
         if (!msg && key.remoteJid) {
           msg = session.msgStore.get(`${key.remoteJid}:${key.id}`);
         }
+        if (!msg && key.remoteJid) {
+          const normRemote = normalizeJid(key.remoteJid);
+          if (normRemote && normRemote !== key.remoteJid) {
+            msg = session.msgStore.get(`${normRemote}:${key.id}`);
+          }
+        }
+        if (!msg && key.participant) {
+          msg = session.msgStore.get(`${key.participant}:${key.id}`);
+          if (!msg) {
+            const normPart = normalizeJid(key.participant);
+            if (normPart && normPart !== key.participant) {
+              msg = session.msgStore.get(`${normPart}:${key.id}`);
+            }
+          }
+        }
+        if (!msg && (key.fromMe || sock?.user?.id)) {
+          if (sock?.user?.id) {
+            msg = session.msgStore.get(`${sock.user.id}:${key.id}`) ||
+                  session.msgStore.get(`${normalizeJid(sock.user.id)}:${key.id}`);
+          }
+        }
         if (msg) {
-          return msg;
+          return (msg && typeof msg === 'object' && msg.message) ? msg.message : msg;
         }
       } catch (e) {}
       return undefined;
@@ -491,7 +527,7 @@ class SessionManager extends EventEmitter {
       emitOwnEvents: false,
       retryRequestOnFail: true,
       msgRetryCounterCache: session.msgRetryCounterCache,
-      placeholderResendCache: session.msgRetryCounterCache,
+      placeholderResendCache: session.placeholderResendCache,
       userDevicesCache: session.userDevicesCache,
       printQRInTerminal: false,
       patchMessageBeforeSending: (message) => {
@@ -553,6 +589,24 @@ class SessionManager extends EventEmitter {
             this.storeSessionMessage(session, sent.key.id, sent.message);
             if (sent.key.remoteJid) {
               this.storeSessionMessage(session, `${sent.key.remoteJid}:${sent.key.id}`, sent.message);
+              const normR = normalizeJid(sent.key.remoteJid);
+              if (normR && normR !== sent.key.remoteJid) {
+                this.storeSessionMessage(session, `${normR}:${sent.key.id}`, sent.message);
+              }
+            }
+            if (jid) {
+              this.storeSessionMessage(session, `${jid}:${sent.key.id}`, sent.message);
+              const normJ = normalizeJid(jid);
+              if (normJ && normJ !== jid) {
+                this.storeSessionMessage(session, `${normJ}:${sent.key.id}`, sent.message);
+              }
+            }
+            if (sock?.user?.id) {
+              this.storeSessionMessage(session, `${sock.user.id}:${sent.key.id}`, sent.message);
+              const normU = normalizeJid(sock.user.id);
+              if (normU && normU !== sock.user.id) {
+                this.storeSessionMessage(session, `${normU}:${sent.key.id}`, sent.message);
+              }
             }
           }
         }
@@ -729,13 +783,30 @@ class SessionManager extends EventEmitter {
    */
   storeSessionMessage(session, id, message) {
     if (!id || !message) return;
-    session.msgStore.set(id, message);
+    const protoMsg = (message && typeof message === 'object' && message.message) ? message.message : message;
+    session.msgStore.set(id, protoMsg);
     if (session.msgStore.size > 2000) {
       const keys = Array.from(session.msgStore.keys());
       for (let i = 0; i < 500; i++) {
         session.msgStore.delete(keys[i]);
       }
     }
+    this.scheduleSaveMessages(session);
+  }
+
+  scheduleSaveMessages(session) {
+    if (!session || !session.dir || !session.msgStore) return;
+    if (session._saveMsgTimer) return;
+    session._saveMsgTimer = setTimeout(() => {
+      session._saveMsgTimer = null;
+      try {
+        const msgStoreFile = path.join(session.dir, 'messages_store.json');
+        const entries = Array.from(session.msgStore.entries());
+        const slice = entries.length > 1500 ? entries.slice(entries.length - 1500) : entries;
+        fs.writeFileSync(msgStoreFile, JSON.stringify(slice));
+      } catch (e) {}
+    }, 2000);
+    if (session._saveMsgTimer.unref) session._saveMsgTimer.unref();
   }
 
   /**
@@ -1042,10 +1113,16 @@ class SessionManager extends EventEmitter {
     // Flush and close all NodeCache instances
     session.msgRetryCounterCache?.flushAll?.();
     session.msgRetryCounterCache?.close?.();
+    session.placeholderResendCache?.flushAll?.();
+    session.placeholderResendCache?.close?.();
     session.userDevicesCache?.flushAll?.();
     session.userDevicesCache?.close?.();
     session.signalKeyStoreCache?.flushAll?.();
     session.signalKeyStoreCache?.close?.();
+    if (session._saveMsgTimer) {
+      clearTimeout(session._saveMsgTimer);
+      session._saveMsgTimer = null;
+    }
 
     // Clear in-memory message store and tracking maps
     if (session.msgStore && typeof session.msgStore.clear === 'function') {

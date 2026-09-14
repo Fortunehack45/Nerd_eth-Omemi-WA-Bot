@@ -410,18 +410,47 @@ async function getYouTubeVideo(url) {
 
 // ─── TIKTOK ───────────────────────────────────────────────────────────────────
 
+async function unshortenTikTokUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  var u = url.trim();
+  if (!u.includes('vt.tiktok.com') && !u.includes('vm.tiktok.com') && !u.includes('/t/')) return u;
+  try {
+    var res = await axios.get(u, {
+      maxRedirects: 5,
+      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      validateStatus: function(status) { return status >= 200 && status < 400; }
+    });
+    var finalUrl = res.request?.res?.responseUrl || res.config?.url;
+    if (finalUrl && finalUrl.includes('tiktok.com')) {
+      log('TikTok — unshortened ' + u + ' -> ' + finalUrl);
+      return finalUrl;
+    }
+  } catch (e) {
+    log('TikTok unshorten warn: ' + e.message);
+  }
+  return u;
+}
+
 async function downloadTikTokVideo(url) {
   var tempDir = ensureTempDir();
   var ts = Date.now();
   var fp = path.join(tempDir, 'tiktok_' + ts + '.mp4');
+  var resolvedUrl = await unshortenTikTokUrl(url);
 
   // Engine 1: tikwm.com (Fast, HD, and supports BOTH videos & photo carousels/slides)
   try {
     log('TikTok — trying tikwm.com...');
     var r1 = await axios.get('https://www.tikwm.com/api/', {
-      params: { url: url, hd: 1 },
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 8000,
+      params: { url: resolvedUrl, hd: 1 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+      timeout: 12000,
     });
     if (r1.data && r1.data.code === 0 && r1.data.data) {
       var d = r1.data.data;
@@ -435,7 +464,7 @@ async function downloadTikTokVideo(url) {
           if (!imgUrl.startsWith('http')) imgUrl = 'https://www.tikwm.com' + imgUrl;
           var imgFp = path.join(tempDir, 'tiktok_img_' + ts + '_' + (i + 1) + '.jpg');
           try {
-            var stImg = await downloadStream(imgUrl, imgFp);
+            var stImg = await downloadStream(imgUrl, imgFp, { 'Referer': 'https://www.tiktok.com/' });
             if (stImg.size > 1000) imgPaths.push(imgFp);
           } catch (eImg) {}
         }
@@ -445,7 +474,7 @@ async function downloadTikTokVideo(url) {
             try {
               var mUrl = d.music.startsWith('http') ? d.music : ('https://www.tikwm.com' + d.music);
               var mFp = path.join(tempDir, 'tiktok_audio_' + ts + '.mp3');
-              var stM = await downloadStream(mUrl, mFp);
+              var stM = await downloadStream(mUrl, mFp, { 'Referer': 'https://www.tiktok.com/' });
               if (stM.size > 2000) audioFp = mFp;
             } catch (eM) {}
           }
@@ -464,7 +493,10 @@ async function downloadTikTokVideo(url) {
       var dlUrl = d.hdplay || d.play;
       if (dlUrl) {
         if (!dlUrl.startsWith('http')) dlUrl = 'https://www.tikwm.com' + dlUrl;
-        var st1 = await downloadStream(dlUrl, fp);
+        var st1 = await downloadStream(dlUrl, fp, {
+          'Referer': 'https://www.tiktok.com/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        });
         if (st1.size > 10000) {
           log('TikTok — tikwm success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
           return { success: true, filePath: fp, title: d.title || 'TikTok Video', size: st1.size, author: d.author?.nickname || 'TikTok', quality: 'HD' };
@@ -477,7 +509,10 @@ async function downloadTikTokVideo(url) {
   try {
     log('TikTok — trying btch-downloader...');
     var { ttdl: btchTt } = require('btch-downloader');
-    var ttRes = await btchTt(url);
+    var ttRes = await Promise.race([
+      btchTt(resolvedUrl),
+      new Promise(function(_, reject) { setTimeout(function() { reject(new Error('btch timeout')); }, 12000); })
+    ]);
     if (ttRes && ttRes.status) {
       if (ttRes.images && Array.isArray(ttRes.images) && ttRes.images.length > 0) {
         log('TikTok — btch detected photo carousel with ' + ttRes.images.length + ' images');
@@ -502,7 +537,9 @@ async function downloadTikTokVideo(url) {
       }
 
       if (ttRes.video && ttRes.video.length > 0) {
-        var stBtchTt = await downloadStream(ttRes.video[0], fp);
+        var stBtchTt = await downloadStream(ttRes.video[0], fp, {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        });
         if (stBtchTt.size > 10000) {
           log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB)');
           return { success: true, filePath: fp, title: ttRes.title || 'TikTok Video', size: stBtchTt.size, author: 'TikTok', quality: 'HD' };
@@ -511,18 +548,20 @@ async function downloadTikTokVideo(url) {
     }
   } catch (e) { log('TikTok btch-downloader fail: ' + e.message); }
 
-  // Engine 3: yt-dlp
+  // Engine 3: yt-dlp with unshortened URL & referer
   try {
     log('TikTok — trying yt-dlp...');
     var outPatternTt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.%(ext)s');
     var expectedMp4Tt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.mp4');
     var resTt = await runYtDlp([
       '-f', 'b[height<=720][fps<=60][ext=mp4]/b[height<=720][ext=mp4]/b[height<=720]/best[height<=720]/best',
+      '--referer', 'https://www.tiktok.com/',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
       '-o', outPatternTt,
       '--no-playlist',
       '--no-warnings',
       '--no-check-certificate',
-      url
+      resolvedUrl
     ], 35000);
 
     var targetTtFp = fs.existsSync(expectedMp4Tt) ? expectedMp4Tt : null;
@@ -542,7 +581,7 @@ async function downloadTikTokVideo(url) {
   // Engine 4: Cobalt
   try {
     log('TikTok — trying Cobalt...');
-    var cobalt = await cobaltRequest(url, false);
+    var cobalt = await cobaltRequest(resolvedUrl, false);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
@@ -1385,6 +1424,7 @@ module.exports = {
   getYouTubeAudio,
   getYouTubeVideo,
   downloadTikTokVideo,
+  unshortenTikTokUrl,
   downloadInstagramMedia,
   downloadSpotifyAudio,
   downloadTwitterVideo,
