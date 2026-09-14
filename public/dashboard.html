@@ -1585,10 +1585,15 @@ function refreshQRCode() {
   var oldText = btn ? btn.innerHTML : '<span>🔄</span> Refresh QR Code';
   if (btn) btn.innerHTML = '<span>⏳</span> Refreshing QR...';
   apiCall('/refresh-qr', { method: 'POST' }).then(function() {
-    setTimeout(function() {
-      if (btn) btn.innerHTML = oldText;
+    var checkCount = 0;
+    var checkInterval = setInterval(function() {
+      checkCount++;
       pollQR();
-    }, 1200);
+      if (checkCount >= 8) {
+        clearInterval(checkInterval);
+        if (btn) btn.innerHTML = oldText;
+      }
+    }, 1500);
   }).catch(function() {
     if (btn) btn.innerHTML = oldText;
     pollQR();
@@ -1686,11 +1691,24 @@ function pollQR() {
     var wrap1 = document.getElementById('qrImageWrapper');
     var wrap2 = document.getElementById('qrImageWrapperTab');
     var html = '';
-    if (res.dataUrl) {
+    if (res.connected) {
+      setConnectedView(res.user);
+      html = '<div class="qr-scan-card" style="padding:28px 20px; text-align:center;">' +
+        '<div style="font-size:2.4rem; margin-bottom:8px;">✅</div>' +
+        '<div style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom:4px;">WhatsApp Connected & Online</div>' +
+        '<div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">Logged in as: <b>' + escapeHtml(res.user || 'Companion Device') + '</b></div>' +
+        '<button class="btn-action-subtle" onclick="promptResetSession()" style="color:#ef4444; border-color:rgba(239,68,68,0.3); margin:0 auto;">' +
+        '<span>🔌</span> Disconnect / Switch Device' +
+        '</button>' +
+        '</div>';
+    } else if (res.dataUrl) {
+      setDisconnectedView();
       html = '<div class="qr-scan-card"><img src="' + res.dataUrl + '" alt="WhatsApp QR Code"></div>';
     } else if (res.qr) {
-      html = '<div style="padding:20px; font-weight:700;">Generating QR image...</div>';
-    } else if (!res.connected) {
+      setDisconnectedView();
+      html = '<div style="padding:30px 20px; font-weight:700; color:var(--text-main);"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Rendering QR Code...</div>';
+    } else {
+      setDisconnectedView();
       html = '<div style="color:var(--text-muted); font-size:0.9rem; padding:40px 20px;"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Connecting to WhatsApp gateway...</div>';
     }
     if (wrap1 && html) wrap1.innerHTML = html;
@@ -1698,9 +1716,6 @@ function pollQR() {
 
     if (res.pairingCode && activePairMode === 'pair') {
       showPairCode(res.pairingCode);
-    }
-    if (res.connected) {
-      setConnectedView(res.user);
     }
   }).catch(function() {});
 }
@@ -1862,8 +1877,14 @@ function promptResetSession() {
     apiCall('/reset-session', { method: 'POST' }).then(function(res) {
       alert('Session reset! Generating fresh QR code...');
       setPairMode('qr');
-      apiCall('/status').then(updateStatusUI);
-      setTimeout(pollQR, 1000);
+      setDisconnectedView();
+      var checkCount = 0;
+      var interval = setInterval(function() {
+        checkCount++;
+        pollQR();
+        apiCall('/status').then(updateStatusUI).catch(function() {});
+        if (checkCount >= 10) clearInterval(interval);
+      }, 1500);
     });
   }
 }

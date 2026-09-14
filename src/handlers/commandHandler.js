@@ -1,4 +1,4 @@
-const { extractCommand, randomBetween } = require('../utils/helpers');
+const { extractCommand, randomBetween, normalizeJid } = require('../utils/helpers');
 const config = require('../../config');
 const { checkRateLimit, simulateTyping } = require('../services/antiBanService');
 const { logCommand } = require('../../server');
@@ -53,19 +53,12 @@ function loadCommands() {
 }
 
 async function handleCommand(sock, msg, text) {
-  var sender = msg.key.remoteJid || '';
-  if (sender && !sender.endsWith('@g.us') && sender.includes(':')) {
-    sender = sender.split(':')[0] + '@s.whatsapp.net';
-    msg.key.remoteJid = sender;
-  }
+  var sender = normalizeJid(msg.key.remoteJid || '');
+  msg.key.remoteJid = sender;
   var isGroup = sender.endsWith('@g.us');
   var isFromMe = !!msg.key.fromMe;
-  var botJid = sock.user?.id || sock.user?.jid || '';
-  if (botJid && botJid.includes(':')) botJid = botJid.split(':')[0] + '@s.whatsapp.net';
-  var senderId = isFromMe ? botJid : (msg.key.participant || sender);
-  if (senderId && !senderId.endsWith('@g.us') && senderId.includes(':')) {
-    senderId = senderId.split(':')[0] + '@s.whatsapp.net';
-  }
+  var botJid = normalizeJid(sock.user?.id || sock.user?.jid || '');
+  var senderId = isFromMe ? botJid : normalizeJid(msg.key.participant || sender);
   var pushName = msg.pushName || 'User';
 
   var extracted = extractCommand(text);

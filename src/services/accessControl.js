@@ -23,7 +23,8 @@ function isAdmin(jid, isFromMe, sock) {
     sock = sock || require('../client').getClient();
     if (sock && sock.user) {
       var botNum = parseJid(sock.user.id || sock.user.jid || '');
-      if (botNum && botNum === sender) {
+      var botLid = parseJid(sock.user.lid || '');
+      if ((botNum && botNum === sender) || (botLid && botLid === sender)) {
         return true;
       }
     }

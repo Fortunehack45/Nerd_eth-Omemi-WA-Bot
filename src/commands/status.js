@@ -1,5 +1,5 @@
 const { sendStatus, sendMediaStatus } = require('../services/statusService');
-const { downloadContentFromMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
+const { downloadContentFromMessage, normalizeMessageContent } = require('../utils/baileysHelper');
 const config = require('../../config');
 
 const HELP = `*📱 WhatsApp Status Poster* (Admin Only)

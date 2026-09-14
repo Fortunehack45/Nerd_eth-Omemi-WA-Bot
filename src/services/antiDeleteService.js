@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { loadJson, saveJson, parseJid } = require('../utils/helpers');
-const { downloadContentFromMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
+const { downloadContentFromMessage, normalizeMessageContent } = require('../utils/baileysHelper');
 
 const ANTIDELETE_FILE = path.join(__dirname, '..', '..', 'storage', 'antidelete.json');
 

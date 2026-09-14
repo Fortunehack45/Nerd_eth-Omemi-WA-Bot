@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { downloadMediaMessage, downloadContentFromMessage, normalizeMessageContent } = require('@whiskeysockets/baileys');
+const { downloadMediaMessage, downloadContentFromMessage, normalizeMessageContent } = require('../utils/baileysHelper');
 const { saveJson, loadJson, sanitizeFileName, parseJid } = require('../utils/helpers');
 
 const SAVE_DIR = path.join(__dirname, '..', '..', 'storage', 'status');

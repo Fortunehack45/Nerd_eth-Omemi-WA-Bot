@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { normalizeMessageContent, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { normalizeMessageContent, downloadMediaMessage, downloadContentFromMessage } = require('../utils/baileysHelper');
 const { saveJson, loadJson, sanitizeFileName, parseJid } = require('../utils/helpers');
 const config = require('../../config');
 
@@ -124,7 +124,7 @@ async function saveViewOnce(sock, msg) {
 
     // Priority 1: Direct stream decoding via downloadContentFromMessage (fastest & most reliable)
     try {
-      const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+      const { downloadContentFromMessage } = require('../utils/baileysHelper');
       var mediaObj = extracted.inner?.[innerType];
       if (mediaObj) {
         var rawType = innerType.replace('Message', '');

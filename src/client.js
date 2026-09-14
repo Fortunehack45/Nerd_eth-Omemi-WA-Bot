@@ -1,4 +1,18 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, proto } = require('@whiskeysockets/baileys');
+const { getBaileys, DisconnectReason: DefaultDisconnectReason } = require('./utils/baileysHelper');
+const { normalizeJid } = require('./utils/helpers');
+let makeWASocket, useMultiFileAuthState, DisconnectReason = DefaultDisconnectReason, fetchLatestBaileysVersion, Browsers, proto, makeCacheableSignalKeyStore;
+
+async function ensureBaileys() {
+  const b = await getBaileys();
+  makeWASocket = b.makeWASocket;
+  useMultiFileAuthState = b.useMultiFileAuthState;
+  if (b.DisconnectReason) DisconnectReason = b.DisconnectReason;
+  fetchLatestBaileysVersion = b.fetchLatestBaileysVersion;
+  Browsers = b.Browsers;
+  proto = b.proto;
+  makeCacheableSignalKeyStore = b.makeCacheableSignalKeyStore;
+  return b;
+}
 const QRCode = require('qrcode');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
@@ -150,11 +164,9 @@ function getDashboardUrl() {
 function clearSessionFolder() {
   try {
     if (fs.existsSync(SESSION_DIR)) {
-      const files = fs.readdirSync(SESSION_DIR);
-      for (const file of files) {
-        fs.unlinkSync(path.join(SESSION_DIR, file));
-      }
-      console.log('[CLIENT] Cleared corrupted session folder.');
+      fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+      fs.mkdirSync(SESSION_DIR, { recursive: true });
+      console.log('[CLIENT] Cleared session folder.');
     }
   } catch (e) {
     console.error('[CLIENT] Failed to clear session folder:', e.message);
@@ -205,6 +217,9 @@ function sanitizePairingNumber(number) {
 }
 
 async function startClient(messageHandler, statusHandler, onConnected) {
+  if (!makeWASocket) {
+    await ensureBaileys();
+  }
   if (messageHandler) savedMessageHandler = messageHandler;
   if (statusHandler) savedStatusHandler = statusHandler;
   if (onConnected) savedOnConnected = onConnected;
@@ -230,7 +245,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
 
   sock = makeWASocket({
     version,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: (typeof makeCacheableSignalKeyStore === 'function')
+        ? makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+        : state.keys,
+    },
     logger: pino({ level: 'silent' }),
     browser,
     syncFullHistory: false,
@@ -273,10 +293,10 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       try {
         const msg = await getStoredMessage(key);
         if (msg) {
-          return proto.Message.fromObject(msg);
+          return proto?.Message?.fromObject ? proto.Message.fromObject(msg) : msg;
         }
       } catch (e) {}
-      return proto.Message.fromObject({});
+      return undefined;
     },
   });
 
@@ -416,9 +436,9 @@ async function startClient(messageHandler, statusHandler, onConnected) {
           storeMessage(m.key.id, m.message);
         }
 
-        // Clean remoteJid: strip device suffix (e.g. :12) to prevent Baileys query timeouts
-        if (m.key?.remoteJid && !m.key.remoteJid.endsWith('@g.us') && m.key.remoteJid.includes(':')) {
-          m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
+        // Clean remoteJid: safely strip device suffix while preserving LID and server domain
+        if (m.key?.remoteJid) {
+          m.key.remoteJid = normalizeJid(m.key.remoteJid);
         }
 
         // Cache all messages immediately for anti-delete recovery
@@ -527,6 +547,9 @@ function getLastPairingCode() {
 }
 
 async function requestPairingCode(phoneNumber) {
+  if (!makeWASocket) {
+    await ensureBaileys();
+  }
   var cleanPhone = sanitizePairingNumber(phoneNumber);
   if (!cleanPhone || cleanPhone.length < 10) {
     throw new Error('Invalid phone number. Provide full number with country code (e.g. 2348012345678 or 08012345678)');

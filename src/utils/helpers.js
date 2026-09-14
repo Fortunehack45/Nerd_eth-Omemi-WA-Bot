@@ -15,6 +15,16 @@ function parseJid(jid) {
   return clean.replace(/[^0-9]/g, '');
 }
 
+function normalizeJid(jid) {
+  if (!jid || typeof jid !== 'string') return '';
+  if (!jid.includes(':')) return jid;
+  var atIdx = jid.indexOf('@');
+  if (atIdx === -1) return jid.split(':')[0];
+  var user = jid.slice(0, atIdx).split(':')[0];
+  var server = jid.slice(atIdx + 1);
+  return user + '@' + server;
+}
+
 function isOwner(jid, ownerNumbers) {
   const sender = parseJid(jid);
   return ownerNumbers.some(owner => parseJid(owner) === sender);
@@ -359,6 +369,7 @@ async function sendAudioMessage(sock, sender, filePath, title, author, opts) {
 module.exports = {
   extractCommand,
   parseJid,
+  normalizeJid,
   isOwner,
   formatBytes,
   formatDuration,
