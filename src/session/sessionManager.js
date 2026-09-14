@@ -17,7 +17,7 @@ try {
   DefaultDisconnectReason = bh.DisconnectReason;
 } catch (e) {}
 
-const { normalizeJid, sanitizePairingNumber } = require('../utils/helpers');
+const { normalizeJid, sanitizePairingNumber, parseJid } = require('../utils/helpers');
 
 let config = {};
 try {
@@ -68,6 +68,9 @@ class SessionManager extends EventEmitter {
 
     this.backupTimers = new Map();
     this.watchdogInterval = null;
+    this.clusterBotSentMessageIds = new Set();
+    global.clusterBotSentMessageIds = this.clusterBotSentMessageIds;
+    this.groupLocks = new Map();
     this.startWatchdog();
   }
 
@@ -126,6 +129,74 @@ class SessionManager extends EventEmitter {
       });
     }, 2500);
     this.backupTimers.set(sessionId, timer);
+  }
+
+  /**
+   * Check if a JID or phone number belongs to ANY bot session on this server.
+   * @param {string} jid
+   * @returns {boolean}
+   */
+  isClusterBot(jid) {
+    if (!jid || typeof jid !== 'string') return false;
+    const cleanNum = parseJid(jid);
+    const rawJid = normalizeJid(jid);
+
+    for (const session of this.sessions.values()) {
+      if (session.phoneNumber && cleanNum && session.phoneNumber === cleanNum) return true;
+      if (session.sock?.user?.id) {
+        const sockUserNum = parseJid(session.sock.user.id);
+        if (sockUserNum && cleanNum && sockUserNum === cleanNum) return true;
+        if (normalizeJid(session.sock.user.id) === rawJid) return true;
+      }
+      if (session.sock?.user?.lid && normalizeJid(session.sock.user.lid) === rawJid) return true;
+      if (session.authState?.state?.creds?.me?.id) {
+        const credNum = parseJid(session.authState.state.creds.me.id);
+        if (credNum && cleanNum && credNum === cleanNum) return true;
+      }
+      if (session.authState?.state?.creds?.me?.lid && normalizeJid(session.authState.state.creds.me.lid) === rawJid) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Acquire a deduplication lock for a group chat to ensure only 1 bot on the server handles a message.
+   * @param {string} groupJid
+   * @param {string} lockKey
+   * @returns {boolean} True if lock acquired, false if already locked by another bot
+   */
+  acquireGroupLock(groupJid, lockKey) {
+    if (!groupJid || !lockKey) return true;
+    const fullKey = `${groupJid}:${lockKey}`;
+    const now = Date.now();
+
+    if (this.groupLocks.size > 200) {
+      for (const [k, ts] of this.groupLocks.entries()) {
+        if (now - ts > 12000) this.groupLocks.delete(k);
+      }
+    }
+
+    if (this.groupLocks.has(fullKey)) {
+      const lockTs = this.groupLocks.get(fullKey);
+      if (now - lockTs < 8000) {
+        return false; // Lock active! Another bot is already handling this
+      }
+    }
+
+    this.groupLocks.set(fullKey, now);
+    return true;
+  }
+
+  /**
+   * Record a bot-sent message ID globally across the entire cluster.
+   * @param {string} msgId
+   */
+  recordBotSentMessage(msgId) {
+    if (!msgId) return;
+    this.clusterBotSentMessageIds.add(msgId);
+    if (this.clusterBotSentMessageIds.size > 5000) {
+      const ids = Array.from(this.clusterBotSentMessageIds);
+      for (let i = 0; i < 1000; i++) this.clusterBotSentMessageIds.delete(ids[i]);
+    }
   }
 
   /**
@@ -286,6 +357,7 @@ class SessionManager extends EventEmitter {
       retryCache,            // Map cache for testing contract
       processedMsgIds: new Set(),
       botSentMessageIds: new Set(),
+      manager: this,
       authState: null,
     };
 
@@ -457,6 +529,11 @@ class SessionManager extends EventEmitter {
         const sent = await origSendMessage(jid, content, options);
         if (sent?.key?.id) {
           session.botSentMessageIds.add(sent.key.id);
+          this.recordBotSentMessage(sent.key.id);
+          try {
+            const { recordChatReply } = require('../utils/antiLoop');
+            recordChatReply(jid);
+          } catch (e) {}
           if (session.botSentMessageIds.size > 2000) {
             const ids = Array.from(session.botSentMessageIds);
             for (let i = 0; i < 500; i++) session.botSentMessageIds.delete(ids[i]);
@@ -577,8 +654,35 @@ class SessionManager extends EventEmitter {
             try { sock.readMessages([m.key]); } catch (e) {}
           }
 
-          if (m.key?.id && session.botSentMessageIds.has(m.key.id)) {
+          // 1. Never process messages sent by this bot session OR any other bot session on the cluster
+          if (m.key?.id && (session.botSentMessageIds.has(m.key.id) || this.clusterBotSentMessageIds.has(m.key.id))) {
             continue;
+          }
+
+          // 2. Never process messages sent by ANY registered bot on this cluster (halts 2 bot users chatting loops)
+          const senderJid = m.key?.participant || m.key?.remoteJid;
+          if (senderJid && this.isClusterBot(senderJid)) {
+            continue;
+          }
+
+          // 3. Drop messages containing bot signatures / status formats
+          const innerMsg = m.message?.ephemeralMessage?.message || m.message?.viewOnceMessage?.message || m.message?.viewOnceMessageV2?.message || m.message?.documentWithCaptionMessage?.message || m.message;
+          const msgBody = innerMsg?.conversation || innerMsg?.extendedTextMessage?.text || innerMsg?.imageMessage?.caption || innerMsg?.videoMessage?.caption || '';
+          if (msgBody) {
+            try {
+              const { isBotSignature } = require('../utils/antiLoop');
+              if (isBotSignature(msgBody)) {
+                continue;
+              }
+            } catch (e) {}
+          }
+
+          // 4. In group chats: de-duplicate so only 1 bot on the server handles the message/command
+          if (m.key?.remoteJid?.endsWith('@g.us')) {
+            const groupLockKey = m.key?.id || (msgBody ? msgBody.trim().substring(0, 50) : '');
+            if (groupLockKey && !this.acquireGroupLock(m.key.remoteJid, groupLockKey)) {
+              continue; // Handled by sibling bot session
+            }
           }
 
           // Filter out history syncs / stale messages older than session start

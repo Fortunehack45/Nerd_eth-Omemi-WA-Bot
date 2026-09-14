@@ -7,6 +7,7 @@ const { isAntiBotEnabled, isBotMessage, logAntiBotEvent } = require('../services
 const { isAdmin } = require('../services/accessControl');
 const { saveAndForwardStatus } = require('../services/statusService');
 const { logMessage } = require('../../server');
+const { isBotSignature, isQuotingBotMessage, checkChatCircuitBreaker, recordChatReply } = require('../utils/antiLoop');
 
 const VIEWONCE_EMOJIS_NORM = [
   '❤', '💖', '💕', '♥', '😍', '🥰', '💓', '💗', '💘', '❣️', '💞', '🔥',
@@ -169,7 +170,20 @@ async function handleMessage(sock, msg, session) {
   // Never allow bot-sent programmatic messages to trigger commands or loops
   if (msg.key?.id) {
     if (global.botSentMessageIds && global.botSentMessageIds.has(msg.key.id)) return;
+    if (global.clusterBotSentMessageIds && global.clusterBotSentMessageIds.has(msg.key.id)) return;
     if (session?.botSentMessageIds && session.botSentMessageIds.has(msg.key.id)) return;
+  }
+
+  // Never process messages sent by ANY registered bot on this cluster (halts 2 bot users chatting loops)
+  var callerParticipant = msg.key?.participant || sender;
+  var mgr = session?.manager || (require('../session/sessionManager').getActiveSessionManager && require('../session/sessionManager').getActiveSessionManager());
+  if (mgr && typeof mgr.isClusterBot === 'function' && mgr.isClusterBot(callerParticipant)) {
+    return;
+  }
+
+  // Ignore any incoming message that matches bot output signatures
+  if (messageText && isBotSignature(messageText)) {
+    return;
   }
 
   // If message is from the bot itself (fromMe), strictly ignore bot output status & notifications
@@ -467,6 +481,10 @@ async function handleMessage(sock, msg, session) {
   // - OR the user quoted/replied to a message containing a media URL with a download request
   // STRICT GUARD: fromMe messages NEVER trigger auto-downloader (prevents infinite echo loops)
   if (!msg.key?.fromMe && !isFeatureDisabled('download')) {
+    // Anti-loop protection: if quoting a bot message or circuit breaker tripped, abort
+    if (isQuotingBotMessage(msg) || !checkChatCircuitBreaker(sender)) {
+      return;
+    }
     var urlRegex = /(https?:\/\/[^\s]+)/gi;
     var matchedUrls = trimmed.match(urlRegex) || [];
     var contextInfo = msg.message?.extendedTextMessage?.contextInfo;
@@ -529,6 +547,9 @@ async function handleMessage(sock, msg, session) {
   // 8. Auto-AI response in private DM for non-command text messages (DISABLED by default)
   // AI only responds when explicitly invoked via !ai <question> unless autoReplyDM is explicitly enabled in config
   if (config.ai?.autoReplyDM === true && isPrivate && !msg.key?.fromMe && messageText && !isCmd) {
+    if (isBotSignature(messageText) || isQuotingBotMessage(msg) || !checkChatCircuitBreaker(sender)) {
+      return;
+    }
     if (!isFeatureDisabled('ai')) {
       try {
         var aiCmd = require('../commands/ai');
