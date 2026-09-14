@@ -75,6 +75,8 @@ app.get('/health', function(req, res) {
 
 app.get('/', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
+app.get('/admin', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
+app.get('/admin.html', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Public aggregate stats endpoint (Strictly zero phone numbers, LIDs, remote JIDs, or private chats)
@@ -588,7 +590,7 @@ app.get('/api/keys', adminAuth, function(req, res) {
   res.json({
     provider: aiSvc.getProvider(),
     model: aiSvc.getModel(),
-    groqSet: !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 5),
+    groqSet: !!((process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 5) || (config.groq && config.groq.apiKey)),
     openaiSet: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 5),
     openrouterSet: !!(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.length > 5),
     braveSet: !!(process.env.BRAVE_SEARCH_API_KEY && process.env.BRAVE_SEARCH_API_KEY.length > 5),

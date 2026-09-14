@@ -34,15 +34,12 @@ async function sendFile(sock, sender, filePath, opts) {
       var sizeMB = stat.size / (1024 * 1024);
       var sendFp = filePath;
 
-      // WhatsApp limits inline videos to ~64MB. If video is > 50MB (like a 75MB TikTok),
-      // or if it is not MP4, compress with ffmpeg ultrafast so it stays under 50MB and plays inline!
-      if (sizeMB > 50 || ext !== 'mp4') {
-        console.log('[DOWNLOAD] Compressing/optimizing video (' + sizeMB.toFixed(1) + 'MB) for WhatsApp inline playback...');
-        var optFp = await optimizeVideoForWhatsApp(filePath);
-        if (fs.existsSync(optFp)) {
-          sendFp = optFp;
-          ext = 'mp4';
-        }
+      // Always optimize videos to ensure 720p60 maximum resolution, optimal data compression, and instant inline playback
+      console.log('[DOWNLOAD] Optimizing video (' + sizeMB.toFixed(1) + 'MB) to 720p60 HD format...');
+      var optFp = await optimizeVideoForWhatsApp(filePath);
+      if (fs.existsSync(optFp)) {
+        sendFp = optFp;
+        ext = 'mp4';
       }
 
       var vidBuf = fs.readFileSync(sendFp);
@@ -167,7 +164,7 @@ module.exports = {
           await sock.sendMessage(sender, { text: '✅ Sending audio: *' + (audioResult.title || 'Track') + '*' });
           await sendFile(sock, sender, audioResult.filePath, { title: audioResult.title || 'Audio', type: 'audio' });
         } else {
-          await sock.sendMessage(sender, { text: '⚠️ Audio file too large (' + formatBytes(stat.size) + '). Max: ' + config.download.maxSize + 'MB.\nLink: ' + url });
+          await sock.sendMessage(sender, { text: '⚠️ Audio file too large (' + formatBytes(stat.size) + '). Max: ' + config.download.maxSize + 'MB.' });
           try { fs.unlinkSync(audioResult.filePath); } catch (e) {}
         }
       }
@@ -216,7 +213,7 @@ module.exports = {
         var info2 = await processLink(url);
         var link2 = info2.downloadUrl || url;
         await sock.sendMessage(sender, {
-          text: '⚠️ File too large (' + formatBytes(fileStat.size) + '). Max: ' + config.download.maxSize + 'MB.\n🔗 Direct link: ' + link2
+          text: '⚠️ File too large (' + formatBytes(fileStat.size) + '). Max: ' + config.download.maxSize + 'MB.'
         });
         try { if (fs.existsSync(dlResult.filePath)) fs.unlinkSync(dlResult.filePath); } catch (e) {}
       }
@@ -226,7 +223,7 @@ module.exports = {
       if (fallbackInfo.downloadUrl) {
         await sock.sendMessage(sender, { text: '🔗 Direct download link:\n' + fallbackInfo.downloadUrl });
       } else {
-        await sock.sendMessage(sender, { text: '❌ Could not download. Original link:\n' + url });
+        await sock.sendMessage(sender, { text: '❌ Could not download media. Please ensure the link is public.' });
       }
     }
   },

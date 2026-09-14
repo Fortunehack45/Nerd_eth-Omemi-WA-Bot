@@ -143,7 +143,7 @@ function hasEmojiMatch(text, emojiListNorm) {
   return false;
 }
 
-async function handleMessage(sock, msg) {
+async function handleMessage(sock, msg, session) {
   var sender = msg.key.remoteJid;
   var isPrivate = !sender.endsWith('@g.us');
   var inner = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message?.documentWithCaptionMessage?.message || msg.message;
@@ -167,8 +167,34 @@ async function handleMessage(sock, msg) {
   }
 
   // Never allow bot-sent programmatic messages to trigger commands or loops
-  if (msg.key?.id && global.botSentMessageIds && global.botSentMessageIds.has(msg.key.id)) {
-    return;
+  if (msg.key?.id) {
+    if (global.botSentMessageIds && global.botSentMessageIds.has(msg.key.id)) return;
+    if (session?.botSentMessageIds && session.botSentMessageIds.has(msg.key.id)) return;
+  }
+
+  // If message is from the bot itself (fromMe), strictly ignore bot output status & notifications
+  if (msg.key?.fromMe) {
+    var rawText = messageText.trim();
+    if (
+      rawText.startsWith('❌') ||
+      rawText.startsWith('✅') ||
+      rawText.startsWith('⚠️') ||
+      rawText.startsWith('🎵') ||
+      rawText.startsWith('⬇️') ||
+      rawText.startsWith('📸') ||
+      rawText.startsWith('🎬') ||
+      rawText.startsWith('📄') ||
+      rawText.startsWith('🔍') ||
+      rawText.startsWith('⏳') ||
+      rawText.startsWith('*📥') ||
+      rawText.startsWith('*📄') ||
+      rawText.startsWith('*🤖') ||
+      rawText.startsWith('[DownloadService]') ||
+      rawText.startsWith('[SESSION-MGR]') ||
+      rawText.startsWith('[Onboarding]')
+    ) {
+      return;
+    }
   }
 
   // 1. Emoji Reaction Trigger (Admin reacting to View-Once or Status)
@@ -370,11 +396,24 @@ async function handleMessage(sock, msg) {
   var isCmd = isCommand(trimmed);
 
   // If the message is from the bot's own account (fromMe: true),
-  // ONLY process if it starts with the command prefix (e.g. !ping, !help),
-  // OR if it's a URL download request from the owner in self-chat.
+  // ONLY process if it starts with the command prefix (e.g. !ping, !help, !download),
+  // or explicit prefixless commands (ping, help, ai, download).
+  // NEVER allow loose text or bare URLs fromMe to enter auto-downloader (prevents infinite echo spam loops).
   if (msg.key?.fromMe && !isCmd) {
-    var checkUrl = /(https?:\/\/[^\s]+)/gi;
-    if (!trimmed.match(checkUrl) || isFeatureDisabled('download')) {
+    var lowerTrim = trimmed.toLowerCase();
+    var isSelfCmd = (
+      lowerTrim === 'ping' ||
+      lowerTrim === 'help' ||
+      lowerTrim.startsWith('ai ') ||
+      lowerTrim.startsWith('gpt ') ||
+      lowerTrim.startsWith('ask ') ||
+      lowerTrim.startsWith('getpp') ||
+      lowerTrim.startsWith('download ') ||
+      lowerTrim.startsWith('dl ') ||
+      lowerTrim.startsWith('play ') ||
+      lowerTrim.startsWith('music ')
+    );
+    if (!isSelfCmd) {
       return;
     }
   }
@@ -426,7 +465,8 @@ async function handleMessage(sock, msg) {
   // - The user says "download this", "save this", "dl this", "get this", etc.
   // - OR the message consists primarily of the media URL
   // - OR the user quoted/replied to a message containing a media URL with a download request
-  if (!isFeatureDisabled('download')) {
+  // STRICT GUARD: fromMe messages NEVER trigger auto-downloader (prevents infinite echo loops)
+  if (!msg.key?.fromMe && !isFeatureDisabled('download')) {
     var urlRegex = /(https?:\/\/[^\s]+)/gi;
     var matchedUrls = trimmed.match(urlRegex) || [];
     var contextInfo = msg.message?.extendedTextMessage?.contextInfo;

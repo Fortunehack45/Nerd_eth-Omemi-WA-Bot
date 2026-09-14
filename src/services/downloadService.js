@@ -339,11 +339,11 @@ async function getYouTubeVideo(url) {
     } catch (e) {}
   }
 
-  // Engine 1: yt-dlp (Primary Full HD / 720p with format merging + WhatsApp Status optimization)
+  // Engine 1: yt-dlp (Standard 720p60 HD format with format merging + compression)
   try {
-    log('YT Video — trying yt-dlp Full HD extractor...');
+    log('YT Video — trying yt-dlp 720p60 HD extractor...');
     var res = await runYtDlp([
-      '-f', 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*+ba/b/best',
+      '-f', 'bv*[height<=720][fps<=60][ext=mp4]+ba[ext=m4a]/b[height<=720][fps<=60][ext=mp4]/b[height<=720]/best[height<=720]/best',
       '--merge-output-format', 'mp4',
       '--no-playlist',
       '--no-warnings',
@@ -364,16 +364,16 @@ async function getYouTubeVideo(url) {
       var st0 = fs.statSync(targetFp);
       if (st0.size > 10000) {
         log('YT Video — yt-dlp download success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: targetFp, title: title, size: st0.size, quality: 'Full HD' };
+        return { success: true, filePath: targetFp, title: title, size: st0.size, quality: '720p60 HD' };
       }
     }
   } catch (e) { log('YT Video yt-dlp fail: ' + e.message); }
 
-  // Engine 2: Cobalt (HD 1080/720)
+  // Engine 2: Cobalt (HD 720p)
   try {
-    log('YT Video — trying Cobalt HD...');
+    log('YT Video — trying Cobalt HD 720p...');
     var fpCob = path.join(tempDir, 'yt_video_cobalt_' + ts + '.mp4');
-    var cobalt = await cobaltRequest(url, false, { videoQuality: '1080' });
+    var cobalt = await cobaltRequest(url, false, { videoQuality: '720' });
     if (!cobalt.success || !cobalt.url) {
       cobalt = await cobaltRequest(url, false, { videoQuality: '720' });
     }
@@ -517,7 +517,7 @@ async function downloadTikTokVideo(url) {
     var outPatternTt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.%(ext)s');
     var expectedMp4Tt = path.join(tempDir, 'tiktok_ytdlp_' + ts + '.mp4');
     var resTt = await runYtDlp([
-      '-f', 'b[ext=mp4]/b/best',
+      '-f', 'b[height<=720][fps<=60][ext=mp4]/b[height<=720][ext=mp4]/b[height<=720]/best[height<=720]/best',
       '-o', outPatternTt,
       '--no-playlist',
       '--no-warnings',
@@ -608,7 +608,7 @@ async function downloadInstagramMedia(url) {
   try {
     log('Instagram — trying native yt-dlp...');
     var resYt = await runYtDlp([
-      '-f', 'b[ext=mp4]/b/best',
+      '-f', 'b[height<=720][fps<=60][ext=mp4]/b[height<=720][ext=mp4]/b[height<=720]/best[height<=720]/best',
       '-o', outPattern,
       '--no-playlist',
       '--no-warnings',
@@ -759,54 +759,83 @@ async function downloadSpotifyAudio(url) {
   var ts = Date.now();
   var fp = path.join(tempDir, 'spotify_' + ts + '.mp3');
   var trackTitle = 'Spotify Track';
-  var artistName = 'Unknown Artist';
+  var artistName = '';
 
   // ── STEP 1: Fetch Spotify OEmbed metadata FIRST so every engine knows the real title + artist ──
   try {
     log('Spotify — fetching track metadata via Spotify OEmbed...');
-    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(cleanUrl), { timeout: 8000 });
+    var metaR = await axios.get('https://open.spotify.com/oembed?url=' + encodeURIComponent(cleanUrl), { timeout: 6000 });
     if (metaR.data) {
-      if (metaR.data.title)       trackTitle = metaR.data.title;
+      if (metaR.data.title) trackTitle = metaR.data.title;
       if (metaR.data.author_name) artistName = metaR.data.author_name;
     }
-    log('Spotify — metadata: "' + trackTitle + '" by ' + artistName);
+    log('Spotify — metadata: "' + trackTitle + '"' + (artistName ? ' by ' + artistName : ''));
   } catch (e) { log('Spotify OEmbed metadata note: ' + e.message); }
 
-  // ── Engine 1: btch-downloader direct 320kbps Spotify API ──
+  // ── Engine 1: btch-downloader direct 320kbps Spotify API (with 4s timeout to prevent hanging) ──
   try {
-    log('Spotify — trying btch-downloader...');
+    log('Spotify — trying btch-downloader with timeout...');
     var { spotify: btchSpotify } = require('btch-downloader');
-    var spRes = await btchSpotify(cleanUrl);
+    var btchPromise = btchSpotify(cleanUrl);
+    var timeoutPromise = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 4000); });
+    var spRes = await Promise.race([btchPromise, timeoutPromise]);
     if (spRes && spRes.status && spRes.result && spRes.result.formats && spRes.result.formats.length > 0) {
       var directMp3 = spRes.result.formats[0].url;
-      // Prefer the Spotify OEmbed title we already fetched; fall back to what btch-downloader reports
       var titleSp = trackTitle !== 'Spotify Track' ? trackTitle : (spRes.result.title || trackTitle);
       var stBtch = await downloadStream(directMp3, fp);
       if (stBtch.size > 10000) {
         log('Spotify — btch-downloader success (' + (stBtch.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: titleSp, author: artistName, size: stBtch.size };
+        return { success: true, filePath: fp, title: titleSp, author: artistName || 'Spotify', size: stBtch.size };
       }
     }
-  } catch (e) { log('Spotify btch-downloader fail: ' + e.message); }
+  } catch (e) { log('Spotify btch-downloader note: ' + e.message); }
 
-  // ── Engine 2: YouTube search + download (matches Spotify song to high-res YouTube audio) ──
+  // ── Engine 2: SoundCloud Search & Download with yt-dlp + ffmpeg (High-speed 320kbps MP3) ──
   try {
-    var searchQuery = artistName !== 'Unknown Artist'
-      ? (artistName + ' ' + trackTitle + ' official audio')
-      : (trackTitle + ' audio');
+    var scQuery = artistName ? (artistName + ' ' + trackTitle) : trackTitle;
+    log('Spotify — searching SoundCloud: "' + scQuery + '"...');
+    var scOutPattern = path.join(tempDir, 'spotify_sc_' + ts + '.%(ext)s');
+    var expectedScMp3 = path.join(tempDir, 'spotify_sc_' + ts + '.mp3');
+    var scRes = await runYtDlp([
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
+      '--no-playlist',
+      '--no-warnings',
+      '-o', scOutPattern,
+      'scsearch1:' + scQuery
+    ], 25000);
 
-    log('Spotify — searching YouTube: "' + searchQuery + '"...');
-    var searchRes = await searchYouTubeAndDownloadAudio(searchQuery);
+    var targetScFp = fs.existsSync(expectedScMp3) ? expectedScMp3 : null;
+    if (!targetScFp) {
+      var scFiles = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('spotify_sc_' + ts); });
+      if (scFiles.length > 0) targetScFp = path.join(tempDir, scFiles[0]);
+    }
+
+    if (targetScFp && fs.existsSync(targetScFp)) {
+      var stSc = fs.statSync(targetScFp);
+      if (stSc.size > 10000) {
+        log('Spotify — SoundCloud match success (' + (stSc.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: targetScFp, title: trackTitle, author: artistName || 'Artist', size: stSc.size };
+      }
+    }
+  } catch (e) { log('Spotify SoundCloud search fail: ' + e.message); }
+
+  // ── Engine 3: YouTube Search & Download (fallback) ──
+  try {
+    var ytQuery = artistName ? (artistName + ' ' + trackTitle + ' official audio') : (trackTitle + ' audio');
+    log('Spotify — searching YouTube: "' + ytQuery + '"...');
+    var searchRes = await searchYouTubeAndDownloadAudio(ytQuery);
     if (searchRes.success && searchRes.filePath && fs.existsSync(searchRes.filePath)) {
       var spFp = path.join(tempDir, 'spotify_yt_' + ts + '.mp3');
       fs.renameSync(searchRes.filePath, spFp);
       var stSp = fs.statSync(spFp);
       log('Spotify — YouTube match success (' + (stSp.size / 1024).toFixed(0) + 'KB)');
-      return { success: true, filePath: spFp, title: trackTitle, author: artistName, size: stSp.size };
+      return { success: true, filePath: spFp, title: trackTitle, author: artistName || 'Artist', size: stSp.size };
     }
   } catch (e) { log('Spotify YouTube search fail: ' + e.message); }
 
-  // ── Engine 3: Cobalt direct Spotify request ──
+  // ── Engine 4: Cobalt direct Spotify request ──
   try {
     log('Spotify — trying Cobalt directly...');
     var cobalt = await cobaltRequest(cleanUrl, true);
@@ -814,38 +843,13 @@ async function downloadSpotifyAudio(url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
         log('Spotify — Cobalt success (' + (stC.size / 1024).toFixed(0) + 'KB)');
-        return { success: true, filePath: fp, title: trackTitle, author: artistName, size: stC.size };
+        return { success: true, filePath: fp, title: trackTitle, author: artistName || 'Spotify', size: stC.size };
       }
     }
   } catch (e) { log('Spotify Cobalt fail: ' + e.message); }
 
-  // ── Engine 4: spotifydown API ──
-  var trackMatch = cleanUrl.match(/\/track\/([a-zA-Z0-9]+)/);
-  if (trackMatch && trackMatch[1]) {
-    try {
-      log('Spotify — trying spotifydown API...');
-      var r1 = await axios.get('https://api.spotifydown.com/download/' + trackMatch[1], {
-        headers: {
-          'Referer': 'https://spotifydown.com/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Origin': 'https://spotifydown.com',
-        },
-        timeout: 20000,
-      });
-      if (r1.data && r1.data.link) {
-        var st1 = await downloadStream(r1.data.link, fp);
-        if (st1.size > 10000) {
-          log('Spotify — spotifydown success (' + (st1.size / 1024).toFixed(0) + 'KB)');
-          // Prefer OEmbed title, fall back to spotifydown metadata
-          var sdTitle = trackTitle !== 'Spotify Track' ? trackTitle : (r1.data.metadata && r1.data.metadata.title ? r1.data.metadata.title : trackTitle);
-          return { success: true, filePath: fp, title: sdTitle, author: artistName, size: st1.size };
-        }
-      }
-    } catch (e) { log('Spotify spotifydown fail: ' + e.message); }
-  }
-
   safeUnlink(fp);
-  return { error: 'Spotify track download failed. Please verify the link or try searching by title.' };
+  return { error: 'Spotify track download failed. Please verify the link or try searching with `!music play ' + trackTitle.replace(/['"]/g, '') + '`' };
 }
 
 // ─── TWITTER/X ────────────────────────────────────────────────────────────────
@@ -857,8 +861,73 @@ async function downloadTwitterVideo(url) {
 
   // Normalize x.com to twitter.com for maximum extractor compatibility
   var normalizedUrl = (url || '').trim().replace(/https?:\/\/(www\.)?x\.com/i, 'https://twitter.com');
+  var tweetIdMatch = normalizedUrl.match(/status(?:es)?\/(\d+)/i);
+  var tweetId = tweetIdMatch ? tweetIdMatch[1] : null;
 
-  // Engine 1: btch-downloader Twitter API (High Speed, 1-2s delivery)
+  // Engine 1: VxTwitter JSON API (Fastest direct extractor, no rate limits, 500ms delivery)
+  if (tweetId) {
+    try {
+      log('Twitter/X — trying VxTwitter API for id ' + tweetId + '...');
+      var vxRes = await axios.get('https://api.vxtwitter.com/i/status/' + tweetId, {
+        headers: { 'User-Agent': 'TelegramBot (like TwitterBot)' },
+        timeout: 7000
+      });
+      var vxData = vxRes.data;
+      if (vxData && vxData.hasMedia && Array.isArray(vxData.mediaURLs) && vxData.mediaURLs.length > 0) {
+        var tweetTitle = (vxData.text || 'Twitter/X Media').replace(/https?:\/\/\S+/g, '').trim().substring(0, 80) || 'Twitter/X Media';
+        var vidExt = (vxData.media_extended || []).find(function(m) { return m.type === 'video' || m.type === 'gif'; });
+        var vidUrl = vidExt ? vidExt.url : vxData.mediaURLs.find(function(u) { return u.includes('.mp4'); });
+        
+        if (vidUrl) {
+          var stVx = await downloadStream(vidUrl, fp);
+          if (stVx.size > 3000) {
+            log('Twitter/X — VxTwitter video success (' + (stVx.size / 1024 / 1024).toFixed(1) + 'MB)');
+            return { success: true, filePath: fp, title: tweetTitle, size: stVx.size, author: vxData.user_name || 'Twitter', quality: 'HD' };
+          }
+        } else {
+          var imgUrl = vxData.mediaURLs[0];
+          var imgExt = imgUrl.split('.').pop().split('?')[0] || 'jpg';
+          var fpImg = path.join(tempDir, 'twitter_' + ts + '.' + imgExt);
+          var stImg = await downloadStream(imgUrl, fpImg);
+          if (stImg.size > 2000) {
+            log('Twitter/X — VxTwitter photo success (' + (stImg.size / 1024).toFixed(0) + 'KB)');
+            return { success: true, filePath: fpImg, title: tweetTitle, type: 'image', size: stImg.size, author: vxData.user_name || 'Twitter' };
+          }
+        }
+      }
+    } catch (eVx) { log('Twitter/X VxTwitter fail: ' + eVx.message); }
+
+    // Engine 2: FxTwitter JSON API fallback
+    try {
+      log('Twitter/X — trying FxTwitter API for id ' + tweetId + '...');
+      var fxRes = await axios.get('https://api.fxtwitter.com/i/status/' + tweetId, {
+        headers: { 'User-Agent': 'TelegramBot (like TwitterBot)' },
+        timeout: 7000
+      });
+      var tweetObj = fxRes.data && fxRes.data.tweet;
+      if (tweetObj && tweetObj.media) {
+        var fxTitle = (tweetObj.text || 'Twitter/X Media').replace(/https?:\/\/\S+/g, '').trim().substring(0, 80) || 'Twitter/X Media';
+        if (tweetObj.media.videos && tweetObj.media.videos.length > 0) {
+          var fxVidUrl = tweetObj.media.videos[0].url;
+          var stFx = await downloadStream(fxVidUrl, fp);
+          if (stFx.size > 3000) {
+            log('Twitter/X — FxTwitter video success (' + (stFx.size / 1024 / 1024).toFixed(1) + 'MB)');
+            return { success: true, filePath: fp, title: fxTitle, size: stFx.size, author: tweetObj.author?.name || 'Twitter', quality: 'HD' };
+          }
+        } else if (tweetObj.media.photos && tweetObj.media.photos.length > 0) {
+          var fxPhotoUrl = tweetObj.media.photos[0].url;
+          var fpFxImg = path.join(tempDir, 'twitter_' + ts + '.jpg');
+          var stFxImg = await downloadStream(fxPhotoUrl, fpFxImg);
+          if (stFxImg.size > 2000) {
+            log('Twitter/X — FxTwitter photo success (' + (stFxImg.size / 1024).toFixed(0) + 'KB)');
+            return { success: true, filePath: fpFxImg, title: fxTitle, type: 'image', size: stFxImg.size, author: tweetObj.author?.name || 'Twitter' };
+          }
+        }
+      }
+    } catch (eFx) { log('Twitter/X FxTwitter fail: ' + eFx.message); }
+  }
+
+  // Engine 3: btch-downloader Twitter API (High Speed, 1-2s delivery)
   try {
     log('Twitter/X — trying btch-downloader...');
     var { twitter: btchTwit } = require('btch-downloader');
@@ -875,7 +944,7 @@ async function downloadTwitterVideo(url) {
     }
   } catch (e) { log('Twitter/X btch-downloader fail: ' + e.message); }
 
-  // Engine 2: twitsave.com (Fast direct scraper)
+  // Engine 4: twitsave.com (Fast direct scraper)
   try {
     log('Twitter — trying twitsave...');
     var r2 = await axios.get('https://twitsave.com/info?url=' + encodeURIComponent(normalizedUrl), {
@@ -892,19 +961,19 @@ async function downloadTwitterVideo(url) {
     }
   } catch (e) { log('Twitter twitsave fail: ' + e.message); }
 
-  // Engine 3: Native yt-dlp Executable (Reliable fallback with tight timeout)
+  // Engine 5: Native yt-dlp Executable (Reliable fallback with tight timeout)
   try {
     log('Twitter/X — trying native yt-dlp...');
     var outPatternTw = path.join(tempDir, 'twitter_' + ts + '.%(ext)s');
     var expectedMp4Tw = path.join(tempDir, 'twitter_' + ts + '.mp4');
     var resYtTw = await runYtDlp([
-      '-f', 'b[ext=mp4]/b/best',
+      '-f', 'b[height<=720][fps<=60][ext=mp4]/b[height<=720][ext=mp4]/b[height<=720]/best[height<=720]/best',
       '-o', outPatternTw,
       '--no-playlist',
       '--no-warnings',
       '--no-check-certificate',
       normalizedUrl
-    ], 12000);
+    ], 15000);
 
     if (fs.existsSync(expectedMp4Tw)) {
       var stYtTw = fs.statSync(expectedMp4Tw);
@@ -925,7 +994,7 @@ async function downloadTwitterVideo(url) {
     }
   } catch (e) { log('Twitter/X yt-dlp fail: ' + e.message); }
 
-  // Engine 4: Cobalt
+  // Engine 6: Cobalt
   try {
     log('Twitter — trying Cobalt...');
     var cobalt = await cobaltRequest(normalizedUrl, false);
@@ -937,7 +1006,7 @@ async function downloadTwitterVideo(url) {
     }
   } catch (e) { log('Twitter Cobalt fail: ' + e.message); }
 
-  // Engine 5: Twitter Photos / Image fallback (if tweet has pictures instead of video)
+  // Engine 7: Twitter Photos / Image fallback (if tweet has pictures instead of video)
   try {
     log('Twitter/X — checking for tweet photos...');
     await runYtDlp([
@@ -974,7 +1043,7 @@ async function downloadFacebookVideo(url) {
   try {
     log('Facebook — trying native yt-dlp...');
     var resYtFb = await runYtDlp([
-      '-f', 'b[ext=mp4]/b/best',
+      '-f', 'b[height<=720][fps<=60][ext=mp4]/b[height<=720][ext=mp4]/b[height<=720]/best[height<=720]/best',
       '-o', outPatternFb,
       '--no-playlist',
       '--no-warnings',
@@ -1221,18 +1290,50 @@ async function downloadAudio(url) {
   }
 }
 
-// ─── YouTube search helper for music command ──────────────────────────────────
+// ─── YouTube / Music search helper for music command ──────────────────────────
 
 async function searchYouTubeAndDownloadAudio(query) {
   var tempDir = ensureTempDir();
   var ts = Date.now();
+
+  log('Audio Search — search query: "' + query + '"...');
+
+  // Engine 1: SoundCloud Search (Fastest, zero 403s, clean 320kbps MP3)
+  if (!query.startsWith('http')) {
+    try {
+      log('Audio Search — trying SoundCloud for "' + query + '"...');
+      var scPattern = path.join(tempDir, 'audio_sc_' + ts + '.%(ext)s');
+      var expectedSc = path.join(tempDir, 'audio_sc_' + ts + '.mp3');
+      var scRes = await runYtDlp([
+        '-x',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '-o', scPattern,
+        '--no-playlist',
+        '--no-warnings',
+        'scsearch1:' + query
+      ], 25000);
+
+      var scFp = fs.existsSync(expectedSc) ? expectedSc : null;
+      if (!scFp) {
+        var scFiles = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('audio_sc_' + ts); });
+        if (scFiles.length > 0) scFp = path.join(tempDir, scFiles[0]);
+      }
+
+      if (scFp && fs.existsSync(scFp)) {
+        var scStat = fs.statSync(scFp);
+        if (scStat.size > 10000) {
+          log('Audio Search — SoundCloud success (' + (scStat.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: scFp, title: query, size: scStat.size };
+        }
+      }
+    } catch (eSc) { log('Audio Search SoundCloud fail: ' + eSc.message); }
+  }
+
   var outPattern = path.join(tempDir, 'yt_search_' + ts + '.%(ext)s');
-
-  log('YT Search Audio — search query: "' + query + '"...');
-
   var searchQuery = query.startsWith('http') ? query : ('ytsearch1:' + query);
 
-  // Engine 1: yt-dlp search
+  // Engine 2: yt-dlp search (25s tight timeout)
   try {
     var res = await runYtDlp([
       '-x',
@@ -1242,7 +1343,7 @@ async function searchYouTubeAndDownloadAudio(query) {
       '--no-playlist',
       '--no-warnings',
       searchQuery
-    ], 180000);
+    ], 25000);
 
     var files = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('yt_search_' + ts); });
     if (files.length > 0) {
@@ -1256,18 +1357,18 @@ async function searchYouTubeAndDownloadAudio(query) {
             if (sr.videos && sr.videos[0]) title = sr.videos[0].title;
           } catch (e) {}
         }
-        log('YT Search Audio — yt-dlp success (' + (st0.size / 1024).toFixed(0) + 'KB)');
+        log('Audio Search — yt-dlp success (' + (st0.size / 1024).toFixed(0) + 'KB)');
         return { success: true, filePath: fp0, title: title, size: st0.size };
       }
     }
-  } catch (e) { log('YT Search Audio yt-dlp fail: ' + e.message); }
+  } catch (e) { log('Audio Search yt-dlp fail: ' + e.message); }
 
-  // Engine 2: ytSearch + getYouTubeAudio
+  // Engine 3: ytSearch + getYouTubeAudio
   if (ytSearch) {
     try {
       var results = await ytSearch({ query: query, pageStart: 1, pageEnd: 2 });
       var video = results.videos && results.videos[0];
-      if (!video) return { error: 'No YouTube results found for: ' + query };
+      if (!video) return { error: 'No results found for: ' + query };
       return await getYouTubeAudio(video.url);
     } catch (e) {
       return { error: 'Search failed: ' + e.message };

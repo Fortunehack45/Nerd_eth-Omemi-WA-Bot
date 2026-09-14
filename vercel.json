@@ -6,6 +6,10 @@
       "destination": "/api/index.js"
     },
     {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },

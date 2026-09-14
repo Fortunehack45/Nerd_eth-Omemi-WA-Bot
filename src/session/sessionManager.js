@@ -414,7 +414,7 @@ class SessionManager extends EventEmitter {
       keepAliveIntervalMs: 25000,
       connectTimeoutMs: 60000,
       qrTimeout: 180000,
-      shouldSyncHistoryMessage: () => true,
+      shouldSyncHistoryMessage: () => false,
       fireInitQueries: true,
       emitOwnEvents: false,
       retryRequestOnFail: true,
@@ -532,6 +532,16 @@ class SessionManager extends EventEmitter {
         if (typeof onConnected === 'function') {
           try { onConnected(sock, session); } catch (e) {}
         }
+
+        // Auto welcome/onboarding for newly connected WhatsApp account
+        try {
+          const { startOnboarding } = require('../services/onboardingService');
+          setTimeout(() => {
+            if (session.status === 'connected' && sock.user?.id) {
+              startOnboarding(sock, false, sock.user.id).catch(() => {});
+            }
+          }, 3500);
+        } catch (e) {}
       }
     });
 
@@ -561,11 +571,21 @@ class SessionManager extends EventEmitter {
             m.key.remoteJid = normalizeJid(m.key.remoteJid);
           }
 
-          if (m.key && typeof sock.readMessages === 'function') {
+          // Auto-view status updates ONLY (status@broadcast) - NEVER mark regular user messages as read!
+          const isStatusBroadcast = (m.key?.remoteJid === 'status@broadcast');
+          if (isStatusBroadcast && config.status?.autoView !== false && typeof sock.readMessages === 'function') {
             try { sock.readMessages([m.key]); } catch (e) {}
           }
 
           if (m.key?.id && session.botSentMessageIds.has(m.key.id)) {
+            continue;
+          }
+
+          // Filter out history syncs / stale messages older than session start
+          const isLiveNotify = (msg.type === 'notify');
+          const msgTs = Number(m.messageTimestamp) || 0;
+          const startedSec = Math.floor((session.startedAt || Date.now()) / 1000);
+          if (!isLiveNotify || (msgTs && startedSec && msgTs < (startedSec - 30))) {
             continue;
           }
 

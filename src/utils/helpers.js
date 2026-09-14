@@ -242,19 +242,16 @@ async function optimizeVideoForWhatsApp(inputPath) {
   var outputPath = path.join(parsed.dir, parsed.name + '_status_opt.mp4');
 
   return new Promise(function(resolve) {
-    var stat = fs.existsSync(inputPath) ? fs.statSync(inputPath) : null;
-    var isBig = stat && stat.size > 50 * 1024 * 1024;
-    var crf = isBig ? '28' : '24';
-    var vf = isBig 
-      ? 'scale=trunc(min(1280,iw)/2)*2:trunc(min(1280,ih)/2)*2'
-      : 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+    // Enforce 720p60 maximum: height <= 720, width <= 1280, max 60fps, compact crf 26 compression
+    var vf = 'scale=trunc(min(1280,iw)/2)*2:trunc(min(720,ih)/2)*2';
 
     var args = [
       '-y',
       '-i', inputPath,
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-crf', crf,
+      '-preset', 'veryfast',
+      '-crf', '26',
+      '-r', '60',
       '-profile:v', 'main',
       '-level', '4.0',
       '-pix_fmt', 'yuv420p',
@@ -279,7 +276,8 @@ async function optimizeVideoForWhatsApp(inputPath) {
           '-i', inputPath,
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
-          '-crf', '28',
+          '-crf', '26',
+          '-r', '60',
           '-pix_fmt', 'yuv420p',
           '-c:a', 'aac',
           '-b:a', '128k',

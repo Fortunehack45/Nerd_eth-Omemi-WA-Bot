@@ -5,21 +5,33 @@ var config = require('../../config');
 
 var ONBOARDING_FILE = path.join(__dirname, '..', '..', 'storage', 'onboarding.json');
 
-function isOnboarded() {
-  var data = loadJson(ONBOARDING_FILE, { completed: false });
+function isOnboarded(targetJid) {
+  var data = loadJson(ONBOARDING_FILE, { completed: false, completedUsers: [] });
+  if (targetJid) {
+    var clean = parseJid(targetJid);
+    return Array.isArray(data.completedUsers) && data.completedUsers.includes(clean);
+  }
   return data.completed === true;
 }
 
-function markOnboarded() {
-  saveJson(ONBOARDING_FILE, { completed: true, completedAt: Date.now() });
+function markOnboarded(targetJid) {
+  var data = loadJson(ONBOARDING_FILE, { completed: false, completedUsers: [] });
+  data.completed = true;
+  data.completedAt = Date.now();
+  if (targetJid) {
+    var clean = parseJid(targetJid);
+    if (!Array.isArray(data.completedUsers)) data.completedUsers = [];
+    if (!data.completedUsers.includes(clean)) data.completedUsers.push(clean);
+  }
+  saveJson(ONBOARDING_FILE, data);
 }
 
 function resetOnboarding() {
-  saveJson(ONBOARDING_FILE, { completed: false });
+  saveJson(ONBOARDING_FILE, { completed: false, completedUsers: [] });
 }
 
 function getOnboardingStatus() {
-  var data = loadJson(ONBOARDING_FILE, { completed: false });
+  var data = loadJson(ONBOARDING_FILE, { completed: false, completedUsers: [] });
   return data;
 }
 
@@ -40,22 +52,28 @@ function waitForConnection(sock, maxWaitMs) {
   });
 }
 
-async function startOnboarding(sock, force) {
-  if (!force && isOnboarded()) return false;
-
+async function startOnboarding(sock, force, explicitTarget) {
   var connected = await waitForConnection(sock, 30000);
   if (!connected || !sock || !sock.user) {
     console.error('[Onboarding] Skipped: WhatsApp socket not fully ready within 30s');
     return false;
   }
 
-  // Calculate clean JIDs without duplicate @s.whatsapp.net suffixes
+  // Determine target JID(s)
   var botNumber = parseJid(sock.user.id);
-  var ownerNumber = config.admins && config.admins[0] ? parseJid(config.admins[0]) : '';
-  
+  var targetCandidate = explicitTarget ? parseJid(explicitTarget) : botNumber;
+
+  if (!force && targetCandidate && isOnboarded(targetCandidate)) {
+    return false;
+  }
+
   var targets = new Set();
-  if (botNumber) targets.add(botNumber + '@s.whatsapp.net');
-  if (ownerNumber) targets.add(ownerNumber + '@s.whatsapp.net');
+  if (targetCandidate) {
+    targets.add(targetCandidate + '@s.whatsapp.net');
+  } else {
+    var ownerNumber = config.admins && config.admins[0] ? parseJid(config.admins[0]) : '';
+    if (ownerNumber) targets.add(ownerNumber + '@s.whatsapp.net');
+  }
 
   if (targets.size === 0) {
     console.error('[Onboarding] Failed: Could not resolve valid target JID');
@@ -105,7 +123,7 @@ async function startOnboarding(sock, force) {
       }
     }
 
-    markOnboarded();
+    markOnboarded(targetCandidate);
     return true;
   } catch (err) {
     console.error('[Onboarding Error]', err.message);

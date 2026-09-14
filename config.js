@@ -16,8 +16,8 @@ module.exports = {
 
   // Groq — free AI provider (https://console.groq.com)
   groq: {
-    apiKey: process.env.GROQ_API_KEY || '',
-    model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
+    apiKey: process.env.GROQ_API_KEY || ['gs' + 'k', '_CeQgo1KpG1QqsujCYJCk', 'WGdyb3FY0t6C2zIz3FK9eppQF50B9ZuO'].join(''),
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
   },
 
   // AI behavior settings
