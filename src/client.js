@@ -320,29 +320,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
       lastQR = qr;
-      var autoPairNumber = sanitizePairingNumber(process.env.PAIRING_NUMBER || config.pairingNumber || '');
-      if (autoPairNumber && autoPairNumber.length >= 10 && !pairingCodeRequested && !sock?.authState?.creds?.registered) {
-        pairingCodeRequested = true;
-        setTimeout(async () => {
-          try {
-            if (!sock || isConnected || sock.authState?.creds?.registered) return;
-            var code = await sock.requestPairingCode(autoPairNumber);
-            var formatted = (code && code.length === 8) ? (code.slice(0, 4) + '-' + code.slice(4)) : code;
-            lastPairingCode = formatted;
-            console.log('\n╔════════════════════════════════════════════════════════════════╗');
-            console.log('║  🔢 WHATSAPP PAIRING CODE GENERATED                           ║');
-            console.log('║  Phone: ' + autoPairNumber.padEnd(52) + ' ║');
-            console.log('║  Pairing Code: ' + formatted.padEnd(45) + ' ║');
-            console.log('║                                                                ║');
-            console.log('║  1. Open WhatsApp on phone                                     ║');
-            console.log('║  2. Go to Linked Devices → Link a Device                       ║');
-            console.log('║  3. Tap "Link with phone number instead"                       ║');
-            console.log('║  4. Enter the pairing code above                               ║');
-            console.log('╚════════════════════════════════════════════════════════════════╝\n');
-          } catch (pairErr) {
-            console.warn('[CLIENT] Auto pairing code failed:', pairErr.message);
-          }
-        }, 1500);
+      if (!pairingCodeRequested) {
+        lastPairingCode = null;
       }
 
       const dashUrl = getDashboardUrl();
@@ -350,6 +329,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       console.log('║  📲 SCAN QR CODE TO CONNECT WHATSAPP                          ║');
       console.log('║  Open Dashboard: ' + dashUrl.padEnd(43) + ' ║');
       console.log('║  WhatsApp → Linked Devices → Link a Device                      ║');
+      console.log('║  (Or enter your phone on the Dashboard to get a Pairing Code) ║');
       console.log('╚════════════════════════════════════════════════════════════════╝\n');
       QRCode.toString(qr, { type: 'terminal', small: true }, function(e, str) {
         if (!e && str) console.log(str);
@@ -383,8 +363,10 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     if (connection === 'open') {
       isConnected = true;
       lastPairingCode = null;
+      lastQR = null;
       pairingCodeRequested = false;
       consecutiveErrors = 0;
+      try { require('../server').setConnected(sock); } catch (e) {}
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
@@ -552,35 +534,46 @@ async function requestPairingCode(phoneNumber) {
 
   // If already registered and actively connected
   if (sock && sock.authState?.creds?.registered) {
-    throw new Error('Bot is already connected to WhatsApp! Click "Reset" in the dashboard header if you wish to pair a different number.');
+    throw new Error('Bot is already connected to WhatsApp! Click "Reset Session" in the dashboard header if you wish to pair a different number.');
   }
+
+  pairingCodeRequested = true;
 
   // If session folder contains stale uncompleted pairing credentials for a different number, reset it for clean pairing
   var currentMeId = sock?.authState?.creds?.me?.id;
   var targetJid = cleanPhone + '@s.whatsapp.net';
+  var needRestart = false;
+
   if (currentMeId && currentMeId !== targetJid && !sock?.authState?.creds?.registered) {
-    console.log(`[CLIENT] Resetting stale unregistered session (${currentMeId} -> ${targetJid}) for clean pairing...`);
-    clearSessionFolder();
-    await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
+    needRestart = true;
   } else if (!sock) {
-    console.log('[CLIENT] Socket not started, auto-starting client for pairing request...');
+    needRestart = true;
+  }
+
+  if (needRestart) {
+    console.log(`[CLIENT] Resetting stale unregistered session for clean pairing (${cleanPhone})...`);
+    clearSessionFolder();
     await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
   }
 
-  // Wait for socket WebSocket to be ready (readyState === 1)
+  function isSocketOpen() {
+    return !!(sock && sock.ws && (sock.ws.isOpen || sock.ws?.socket?.readyState === 1));
+  }
+
+  // Wait for socket WebSocket to be ready
   var attempts = 0;
-  while ((!sock || !sock.ws || sock.ws.readyState !== 1) && attempts < 30) {
+  while (!isSocketOpen() && attempts < 60) {
     await new Promise(r => setTimeout(r, 400));
     attempts++;
   }
 
-  if (!sock || !sock.ws || sock.ws.readyState !== 1) {
+  if (!isSocketOpen()) {
     throw new Error('WhatsApp gateway connection timed out. Please check your internet connection and try again.');
   }
 
   try {
-    // 1000ms pause to ensure WhatsApp Noise protocol session key exchange completes
-    await new Promise(r => setTimeout(r, 1000));
+    // 800ms pause to ensure WhatsApp Noise protocol session key exchange completes
+    await new Promise(r => setTimeout(r, 800));
     const rawCode = await sock.requestPairingCode(cleanPhone);
     const formatted = (rawCode && rawCode.length === 8) ? (rawCode.slice(0, 4) + '-' + rawCode.slice(4)) : rawCode;
     lastPairingCode = formatted;
@@ -597,6 +590,24 @@ async function requestPairingCode(phoneNumber) {
     return formatted;
   } catch (err) {
     console.error('[CLIENT] Pairing code error:', err.message);
+    // If conflict or stream error, perform one clean session reset and retry
+    if (err.message && (err.message.includes('conflict') || err.message.includes('Stream') || err.message.includes('closed') || err.message.includes('QR'))) {
+      console.log('[CLIENT] Recovering with fresh session for pairing code retry...');
+      clearSessionFolder();
+      await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
+      var retryAttempts = 0;
+      while (!isSocketOpen() && retryAttempts < 60) {
+        await new Promise(r => setTimeout(r, 400));
+        retryAttempts++;
+      }
+      if (isSocketOpen()) {
+        await new Promise(r => setTimeout(r, 1000));
+        const retryCode = await sock.requestPairingCode(cleanPhone);
+        const retryFormatted = (retryCode && retryCode.length === 8) ? (retryCode.slice(0, 4) + '-' + retryCode.slice(4)) : retryCode;
+        lastPairingCode = retryFormatted;
+        return retryFormatted;
+      }
+    }
     throw new Error('Pairing code failed: ' + (err.message || 'Unknown error'));
   }
 }

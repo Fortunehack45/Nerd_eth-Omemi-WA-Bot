@@ -177,13 +177,23 @@ app.get('/api/qrdata', auth, async function(req, res) {
   var client = require('./src/client');
   var qr = client.getLastQR();
   var pairingCode = (typeof client.getLastPairingCode === 'function') ? client.getLastPairingCode() : null;
-  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode });
+  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user });
   try {
     var QRCode = require('qrcode');
     var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'H' });
-    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode });
+    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user });
   } catch (e) {
-    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, error: e.message });
+    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user, error: e.message });
+  }
+});
+
+app.post('/api/refresh-qr', auth, function(req, res) {
+  try {
+    var client = require('./src/client');
+    client.resetSession();
+    res.json({ success: true, message: 'QR Code refreshed. Generating fresh handshake...' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Refresh failed' });
   }
 });
 
