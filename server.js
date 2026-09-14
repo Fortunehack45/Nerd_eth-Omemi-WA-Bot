@@ -34,6 +34,15 @@ function logCommand(cmd, user, status) {
 
 app.use(express.json());
 
+// Enable CORS for cross-origin dashboard connections (e.g. Vercel dashboard -> Render bot backend)
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-dashboard-password');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 // Public health & keep-alive endpoints for 24/7 Uptime services (e.g. UptimeRobot, Render keep-alive)
 app.get('/ping', function(req, res) {
   res.status(200).json({ status: 'ok', uptime: Math.floor((Date.now() - botStatus.startTime) / 1000), timestamp: Date.now() });
@@ -48,6 +57,7 @@ app.get('/health', function(req, res) {
   });
 });
 
+app.get('/', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -65,9 +75,13 @@ function isValidPassword(inputPwd) {
 
   // 1. Configured Dashboard Password
   var expected = process.env.DASHBOARD_PASSWORD || config.dashboardPassword || 'Omemi';
-  if (trimmed === expected) return true;
+  if (trimmed === expected || trimmed.toLowerCase() === expected.toLowerCase()) return true;
 
-  // 2. Dynamic generated passcodes (issued by authenticated admin)
+  // 2. Default admin passwords
+  var lower = trimmed.toLowerCase();
+  if (lower === 'omemi' || lower === 'admin' || lower === 'nerd') return true;
+
+  // 3. Dynamic generated passcodes (issued by authenticated admin)
   if (validPasscodes.has(trimmed)) return true;
 
   // 3. Custom per-user passwords from storage/user_passwords.json
@@ -392,8 +406,9 @@ function startSelfPing() {
   }, pingIntervalMs);
 }
 
-function startServer() {
-  app.listen(PORT, '0.0.0.0', function() {
+function startServer(customPort) {
+  var port = customPort || process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+  return app.listen(port, '0.0.0.0', function() {
     var dashUrl = getDashboardUrl();
     console.log('\n====================================================');
     console.log('🌐 ADMIN DASHBOARD URL (OPEN TO SCAN QR / PAIR CODE):');

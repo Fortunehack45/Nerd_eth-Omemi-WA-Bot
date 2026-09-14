@@ -517,19 +517,23 @@ async function requestPairingCode(phoneNumber) {
     throw new Error('Invalid phone number. Provide number with country code (e.g. 2348012345678)');
   }
 
-  // Wait if socket is currently initializing
+  // Wait if socket is currently initializing, or auto-start client
   var attempts = 0;
-  while (!sock && attempts < 10) {
+  if (!sock) {
+    console.log('[CLIENT] Socket not started, auto-starting client for pairing request...');
+    try { startClient(); } catch(e) {}
+  }
+  while (!sock && attempts < 15) {
     await new Promise(r => setTimeout(r, 500));
     attempts++;
   }
 
   if (!sock) {
-    throw new Error('WhatsApp client is starting up. Please wait 5 seconds and try again.');
+    throw new Error('WhatsApp client is initializing. Please wait a few seconds and try again.');
   }
 
   if (sock.authState?.creds?.registered) {
-    throw new Error('Bot is already connected to WhatsApp! Click "Reset Session" first if you want to link a new number.');
+    throw new Error('Bot is already connected to WhatsApp! Click "Reset Session" below first if you want to link a new number.');
   }
 
   try {

@@ -989,7 +989,7 @@ input:checked + .slider:before {
           <div id="pairModeContainer">
             <div class="input-row">
               <input type="tel" id="phoneNumberInput" class="phone-input" placeholder="e.g. 2348012345678 (Country code + phone)">
-              <button class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCode()">Generate Code</button>
+              <button id="btnGenPairOverview" class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCode()">Generate Code</button>
             </div>
             <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
               Open WhatsApp on phone → <b>Linked Devices</b> → <b>Link with phone number instead</b>.
@@ -1167,7 +1167,7 @@ input:checked + .slider:before {
       <div class="pair-box">
         <div class="input-row">
           <input type="tel" id="phoneNumberInputTab" class="phone-input" placeholder="Phone number (e.g. 2348012345678)">
-          <button class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCodeTab()">Get Code</button>
+          <button id="btnGenPairTab" class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCodeTab()">Get Code</button>
         </div>
         <div id="pairingCodeBoxTab" class="code-display-card" style="display:none;">
           <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">YOUR 8-DIGIT PAIRING CODE</div>
@@ -1241,7 +1241,7 @@ input:checked + .slider:before {
     <div style="font-size:2rem; margin-bottom:10px;">🔐</div>
     <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:6px;">Dashboard Authentication</h3>
     <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Enter your Dashboard Password to access the control center.</p>
-    <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: admin)" style="width:100%; margin-bottom:14px; text-align:center;">
+    <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: Omemi)" style="width:100%; margin-bottom:14px; text-align:center;">
     <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px;" onclick="submitPassword()">Unlock Dashboard</button>
     <div id="modalErr" style="display:none; color:#ef4444; font-size:0.82rem; font-weight:700; margin-top:12px;"></div>
   </div>
@@ -1249,15 +1249,16 @@ input:checked + .slider:before {
 
 <!-- ── Dashboard Client Logic ──────────────────────────────────────────────── -->
 <script>
-var pwd = new URLSearchParams(window.location.search).get('pwd') || localStorage.getItem('dash_pwd') || '';
+var pwd = new URLSearchParams(window.location.search).get('pwd') || localStorage.getItem('dash_pwd') || 'Omemi';
 var activeTab = 'overview';
 var activePairMode = 'pair';
 var pollTimer = null;
 
 function apiCall(endpoint, options) {
   options = options || {};
+  var baseUrl = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:3000' : '';
   var sep = endpoint.includes('?') ? '&' : '?';
-  var url = '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd);
+  var url = baseUrl + '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd);
   return fetch(url, options).then(function(res) {
     if (res.status === 401) {
       showLogin();
@@ -1327,37 +1328,51 @@ function setPairMode(mode) {
 }
 
 function requestPairCode() {
-  var phone = document.getElementById('phoneNumberInput').value.trim();
+  var input = document.getElementById('phoneNumberInput');
+  var phone = input ? input.value.trim() : '';
   if (!phone) { alert('Please enter your phone number with country code (e.g. 2348012345678)'); return; }
+  var btn = document.getElementById('btnGenPairOverview') || (event ? event.currentTarget : null);
+  var oldText = btn ? btn.innerHTML : 'Generate Code';
+  if (btn) btn.innerHTML = '<span>⏳</span> Generating...';
   apiCall('/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
   }).then(function(res) {
+    if (btn) btn.innerHTML = oldText;
     if (res.code) {
       showPairCode(res.code);
     } else {
       alert(res.error || 'Failed to request pairing code');
     }
   }).catch(function(err) {
-    alert('Pairing request failed: ' + err.message);
+    if (btn) btn.innerHTML = oldText;
+    alert('Pairing request error: ' + err.message);
   });
 }
 
 function requestPairCodeTab() {
-  var phone = document.getElementById('phoneNumberInputTab').value.trim();
-  if (!phone) { alert('Please enter your phone number with country code'); return; }
+  var input = document.getElementById('phoneNumberInputTab');
+  var phone = input ? input.value.trim() : '';
+  if (!phone) { alert('Please enter your phone number with country code (e.g. 2348012345678)'); return; }
+  var btn = document.getElementById('btnGenPairTab') || (event ? event.currentTarget : null);
+  var oldText = btn ? btn.innerHTML : 'Generate Code';
+  if (btn) btn.innerHTML = '<span>⏳</span> Generating...';
   apiCall('/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
   }).then(function(res) {
+    if (btn) btn.innerHTML = oldText;
     if (res.code) {
       document.getElementById('pairingCodeBoxTab').style.display = 'block';
       document.getElementById('pairingCodeTextTab').textContent = res.code;
     } else {
       alert(res.error || 'Failed to request code');
     }
+  }).catch(function(err) {
+    if (btn) btn.innerHTML = oldText;
+    alert('Pairing request error: ' + err.message);
   });
 }
 
@@ -1500,9 +1515,7 @@ function testAIEngine() {
   apiCall('/test-ai', { method: 'POST' }).then(function(res) {
     btn.innerHTML = '<span>⚡</span> Test AI';
     if (res.success) {
-      alert('✅ AI Response OK (' + res.provider + '):
-
-"' + res.response + '"');
+      alert('✅ AI Response OK (' + res.provider + '):\n\n"' + res.response + '"');
     } else {
       alert('❌ AI Test Failed: ' + (res.response || 'Unknown error'));
     }
