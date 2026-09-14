@@ -183,11 +183,9 @@ async function simulateOrganicPresence(sock) {
   if (!cfg.enabled) return;
 
   try {
-    var pattern = PRESENCE_PATTERNS[randomBetween(0, PRESENCE_PATTERNS.length - 1)];
-    for (var i = 0; i < pattern.length; i++) {
-      await sock.sendPresenceUpdate(pattern[i], 'status@broadcast');
-      await new Promise(r => setTimeout(r, randomBetween(2000, 6000)));
-    }
+    // Only update global presence to 'available' or 'unavailable'
+    // NEVER send 'composing' or 'paused' to 'status@broadcast' as WhatsApp servers disconnect sockets on invalid stanzas
+    await sock.sendPresenceUpdate('available');
   } catch (e) {}
 }
 

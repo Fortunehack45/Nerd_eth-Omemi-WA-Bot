@@ -30,15 +30,23 @@ async function sendFile(sock, sender, filePath, opts) {
     }
 
     if (opts.type === 'video' || ['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
-      // Ensure video is 100% WhatsApp Status compatible (H.264 yuv420p + AAC + faststart + even dimensions)
-      var optFp = await optimizeVideoForWhatsApp(filePath);
-      var sendFp = fs.existsSync(optFp) ? optFp : filePath;
-      var buf = fs.readFileSync(sendFp);
+      // Fast path: If already mp4, send directly without re-encoding to avoid 2-minute delays!
+      // Only run ffmpeg if the file is not mp4 or if explicitly requested.
+      var sendFp = filePath;
+      if (ext !== 'mp4') {
+        var optFp = await optimizeVideoForWhatsApp(filePath);
+        if (fs.existsSync(optFp)) sendFp = optFp;
+      }
+      var vidBuf = fs.readFileSync(sendFp);
       var caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
       if (opts.quality) caption += '\n📺 Quality: ' + opts.quality;
       try {
-        await sock.sendMessage(sender, { video: buf, caption: caption });
-        try { if (fs.existsSync(optFp) && optFp !== filePath) fs.unlinkSync(optFp); } catch (e) {}
+        await sock.sendMessage(sender, {
+          video: vidBuf,
+          mimetype: 'video/mp4',
+          caption: caption,
+        });
+        try { if (sendFp !== filePath && fs.existsSync(sendFp)) fs.unlinkSync(sendFp); } catch (e) {}
         return;
       } catch (e1) {
         console.warn('[DOWNLOAD] Primary video send failed, falling back to document mode:', e1.message);
@@ -46,9 +54,10 @@ async function sendFile(sock, sender, filePath, opts) {
     }
 
     // Fallback: Send as document
+    var docBuf = fs.readFileSync(filePath);
     var docName = (opts.title || 'media').replace(/[<>:"/\\|?*]/g, '_').substring(0, 60) + '.' + ext;
     await sock.sendMessage(sender, {
-      document: buf,
+      document: docBuf,
       mimetype: 'application/octet-stream',
       fileName: docName,
       caption: '📄 ' + (opts.title || 'Downloaded Media')

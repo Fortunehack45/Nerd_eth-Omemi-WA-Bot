@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const config = require('../../config');
+const { formatForWhatsApp } = require('../utils/whatsappFormatter');
 
 // Groq SDK (free tier AI)
 let Groq = null;
@@ -167,7 +168,7 @@ async function fetchFreeAI(messages) {
       }
     });
     if (polResp.data && typeof polResp.data === 'string' && polResp.data.trim().length > 0 && !polResp.data.includes('budget') && !polResp.data.includes('402') && !polResp.data.includes('Error')) {
-      return { text: polResp.data.trim(), success: true };
+      return { text: formatForWhatsApp(polResp.data.trim()), success: true };
     }
   } catch (e) {}
 
@@ -240,7 +241,7 @@ async function chatComplete(messages, modelOverride) {
     }
 
     if (textResult) {
-      return { text: textResult, success: true };
+      return { text: formatForWhatsApp(textResult), success: true };
     } else {
       // Fallback to free AI if SDK response was malformed
       console.warn('[AI Service] API response missing choices, falling back to free AI');
@@ -356,4 +357,5 @@ module.exports = {
   listModels,
   listAgentRouterModels: listModels,
   testConnection,
+  formatForWhatsApp,
 };

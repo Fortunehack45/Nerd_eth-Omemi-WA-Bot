@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Nerd Bot Pro — Premium Command Center</title>
+<title>Nerd Bot Pro — Command Center</title>
 <link rel="icon" type="image/png" href="https://iili.io/Cwvlxwv.png">
 <link rel="apple-touch-icon" href="https://iili.io/Cwvlxwv.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ── Reset & Master Theme Variables ────────────────────────────────────────── */
+/* ── Theme Tokens (Donezo & Mobile Reference Designs) ──────────────────────── */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -20,58 +20,74 @@
 }
 
 :root {
-  /* Warm Canvas & Card Palette (Inspired by Uploaded Designs) */
-  --canvas-bg: #f7f6f2;
-  --card-white: #ffffff;
+  --bg-canvas: #f7f6f2;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #fcfbfa;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.12);
   
-  /* Pastel Accent Cards (From Image 1 & 2) */
-  --pastel-peach: #fde2d4;
-  --pastel-peach-text: #9a3412;
-  --pastel-pink: #fce7f3;
-  --pastel-pink-text: #9d174d;
-  --pastel-lavender: #ede9fe;
-  --pastel-lavender-text: #5b21b6;
-  --pastel-amber: #fef3c7;
-  --pastel-amber-text: #92400e;
-  --pastel-mint: #ccfbf1;
-  --pastel-mint-text: #115e59;
-  --pastel-blue: #e0f2fe;
-  --pastel-blue-text: #075985;
-  
-  /* Hero Emerald Accent (From Image 3 "Donezo") */
-  --emerald-900: #064e3b;
-  --emerald-700: #047857;
-  --emerald-600: #059669;
-  --emerald-500: #10b981;
-  --emerald-100: #d1fae5;
-  
-  /* Dark Capsule & Nav Elements */
-  --dark-sidebar: #131418;
-  --dark-card: #18191f;
-  --dark-pill: #1e1f26;
-  
-  /* Text & Border Tokens */
-  --text-dark: #0f172a;
+  --text-main: #0f172a;
   --text-body: #334155;
   --text-muted: #64748b;
-  --text-light: #94a3b8;
-  --border-light: rgba(0, 0, 0, 0.05);
-  --border-hairline: rgba(0, 0, 0, 0.08);
-  
-  /* Shadows */
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.03);
-  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  --shadow-float: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
-  --shadow-dock: 0 15px 35px -5px rgba(0, 0, 0, 0.25);
-  
-  --radius-card: 28px;
-  --radius-sm: 18px;
+  --text-subtle: #94a3b8;
+
+  /* Accent Palettes from Reference */
+  --hero-green-dark: #064e3b;
+  --hero-green: #047857;
+  --hero-green-light: #10b981;
+  --hero-green-bg: #ecfdf5;
+
+  --pastel-peach-bg: #fde8db;
+  --pastel-peach-text: #9a3412;
+  --pastel-lavender-bg: #eee9fe;
+  --pastel-lavender-text: #5b21b6;
+  --pastel-mint-bg: #d1fae5;
+  --pastel-mint-text: #065f46;
+  --pastel-rose-bg: #ffe4e6;
+  --pastel-rose-text: #9f1239;
+  --pastel-sky-bg: #e0f2fe;
+  --pastel-sky-text: #075985;
+
+  --sidebar-bg: #121316;
+  --sidebar-text: #e2e8f0;
+  --sidebar-muted: #64748b;
+
+  --radius-card: 26px;
+  --radius-btn: 14px;
   --radius-pill: 9999px;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 10px 30px -4px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.02);
+  --shadow-pop: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-dock: 0 20px 40px rgba(0, 0, 0, 0.22);
+}
+
+body.dark-mode {
+  --bg-canvas: #0c0d10;
+  --bg-card: #15161b;
+  --bg-card-subtle: #1a1b22;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-main: #f8fafc;
+  --text-body: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+
+  --pastel-peach-bg: #2a1b14;
+  --pastel-peach-text: #fdba74;
+  --pastel-lavender-bg: #211c38;
+  --pastel-lavender-text: #c4b5fd;
+  --pastel-mint-bg: #132b23;
+  --pastel-mint-text: #6ee7b7;
+  --pastel-rose-bg: #31151c;
+  --pastel-rose-text: #fca5a5;
+  --pastel-sky-bg: #142436;
+  --pastel-sky-text: #7dd3fc;
 }
 
 html, body {
-  background-color: var(--canvas-bg);
-  color: var(--text-dark);
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
@@ -80,1713 +96,1503 @@ html, body {
 
 body {
   display: flex;
-  position: relative;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
-
-svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
-
-/* ── Typography Utilities ─────────────────────────────────────────────────── */
-.heading-xl { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; line-height: 1.15; }
-.heading-lg { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
-.heading-md { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.3px; }
-.text-sub { color: var(--text-muted); font-size: 0.88rem; line-height: 1.45; }
-
-/* ── Badges & Chips ───────────────────────────────────────────────────────── */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: var(--radius-pill);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  line-height: 1;
-}
-.chip-emerald { background: var(--emerald-100); color: var(--emerald-700); }
-.chip-peach { background: #ffe4e6; color: #be123c; }
-.chip-lavender { background: #f3e8ff; color: #7e22ce; }
-.chip-amber { background: #fef3c7; color: #b45309; }
-.chip-dark { background: rgba(0, 0, 0, 0.06); color: var(--text-dark); }
-.chip-white { background: rgba(255, 255, 255, 0.25); color: #ffffff; backdrop-filter: blur(10px); }
-
-/* ── Desktop Capsule Sidebar ──────────────────────────────────────────────── */
-.desktop-sidebar {
-  width: 260px;
-  padding: 24px 18px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  z-index: 50;
-}
-
-.sidebar-inner {
-  background: var(--dark-sidebar);
-  border-radius: 32px;
-  height: 100%;
+/* ── Layout Framework ─────────────────────────────────────────────────────── */
+#sidebar {
+  width: 270px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  z-index: 50;
+  transition: transform 0.3s ease;
 }
 
-.sidebar-brand {
+#main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px 120px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Sidebar Styles ───────────────────────────────────────────────────────── */
+.brand-box {
   display: flex;
   align-items: center;
   gap: 12px;
-  text-decoration: none;
-  margin-bottom: 28px;
+  margin-bottom: 34px;
+  padding: 0 6px;
 }
-
-.sidebar-brand-avatar {
+.brand-logo {
   width: 44px;
   height: 44px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--emerald-600), var(--emerald-900));
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10b981, #047857);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: 900;
-  font-size: 1.25rem;
-  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35);
-  overflow: hidden;
-}
-
-.sidebar-brand-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sidebar-brand-info h2 {
-  font-size: 1.15rem;
+  font-size: 20px;
   font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.4px;
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25);
 }
-
-.sidebar-brand-info span {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 500;
+.brand-title {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
-
-.nav-section-title {
-  font-size: 0.7rem;
+.brand-badge {
+  font-size: 0.65rem;
   font-weight: 700;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: #64748b;
-  margin: 18px 0 8px 12px;
+  margin-left: 4px;
 }
 
-.nav-links {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: var(--radius-pill);
-  color: #94a3b8;
-  background: transparent;
-  border: none;
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  width: 100%;
-}
-
-.nav-btn svg { stroke: #94a3b8; transition: stroke 0.2s; }
-
-.nav-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.nav-btn:hover svg { stroke: #ffffff; }
-
-.nav-btn.active {
-  background: #ffffff;
-  color: var(--text-dark);
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-}
-
-.nav-btn.active svg { stroke: var(--text-dark); }
-
-.sidebar-footer-card {
-  background: var(--dark-pill);
-  border-radius: 20px;
-  padding: 16px;
-  color: #ffffff;
-  margin-top: 20px;
-}
-
-.sidebar-footer-card .live-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--emerald-500);
-  box-shadow: 0 0 10px var(--emerald-500);
-  animation: pulseDot 2s infinite;
-}
-
-@keyframes pulseDot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-/* ── Main App Layout Canvas ──────────────────────────────────────────────── */
-.app-container {
-  flex: 1;
-  padding: 24px 32px 100px 14px;
-  max-width: 1600px;
-  min-height: 100vh;
-}
-
-/* ── Top Header Bar ──────────────────────────────────────────────────────── */
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-}
-
-.search-pill-container {
-  position: relative;
-  flex: 1;
-  max-width: 480px;
-}
-
-.search-pill {
-  width: 100%;
-  padding: 14px 20px 14px 48px;
-  background: #ffffff;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-pill);
-  font-size: 0.92rem;
-  font-weight: 500;
-  color: var(--text-dark);
-  outline: none;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
-}
-
-.search-pill:focus {
-  border-color: var(--emerald-600);
-  box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.08);
-}
-
-.search-icon-pos {
-  position: absolute;
-  left: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-}
-
-.search-shortcut-badge {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: var(--canvas-bg);
-  border: 1px solid var(--border-light);
+.nav-section-label {
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--sidebar-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 18px 10px 8px 10px;
 }
 
-.top-actions {
+.nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.action-btn-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 22px;
-  border-radius: var(--radius-pill);
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-decoration: none;
-  border: none;
-}
-
-.btn-emerald {
-  background: var(--emerald-700);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(4, 120, 87, 0.25);
-}
-
-.btn-emerald:hover {
-  background: var(--emerald-600);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(4, 120, 87, 0.35);
-}
-
-.btn-dark {
-  background: var(--dark-sidebar);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-}
-
-.btn-dark:hover {
-  background: #27272a;
-  transform: translateY(-1px);
-}
-
-.btn-white {
-  background: #ffffff;
-  color: var(--text-dark);
-  border: 1px solid var(--border-hairline);
-  box-shadow: var(--shadow-sm);
-}
-
-.btn-white:hover {
-  background: #fafafa;
-  transform: translateY(-1px);
-}
-
-.top-avatar-pill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 14px 6px 6px;
-  background: #ffffff;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-sm);
-}
-
-.top-avatar-img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--emerald-100);
-}
-
-/* ── Bento Grid System (Matching Images 2 & 3) ────────────────────────────── */
-.bento-grid-kpi {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.bento-card {
-  background: var(--card-white);
-  border-radius: var(--radius-card);
-  padding: 26px 24px;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-card);
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.bento-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
-}
-
-/* Bento Card Style Variants */
-.card-hero-emerald {
-  background: linear-gradient(135deg, #064e3b 0%, #047857 60%, #059669 100%);
-  color: #ffffff;
-  border: none;
-}
-
-.card-hero-emerald .bento-label { color: rgba(255, 255, 255, 0.82); }
-.card-hero-emerald .bento-sub { color: rgba(255, 255, 255, 0.88); }
-.card-hero-emerald .arrow-pill { background: rgba(255, 255, 255, 0.2); color: #ffffff; }
-
-.card-pastel-peach {
-  background: var(--pastel-peach);
-  border: 1px solid rgba(251, 146, 60, 0.15);
-}
-.card-pastel-peach .bento-label { color: #9a3412; }
-.card-pastel-peach .bento-val { color: #431407; }
-.card-pastel-peach .arrow-pill { background: rgba(255, 255, 255, 0.6); color: #9a3412; }
-
-.card-pastel-lavender {
-  background: var(--pastel-lavender);
-  border: 1px solid rgba(167, 139, 250, 0.15);
-}
-.card-pastel-lavender .bento-label { color: #5b21b6; }
-.card-pastel-lavender .bento-val { color: #2e1065; }
-.card-pastel-lavender .arrow-pill { background: rgba(255, 255, 255, 0.6); color: #5b21b6; }
-
-.card-pastel-mint {
-  background: var(--pastel-mint);
-  border: 1px solid rgba(45, 212, 191, 0.15);
-}
-.card-pastel-mint .bento-label { color: #115e59; }
-.card-pastel-mint .bento-val { color: #042f2e; }
-.card-pastel-mint .arrow-pill { background: rgba(255, 255, 255, 0.6); color: #115e59; }
-
-.bento-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.bento-label {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: capitalize;
-}
-
-.arrow-pill {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--canvas-bg);
-  border: 1px solid var(--border-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--text-dark);
-}
-
-.bento-val {
-  font-size: 2.5rem;
-  font-weight: 900;
-  letter-spacing: -1.2px;
-  line-height: 1.05;
-  margin-bottom: 8px;
-}
-
-.bento-sub {
-  font-size: 0.8rem;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #94a3b8;
+  font-size: 0.92rem;
   font-weight: 600;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ── 2-Column Main Bento Grid ─────────────────────────────────────────────── */
-.main-bento-layout {
-  display: grid;
-  grid-template-columns: 2fr 1.15fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.bento-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Interactive Connection Hub Card */
-.connection-hub-card {
-  background: #ffffff;
-  border-radius: var(--radius-card);
-  padding: 32px 28px;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-card);
-}
-
-.connect-tabs-pill {
-  display: inline-flex;
-  padding: 6px;
-  background: var(--canvas-bg);
-  border-radius: var(--radius-pill);
-  gap: 4px;
-  margin-bottom: 24px;
-  border: 1px solid var(--border-light);
-}
-
-.tab-pill-btn {
-  padding: 8px 20px;
-  border-radius: var(--radius-pill);
-  font-size: 0.84rem;
-  font-weight: 700;
-  border: none;
   cursor: pointer;
-  background: transparent;
-  color: var(--text-muted);
-  transition: all 0.2s;
+  transition: all 0.18s ease;
+  user-select: none;
+  margin-bottom: 3px;
 }
-
-.tab-pill-btn.active {
-  background: #ffffff;
-  color: var(--text-dark);
-  box-shadow: var(--shadow-sm);
+.nav-item:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.06);
 }
-
-/* Pairing Code Visual Area */
-.pairing-display-box {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 24px;
-  padding: 30px 24px;
-  color: #ffffff;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.15);
-  margin-top: 14px;
+.nav-item.active {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.08));
+  border-left: 3px solid #10b981;
 }
-
-.pairing-display-box::before {
-  content: '';
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
-  top: -40px;
-  right: -40px;
-}
-
-.pairing-digits {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 3rem;
-  font-weight: 900;
-  letter-spacing: 8px;
-  color: #34d399;
-  margin: 12px 0 16px 0;
-  text-shadow: 0 0 25px rgba(52, 211, 153, 0.4);
-}
-
-/* Input Fields */
-.input-pill {
-  width: 100%;
-  padding: 14px 20px;
-  background: #ffffff;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-pill);
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-dark);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.input-pill:focus {
-  border-color: var(--emerald-600);
-  box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.08);
-}
-
-/* Real-Time Activity Feed */
-.activity-card {
-  background: #ffffff;
-  border-radius: var(--radius-card);
-  padding: 28px 24px;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-card);
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: var(--canvas-bg);
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-
-.activity-item:hover { background: #efece5; }
-
-.activity-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.88rem;
+.nav-item svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
   flex-shrink: 0;
 }
 
-/* Right Rail Widgets (Uptime Donut & Bot Identity) */
-.donut-gauge-card {
-  background: #ffffff;
-  border-radius: var(--radius-card);
-  padding: 28px 24px;
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-card);
-  text-align: center;
-}
-
-.gauge-svg-wrap {
+.sidebar-bottom-card {
+  margin-top: auto;
+  background: linear-gradient(145deg, #064e3b, #047857);
+  border-radius: 20px;
+  padding: 18px;
+  color: #fff;
   position: relative;
-  width: 180px;
-  height: 180px;
-  margin: 10px auto 16px auto;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(4, 120, 87, 0.25);
 }
-
-.gauge-inner-val {
+.sidebar-bottom-card::after {
+  content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
+  top: -30px;
+  right: -30px;
+  width: 90px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+.sidebar-bottom-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.sidebar-bottom-sub {
+  font-size: 0.78rem;
+  color: #a7f3d0;
+  line-height: 1.35;
+  margin-bottom: 14px;
+}
+.sidebar-action-btn {
+  background: #ffffff;
+  color: #064e3b;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.sidebar-action-btn:hover {
+  transform: translateY(-1px);
+  background: #f0fdf4;
 }
 
-.gauge-inner-val h3 {
-  font-size: 2.2rem;
-  font-weight: 900;
-  letter-spacing: -1px;
-  color: var(--text-dark);
-  line-height: 1;
+/* ── Top Header ───────────────────────────────────────────────────────────── */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.header-greeting-box h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+.header-greeting-box p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
-.gauge-inner-val span {
-  font-size: 0.76rem;
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.status-beacon {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  position: relative;
+}
+.status-beacon.active {
+  background-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  animation: pulse-beacon 2s infinite;
+}
+.status-beacon.pairing {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+  animation: pulse-beacon 1.5s infinite;
+}
+@keyframes pulse-beacon {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  border: none;
+}
+.btn-pill-primary {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+.btn-pill-primary:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+.btn-pill-subtle {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+}
+.btn-pill-subtle:hover {
+  background: var(--bg-card-subtle);
+  border-color: var(--border-strong);
+}
+
+/* ── Hero 4-Card Stat Grid (Donezo Style) ─────────────────────────────────── */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 145px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-pop);
+}
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.stat-label {
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+}
+.stat-arrow-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.stat-value {
+  font-size: 1.95rem;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.stat-subtext {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-/* Feature Toggles & Switch Controls */
+/* Card Themes */
+.stat-card-hero-green {
+  background: linear-gradient(145deg, #064e3b, #047857);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 30px rgba(4, 120, 87, 0.28);
+}
+.stat-card-hero-green .stat-label { color: #a7f3d0; }
+.stat-card-hero-green .stat-value { color: #ffffff; }
+.stat-card-hero-green .stat-subtext { color: #6ee7b7; }
+.stat-card-hero-green .stat-arrow-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+}
+
+.stat-card-peach {
+  background: var(--pastel-peach-bg);
+  border-color: rgba(154, 52, 18, 0.1);
+}
+.stat-card-peach .stat-label { color: var(--pastel-peach-text); }
+.stat-card-peach .stat-value { color: var(--pastel-peach-text); }
+.stat-card-peach .stat-subtext { color: var(--pastel-peach-text); opacity: 0.85; }
+
+.stat-card-lavender {
+  background: var(--pastel-lavender-bg);
+  border-color: rgba(91, 33, 182, 0.1);
+}
+.stat-card-lavender .stat-label { color: var(--pastel-lavender-text); }
+.stat-card-lavender .stat-value { color: var(--pastel-lavender-text); }
+.stat-card-lavender .stat-subtext { color: var(--pastel-lavender-text); opacity: 0.85; }
+
+.stat-card-mint {
+  background: var(--pastel-mint-bg);
+  border-color: rgba(6, 95, 70, 0.1);
+}
+.stat-card-mint .stat-label { color: var(--pastel-mint-text); }
+.stat-card-mint .stat-value { color: var(--pastel-mint-text); }
+.stat-card-mint .stat-subtext { color: var(--pastel-mint-text); opacity: 0.85; }
+
+/* ── Content Columns Bento Layout ─────────────────────────────────────────── */
+.bento-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+}
+
+.content-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-subtle);
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-title-group h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--text-main);
+  margin-bottom: 3px;
+}
+.card-title-group p {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+/* ── Fast Pairing Center ─────────────────────────────────────────────────── */
+.pair-box {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 22px;
+}
+.pair-segmented {
+  display: flex;
+  background: var(--bg-canvas);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.pair-seg-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pair-seg-btn.active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.phone-input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.phone-input:focus {
+  border-color: #10b981;
+}
+
+.code-display-card {
+  background: #111317;
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+  margin-top: 14px;
+  position: relative;
+}
+.code-digits {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #34d399;
+  margin: 6px 0 10px 0;
+}
+.btn-copy-code {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-copy-code:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Live Message Activity Feed (Solves "not showing messages") ───────────── */
+.msg-stream-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.msg-bubble {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+.msg-bubble:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+.msg-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  color: #475569;
+  flex-shrink: 0;
+}
+.msg-avatar.bot {
+  background: linear-gradient(135deg, #10b981, #047857);
+  color: #fff;
+}
+.msg-avatar.self {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.msg-body {
+  flex: 1;
+  min-width: 0;
+}
+.msg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.msg-sender {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.msg-time {
+  font-size: 0.74rem;
+  color: var(--text-subtle);
+}
+.msg-text {
+  font-size: 0.88rem;
+  color: var(--text-body);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.msg-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+.msg-badge-cmd { background: #fee2e2; color: #b91c1c; }
+.msg-badge-dm { background: #e0f2fe; color: #0369a1; }
+.msg-badge-bot { background: #d1fae5; color: #047857; }
+.msg-badge-self { background: #f3e8ff; color: #7e22ce; }
+
+/* ── Toggle Switch Grid ───────────────────────────────────────────────────── */
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.toggle-item {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.toggle-info h4 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+.toggle-info p {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
 .switch {
   position: relative;
   display: inline-block;
-  width: 48px;
-  height: 28px;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
 }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
   position: absolute;
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #e2e8f0;
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #cbd5e1;
+  transition: .24s;
   border-radius: 34px;
 }
 .slider:before {
   position: absolute;
   content: "";
-  height: 22px;
-  width: 22px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: .24s;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-input:checked + .slider { background-color: var(--emerald-600); }
-input:checked + .slider:before { transform: translateX(20px); }
-
-/* Interactive Table */
-.data-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
+input:checked + .slider {
+  background-color: #10b981;
+}
+input:checked + .slider:before {
+  transform: translateX(20px);
 }
 
-.data-table th {
-  padding: 10px 16px;
-  text-align: left;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+/* ── AI Key Manager ───────────────────────────────────────────────────────── */
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
 }
-
-.data-table td {
-  padding: 14px 16px;
-  background: var(--canvas-bg);
+.key-provider {
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.key-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+.key-status-dot.active { background: #10b981; }
 
-.data-table tr td:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.data-table tr td:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+/* ── Terminal Console ─────────────────────────────────────────────────────── */
+.terminal-window {
+  background: #0f1117;
+  color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  border-radius: 18px;
+  padding: 18px;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.log-line {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+.log-line.warn { color: #f59e0b; }
+.log-line.error { color: #ef4444; }
+.log-line.success { color: #34d399; }
 
-/* ── Mobile Floating Dock Pill (Matching Image 1) ─────────────────────────── */
-.mobile-floating-dock {
+/* ── Mobile Floating Bottom Dock (Reference: Image 2) ─────────────────────── */
+#mobile-dock {
   display: none;
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(19, 20, 24, 0.94);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-radius: var(--radius-pill);
-  padding: 8px 14px;
-  gap: 8px;
-  z-index: 1000;
-  box-shadow: var(--shadow-dock);
+  background: rgba(18, 19, 22, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 36px;
+  padding: 6px 10px;
+  z-index: 999;
+  box-shadow: var(--shadow-dock);
+  gap: 6px;
 }
-
 .dock-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: transparent;
   border: none;
   color: #94a3b8;
+  padding: 10px 14px;
+  border-radius: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s ease;
 }
-
 .dock-btn.active {
-  background: #ffffff;
-  color: var(--text-dark);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+.dock-btn svg {
+  width: 19px;
+  height: 19px;
 }
 
-.dock-btn.active svg { stroke: var(--text-dark); }
+/* ── Responsive Adaptations ──────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  #sidebar { display: none; }
+  #mobile-dock { display: flex; }
+  #main-content { padding: 20px 16px 120px 16px; }
+  .hero-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .bento-layout { grid-template-columns: 1fr; }
+  .toggle-grid { grid-template-columns: 1fr; }
+}
 
-/* ── Login Modal & Toast Overlay ─────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 10px; }
+  .header-greeting-box h1 { font-size: 1.45rem; }
+  .stat-value { font-size: 1.65rem; }
+  .content-card { padding: 18px; border-radius: 20px; }
+  .code-digits { font-size: 1.7rem; letter-spacing: 2px; }
+}
+
+/* ── Modal Dialog ─────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(12px);
-  display: flex;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 1000;
   padding: 20px;
 }
-
-.modal-box {
-  background: #ffffff;
-  border-radius: 32px;
-  padding: 40px 36px;
+.modal-card {
+  background: var(--bg-card);
+  border-radius: 24px;
+  padding: 30px;
   width: 100%;
   max-width: 440px;
+  box-shadow: var(--shadow-pop);
+  border: 1px solid var(--border-subtle);
   text-align: center;
-  box-shadow: var(--shadow-float);
-  border: 1px solid var(--border-hairline);
-}
-
-.toast {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  background: #18181b;
-  color: #ffffff;
-  padding: 12px 24px;
-  border-radius: var(--radius-pill);
-  font-size: 0.88rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-  z-index: 10000;
-  transform: translateY(100px);
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toast.show { transform: translateY(0); opacity: 1; }
-
-/* ── Responsive Adaptations ──────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .bento-grid-kpi { grid-template-columns: repeat(2, 1fr); }
-  .main-bento-layout { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 860px) {
-  .desktop-sidebar { display: none; }
-  .mobile-floating-dock { display: flex; }
-  .app-container { padding: 18px 18px 110px 18px; }
-  .bento-grid-kpi { grid-template-columns: 1fr; }
-  .top-bar { flex-direction: column; align-items: stretch; }
-  .search-pill-container { max-width: 100%; }
 }
 </style>
 </head>
 <body>
 
-<!-- ── DESKTOP CAPSULE SIDEBAR (Matching Images 2 & 3) ──────────────────────── -->
-<aside class="desktop-sidebar">
-  <div class="sidebar-inner">
+<!-- ── Left Sidebar Navigation (Desktop) ──────────────────────────────────── -->
+<aside id="sidebar">
+  <div class="brand-box">
+    <div class="brand-logo">N</div>
     <div>
-      <!-- Brand Logo -->
-      <a href="#" class="sidebar-brand">
-        <div class="sidebar-brand-avatar">
-          <img src="https://iili.io/Cwvlxwv.png" alt="Nerd Logo">
-        </div>
-        <div class="sidebar-brand-info">
-          <h2>Nerd Pro</h2>
-          <span>WhatsApp WA-Bot v2.4</span>
-        </div>
-      </a>
-
-      <!-- Navigation Section -->
-      <div class="nav-section-title">Overview</div>
-      <div class="nav-links">
-        <button onclick="showTab('dashboard')" class="nav-btn active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
-          Dashboard
-        </button>
-        <button onclick="showTab('connect')" class="nav-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-          Connect & Pair
-        </button>
-        <button onclick="showTab('users')" class="nav-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Users & Access
-        </button>
+      <div style="display:flex; align-items:center;">
+        <span class="brand-title">Nerd Bot</span>
+        <span class="brand-badge">PRO</span>
       </div>
-
-      <div class="nav-section-title">Control Hub</div>
-      <div class="nav-links">
-        <button onclick="showTab('features')" class="nav-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Features & Toggles
-        </button>
-        <button onclick="showTab('keys')" class="nav-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          API Keys & AI
-        </button>
-        <button onclick="showTab('logs')" class="nav-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-          Terminal Logs
-        </button>
-      </div>
+      <div style="font-size:0.75rem; color:#64748b; font-weight:600;">Autonomous WhatsApp AI</div>
     </div>
+  </div>
 
-    <!-- Bottom Status Card -->
-    <div>
-      <div class="sidebar-footer-card">
-        <div class="live-status">
-          <span class="live-dot"></span>
-          <span>WhatsApp Engine</span>
-        </div>
-        <p style="font-size:0.78rem;color:#94a3b8;line-height:1.4">24/7 Zero-Downtime Keep-Alive Active</p>
-      </div>
+  <div class="nav-section-label">Main Menu</div>
+  <div class="nav-item active" onclick="switchTab('overview')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" onclick="switchTab('messages')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+    Live Messages
+  </div>
+  <div class="nav-item" onclick="switchTab('pairing')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
+    Pair WhatsApp
+  </div>
+  <div class="nav-item" onclick="switchTab('features')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    Security & Features
+  </div>
+  <div class="nav-item" onclick="switchTab('terminal')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 3-3 3m4.5 0h4.5m-11.25 6h15a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25z"/></svg>
+    Terminal Logs
+  </div>
 
-      <button onclick="logout()" class="nav-btn" style="margin-top:10px;color:#f87171">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Lock Session
-      </button>
-    </div>
+  <div class="sidebar-bottom-card">
+    <div class="sidebar-bottom-title">Link Companion Phone</div>
+    <div class="sidebar-bottom-sub">Stay connected 24/7 with zero multi-device drops.</div>
+    <button class="sidebar-action-btn" onclick="switchTab('pairing')">
+      <span>🔢</span> Pair with Phone
+    </button>
   </div>
 </aside>
 
-<!-- ── MAIN APP CONTAINER ────────────────────────────────────────────────── -->
-<main class="app-container">
+<!-- ── Main Dashboard Workspace ────────────────────────────────────────────── -->
+<main id="main-content">
 
-  <!-- Top Header Bar -->
-  <header class="top-bar">
-    <div>
-      <h1 id="topGreeting" class="heading-xl">Hello, Administrator 👋</h1>
-      <p class="text-sub">Plan, prioritize, and control your WhatsApp Bot with effortless ease.</p>
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="header-greeting-box">
+      <h1 id="welcomeTitle">Dashboard</h1>
+      <p id="welcomeSub">Plan, monitor, and automate your WhatsApp bot with ease.</p>
     </div>
 
-    <div class="search-pill-container">
-      <svg class="search-icon-pos" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="globalSearchInput" class="search-pill" placeholder="Search commands, users, or phone numbers...">
-      <span class="search-shortcut-badge">⌘K</span>
-    </div>
-
-    <div class="top-actions">
-      <button onclick="showTab('connect')" class="action-btn-pill btn-emerald">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        Pair Device
-      </button>
-      <button onclick="sendTestMsgAction()" class="action-btn-pill btn-white">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Test Ping
-      </button>
-      <div id="statusTagTop" class="top-avatar-pill">
-        <span class="live-dot"></span>
-        <span id="statusBadgeText" style="font-size:0.84rem;font-weight:700">Connecting...</span>
+    <div class="header-controls">
+      <div class="status-pill">
+        <span class="status-beacon" id="statusBeacon"></span>
+        <span id="statusLabel">Checking connection...</span>
       </div>
+      <button class="btn-pill btn-pill-primary" onclick="testAIEngine()">
+        <span>⚡</span> Test AI
+      </button>
+      <button class="btn-pill btn-pill-subtle" onclick="promptResetSession()">
+        <span>🔄</span> Reset
+      </button>
     </div>
   </header>
 
-  <!-- ── TAB 1: DASHBOARD BENTO OVERVIEW (Matching Uploaded Layouts) ───────── -->
-  <div id="tab-dashboard" class="tab-pane">
+  <!-- 4-Card Executive Metric Row (Donezo Palette) -->
+  <section class="hero-grid">
+    <!-- Card 1: Hero Emerald (Active Status & Uptime) -->
+    <div class="stat-card stat-card-hero-green">
+      <div class="stat-card-header">
+        <span class="stat-label">Connection & Uptime</span>
+        <div class="stat-arrow-btn">↗</div>
+      </div>
+      <div>
+        <div class="stat-value" id="uptimeDisplay">00:00:00</div>
+        <div class="stat-subtext" id="phoneUserTag">Connecting to WhatsApp...</div>
+      </div>
+    </div>
 
-    <!-- KPI Metric Bento Row -->
-    <section class="bento-grid-kpi">
-      <!-- Card 1: Hero Emerald Card (From Image 3) -->
-      <div class="bento-card card-hero-emerald">
+    <!-- Card 2: Messages Processed -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-label">Live Traffic</span>
+        <div class="stat-arrow-btn">↗</div>
+      </div>
+      <div>
+        <div class="stat-value" id="msgCountDisplay">0</div>
+        <div class="stat-subtext">Messages stream recorded</div>
+      </div>
+    </div>
+
+    <!-- Card 3: Active AI Engine (Pastel Lavender) -->
+    <div class="stat-card stat-card-lavender">
+      <div class="stat-card-header">
+        <span class="stat-label">AI Engine</span>
+        <div class="stat-arrow-btn">↗</div>
+      </div>
+      <div>
+        <div class="stat-value" id="aiProviderDisplay">GROQ</div>
+        <div class="stat-subtext" id="aiModelDisplay">Llama-3.3-70B • 720ms</div>
+      </div>
+    </div>
+
+    <!-- Card 4: Anti-Ban & Shield (Pastel Peach) -->
+    <div class="stat-card stat-card-peach">
+      <div class="stat-card-header">
+        <span class="stat-label">Protection Shield</span>
+        <div class="stat-arrow-btn">↗</div>
+      </div>
+      <div>
+        <div class="stat-value">100%</div>
+        <div class="stat-subtext">macOS Desktop Fingerprint</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Tab Views ──────────────────────────────────────────────────────────── -->
+
+  <!-- TAB 1: OVERVIEW -->
+  <div id="tab-overview" class="bento-layout">
+    
+    <!-- Left Bento: Fast Pairing Center & Key Toggles -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      
+      <!-- Fast Pairing Card -->
+      <div class="content-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2>WhatsApp Fast Link</h2>
+            <p>Link your phone instantly with an 8-digit Pairing Code or QR Scan.</p>
+          </div>
+        </div>
+
+        <div class="pair-box">
+          <div class="pair-segmented">
+            <button class="pair-seg-btn active" id="btnModePair" onclick="setPairMode('pair')">8-Digit Pairing Code</button>
+            <button class="pair-seg-btn" id="btnModeQr" onclick="setPairMode('qr')">QR Code Scan</button>
+          </div>
+
+          <!-- Pairing Mode Form -->
+          <div id="pairModeContainer">
+            <div class="input-row">
+              <input type="tel" id="phoneNumberInput" class="phone-input" placeholder="e.g. 2348012345678 (Country code + phone)">
+              <button class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCode()">Generate Code</button>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+              Open WhatsApp on phone → <b>Linked Devices</b> → <b>Link with phone number instead</b>.
+            </div>
+
+            <!-- Pairing Code Result Box -->
+            <div id="pairingCodeBox" class="code-display-card" style="display:none;">
+              <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Your WhatsApp Pairing Code</div>
+              <div class="code-digits" id="pairingCodeText">---- - ----</div>
+              <button class="btn-copy-code" id="btnCopyPair" onclick="copyPairCode()">📋 Tap to Copy Code</button>
+            </div>
+          </div>
+
+          <!-- QR Mode Form -->
+          <div id="qrModeContainer" style="display:none; text-align:center; padding:10px 0;">
+            <div id="qrImageWrapper">
+              <div style="color:var(--text-muted); font-size:0.9rem; padding:40px 0;">Waiting for QR code generation...</div>
+            </div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:10px;">Scan using WhatsApp → Linked Devices → Link a Device</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature Toggles Card -->
+      <div class="content-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2>Shield & Automation Toggles</h2>
+            <p>Control anti-ban safeguards and automated WhatsApp listeners.</p>
+          </div>
+        </div>
+
+        <div class="toggle-grid">
+          <div class="toggle-item">
+            <div class="toggle-info">
+              <h4>Anti-Ban Engine</h4>
+              <p>Organic delays & jitter</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleAntiBan" onchange="toggleFeature('antiban', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-item">
+            <div class="toggle-info">
+              <h4>Anti-Delete Saver</h4>
+              <p>Recover revoked chats</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleAntiDelete" onchange="toggleFeature('antidelete', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-item">
+            <div class="toggle-info">
+              <h4>View-Once Reveal</h4>
+              <p>Auto-forward to owner</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleViewOnce" onchange="toggleFeature('viewonce', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-item">
+            <div class="toggle-info">
+              <h4>Auto-View Status</h4>
+              <p>Read contacts' stories</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggleAutoStatus" onchange="toggleFeature('autostatus', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Bento: Live Messages Stream (FIX FOR "not showing the messages") -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+      
+      <!-- Live Message Feed -->
+      <div class="content-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2>Live Chat Activity</h2>
+            <p>Real-time stream of incoming messages, bot replies, and commands.</p>
+          </div>
+          <span style="font-size:0.75rem; background:var(--pastel-mint-bg); color:var(--pastel-mint-text); font-weight:700; padding:4px 10px; border-radius:9999px;">● LIVE</span>
+        </div>
+
+        <div class="msg-stream-box" id="liveMessagesList">
+          <div style="text-align:center; padding:30px; color:var(--text-subtle); font-size:0.88rem;">
+            No messages logged yet. Waiting for incoming chat activity...
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Provider Quick Config -->
+      <div class="content-card">
+        <div class="card-header-row">
+          <div class="card-title-group">
+            <h2>AI Engines & API Keys</h2>
+            <p>Instant provider switching without restarting.</p>
+          </div>
+        </div>
+
         <div>
-          <div class="bento-header">
-            <span class="bento-label">WhatsApp Status</span>
-            <div class="arrow-pill">↗</div>
-          </div>
-          <div id="mUptime" class="bento-val">Online</div>
-        </div>
-        <div class="bento-sub">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span id="mUptimeSub">24/7 Zero-Downtime Guarantee</span>
-        </div>
-      </div>
-
-      <!-- Card 2: Active Pairing Code Card (Pastel Lavender) -->
-      <div class="bento-card card-pastel-lavender">
-        <div>
-          <div class="bento-header">
-            <span class="bento-label">Active Pairing Code</span>
-            <div onclick="showTab('connect')" class="arrow-pill" style="cursor:pointer">↗</div>
-          </div>
-          <div id="mPairCode" class="bento-val" style="font-family:'JetBrains Mono',monospace;letter-spacing:1px;font-size:1.85rem">Ready</div>
-        </div>
-        <div class="bento-sub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span>Direct 8-digit link code</span>
-        </div>
-      </div>
-
-      <!-- Card 3: Total Contacts & Users (Pastel Peach) -->
-      <div class="bento-card card-pastel-peach">
-        <div>
-          <div class="bento-header">
-            <span class="bento-label">Total Users</span>
-            <div onclick="showTab('users')" class="arrow-pill" style="cursor:pointer">↗</div>
-          </div>
-          <div id="mUsers" class="bento-val">0</div>
-        </div>
-        <div class="bento-sub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          <span id="mFacts">0 facts remembered</span>
-        </div>
-      </div>
-
-      <!-- Card 4: Commands & Multilingual AI (Pastel Mint) -->
-      <div class="bento-card card-pastel-mint">
-        <div>
-          <div class="bento-header">
-            <span class="bento-label">Commands Engine</span>
-            <div class="arrow-pill">↗</div>
-          </div>
-          <div id="mCommands" class="bento-val">43</div>
-        </div>
-        <div class="bento-sub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          <span>Universal Multilingual Active</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Main 2-Column Bento Layout -->
-    <div class="main-bento-layout">
-
-      <!-- Left Column: Connection Hub & Real-Time Activity -->
-      <div class="bento-column">
-
-        <!-- Connection Hub (QR + Pairing Code) -->
-        <div class="connection-hub-card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px">
-            <div>
-              <span class="chip chip-emerald" style="margin-bottom:8px">WhatsApp Device Link</span>
-              <h2 class="heading-lg">Connect WhatsApp Account</h2>
-              <p class="text-sub">Choose either Camera QR scan or the instant 8-Digit Pairing Code.</p>
+          <div class="key-row">
+            <div class="key-provider">
+              <span class="key-status-dot" id="dotGroq"></span>
+              <span>Groq Cloud (Llama 3.3)</span>
             </div>
-            <div class="connect-tabs-pill">
-              <button id="tabBtnPair" onclick="toggleConnectMode('pair')" class="tab-pill-btn active">Option A • 8-Digit Pairing Code</button>
-              <button id="tabBtnQr" onclick="toggleConnectMode('qr')" class="tab-pill-btn">Option B • Scan QR Code</button>
-            </div>
+            <span id="badgeGroq" style="font-size:0.75rem; font-weight:700; color:var(--text-subtle);">Checking...</span>
           </div>
 
-          <!-- Mode 1: 8-Digit Pairing Code (No Camera) -->
-          <div id="connectModePair" style="display:block">
-            <div style="display:flex;gap:12px;margin-bottom:12px">
-              <input type="text" id="pairPhoneNum" class="input-pill" placeholder="Phone with country code (e.g. 2348012345678)">
-              <button id="btnPairSubmit" onclick="requestPairCodeAction()" class="action-btn-pill btn-emerald" style="white-space:nowrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                Get Code
-              </button>
+          <div class="key-row">
+            <div class="key-provider">
+              <span class="key-status-dot" id="dotOpenai"></span>
+              <span>OpenAI (GPT-4o / Mini)</span>
             </div>
-            <small style="color:var(--text-muted);font-size:0.78rem">Include country code without spaces (e.g. <b>234</b> for Nigeria, <b>1</b> for USA, <b>44</b> for UK).</small>
-
-            <!-- Pairing Code Output Display Box -->
-            <div id="pairOutput" class="pairing-display-box" style="display:none">
-              <span style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;font-weight:700">Your WhatsApp Pairing Code</span>
-              <div id="pairCodeVal" class="pairing-digits">----</div>
-              <button onclick="copyPairCodeAction()" class="action-btn-pill btn-emerald" style="margin:0 auto 14px auto">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy Pairing Code
-              </button>
-              <div style="font-size:0.82rem;color:#cbd5e1;line-height:1.5">
-                On phone: <b>WhatsApp → Linked Devices → Link with phone number instead</b>
-              </div>
-            </div>
+            <span id="badgeOpenai" style="font-size:0.75rem; font-weight:700; color:var(--text-subtle);">Checking...</span>
           </div>
 
-          <!-- Mode 2: Camera QR Scan -->
-          <div id="connectModeQr" style="display:none;text-align:center;padding:16px 0">
-            <div id="qrWrapper" style="display:inline-block;padding:16px;background:#ffffff;border-radius:24px;box-shadow:0 12px 30px rgba(0,0,0,0.08);border:1px solid var(--border-light)">
-              <img id="dashQrImg" src="" alt="WhatsApp QR Code" style="width:240px;height:240px;display:block">
+          <div class="key-row">
+            <div class="key-provider">
+              <span class="key-status-dot" id="dotOpenrouter"></span>
+              <span>OpenRouter (Multi-Model)</span>
             </div>
-            <p style="color:var(--text-muted);font-size:0.86rem;margin-top:14px">Open WhatsApp → Linked Devices → Link a Device</p>
-            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-              <button onclick="refreshQrAction()" class="action-btn-pill btn-white">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                Refresh QR
-              </button>
-              <button onclick="resetSessionAction()" class="action-btn-pill btn-white" style="color:#ef4444">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                Reset Session
-              </button>
+            <span id="badgeOpenrouter" style="font-size:0.75rem; font-weight:700; color:var(--text-subtle);">Checking...</span>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div class="input-row">
+              <input type="password" id="inputGroqKey" class="phone-input" placeholder="Paste Groq API Key (gsk_...)">
+              <button class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="saveGroqKey()">Save Key</button>
             </div>
           </div>
         </div>
-
-        <!-- Real-Time Activity & Command Stream -->
-        <div class="activity-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 class="heading-md">Live Activity Stream</h3>
-            <span class="chip chip-dark">Real-Time Ingestion</span>
-          </div>
-          <p class="text-sub">Continuous live feed of incoming user interactions and executed commands.</p>
-
-          <div id="cmdStream" class="activity-list">
-            <div class="activity-item">
-              <div style="display:flex;align-items:center;gap:12px">
-                <div class="activity-avatar" style="background:#dbeafe;color:#1d4ed8">⚡</div>
-                <div>
-                  <div style="font-weight:700;color:var(--text-dark)">Bot Ready & Monitoring</div>
-                  <div style="font-size:0.78rem;color:var(--text-muted)">Awaiting incoming WhatsApp traffic</div>
-                </div>
-              </div>
-              <span class="chip chip-emerald">Active</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Right Column: Diagnostics, Persona & Uptime Gauge -->
-      <div class="bento-column">
-
-        <!-- 100% Zero Downtime Donut Ring (Matching Images 1 & 3) -->
-        <div class="donut-gauge-card">
-          <span class="chip chip-emerald" style="margin-bottom:8px">24/7 Availability</span>
-          <h3 class="heading-md">System Reliability</h3>
-          
-          <div class="gauge-svg-wrap">
-            <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)">
-              <circle cx="50" cy="50" r="40" stroke="#e2e8f0" stroke-width="10" fill="none"/>
-              <circle cx="50" cy="50" r="40" stroke="var(--emerald-600)" stroke-width="10" stroke-dasharray="251.2" stroke-dashoffset="12.5" stroke-linecap="round" fill="none"/>
-            </svg>
-            <div class="gauge-inner-val">
-              <h3>99.9%</h3>
-              <span>Uptime</span>
-            </div>
-          </div>
-
-          <p class="text-sub">Continuous socket keep-alive ping with automated 515/408 reconnect loops.</p>
-        </div>
-
-        <!-- Bot Identity & Persona Card -->
-        <div class="bento-card" style="background:var(--pastel-amber);border:1px solid rgba(245,158,11,0.15)">
-          <div>
-            <div class="bento-header">
-              <span class="bento-label" style="color:#b45309">Bot Identity</span>
-              <div class="arrow-pill" style="background:rgba(255,255,255,0.7);color:#b45309">🎭</div>
-            </div>
-            <h3 id="personaName" style="font-size:1.6rem;font-weight:900;color:#78350f;margin-bottom:6px">Nerd 🤖</h3>
-            <p id="personaDesc" style="font-size:0.84rem;color:#92400e;line-height:1.4">Intelligent, sharp, witty WhatsApp assistant with multi-language fluency.</p>
-          </div>
-          <div style="margin-top:16px">
-            <span class="chip chip-white" style="color:#78350f;font-weight:700">Multilingual: 100% Supported</span>
-          </div>
-        </div>
-
-        <!-- Quick Speed Test Diagnostic Widget -->
-        <div class="bento-card">
-          <div>
-            <div class="bento-header">
-              <span class="bento-label">Network Benchmark</span>
-              <div class="arrow-pill">⚡</div>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
-              <div style="background:var(--canvas-bg);padding:10px;border-radius:14px;text-align:center">
-                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700">DOWNLOAD</div>
-                <div id="spDl" style="font-size:1.1rem;font-weight:900;color:var(--emerald-600)">--</div>
-              </div>
-              <div style="background:var(--canvas-bg);padding:10px;border-radius:14px;text-align:center">
-                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700">UPLOAD</div>
-                <div id="spUl" style="font-size:1.1rem;font-weight:900;color:#3b82f6">--</div>
-              </div>
-              <div style="background:var(--canvas-bg);padding:10px;border-radius:14px;text-align:center">
-                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700">LATENCY</div>
-                <div id="spPing" style="font-size:1.1rem;font-weight:900;color:#f59e0b">--</div>
-              </div>
-            </div>
-          </div>
-          <button id="speedTestBtn" onclick="runSpeedTest()" class="action-btn-pill btn-white" style="width:100%;justify-content:center;margin-top:8px">
-            Run Speed Test
-          </button>
-        </div>
-
       </div>
 
     </div>
 
   </div>
 
-  <!-- ── TAB 2: CONNECT & PAIR CODE ────────────────────────────────────────── -->
-  <div id="tab-connect" class="tab-pane" style="display:none">
-    <div class="connection-hub-card" style="margin-bottom:24px">
-      <span class="chip chip-emerald" style="margin-bottom:8px">Device Authentication</span>
-      <h2 class="heading-lg">WhatsApp Linking & 8-Digit Pairing Code</h2>
-      <p class="text-sub" style="margin-bottom:24px">Connect without scanning a QR code using WhatsApp's official phone pairing system.</p>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-        <div>
-          <label style="display:block;font-size:0.86rem;font-weight:700;color:var(--text-dark);margin-bottom:8px">Phone Number (International format)</label>
-          <input type="text" id="pairPhoneNumDirect" class="input-pill" placeholder="e.g. 2348012345678" style="margin-bottom:12px">
-          <button onclick="requestPairCodeActionDirect()" class="action-btn-pill btn-emerald" style="width:100%;justify-content:center">
-            Generate 8-Digit Pairing Code
-          </button>
+  <!-- TAB 2: LIVE MESSAGES EXPANDED -->
+  <div id="tab-messages" style="display:none;">
+    <div class="content-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <h2>Message History & Command Logs</h2>
+          <p>Full chronological record of messages and actions processed by the bot.</p>
         </div>
+        <button class="btn-pill btn-pill-subtle" onclick="refreshMessages()">Refresh</button>
+      </div>
 
-        <div style="background:var(--canvas-bg);border-radius:20px;padding:20px">
-          <div style="font-weight:800;color:var(--text-dark);margin-bottom:10px">📱 Quick 4-Step Linking:</div>
-          <ol style="padding-left:20px;font-size:0.86rem;color:var(--text-body);line-height:1.7">
-            <li>Open WhatsApp on your mobile phone</li>
-            <li>Tap <b>Menu (⋮)</b> or <b>Settings</b> → <b>Linked Devices</b></li>
-            <li>Tap <b>Link a Device</b></li>
-            <li>Tap <b>Link with phone number instead</b> at the bottom</li>
-            <li>Enter the 8-digit pairing code</li>
-          </ol>
+      <div class="msg-stream-box" id="fullMessagesList" style="max-height:600px;">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: PAIRING VIEW -->
+  <div id="tab-pairing" style="display:none;">
+    <div class="content-card" style="max-width:700px; margin:0 auto;">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <h2>Pair WhatsApp Companion Device</h2>
+          <p>Link your WhatsApp account to keep Nerd Bot active 24/7.</p>
+        </div>
+      </div>
+      <div class="pair-box">
+        <div class="input-row">
+          <input type="tel" id="phoneNumberInputTab" class="phone-input" placeholder="Phone number (e.g. 2348012345678)">
+          <button class="btn-pill btn-pill-primary" style="border-radius:14px;" onclick="requestPairCodeTab()">Get Code</button>
+        </div>
+        <div id="pairingCodeBoxTab" class="code-display-card" style="display:none;">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">YOUR 8-DIGIT PAIRING CODE</div>
+          <div class="code-digits" id="pairingCodeTextTab">---- - ----</div>
+          <button class="btn-copy-code" onclick="copyPairCodeTab()">📋 Copy Pairing Code</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── TAB 3: USERS & ACCESS CONTROL ─────────────────────────────────────── -->
-  <div id="tab-users" class="tab-pane" style="display:none">
-    <div class="bento-card" style="margin-bottom:24px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
-        <div>
-          <h2 class="heading-lg">Contacts & User Memory</h2>
-          <p class="text-sub">Users interacting with your bot and personalized memory context.</p>
-        </div>
-        <input type="text" id="userFilterInput" onkeyup="filterUsersTable()" class="input-pill" placeholder="Filter users..." style="max-width:260px;padding:10px 18px">
-      </div>
-
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>User / Contact</th>
-            <th>Facts Remembered</th>
-            <th>Messages</th>
-            <th>Last Active</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody">
-          <tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Loading user directory...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Access Control Manager -->
-    <div class="bento-card">
-      <h3 class="heading-md" style="margin-bottom:12px">Access Control Configuration</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
-        <input type="text" id="acPhoneNum" class="input-pill" placeholder="Phone (e.g. 2348012345678)">
-        <input type="text" id="acUserName" class="input-pill" placeholder="Name (e.g. John Doe)">
-        <button onclick="addUserAccessAction()" class="action-btn-pill btn-emerald" style="justify-content:center">Grant Access</button>
-      </div>
-      <div id="accessUsersList"></div>
-    </div>
-  </div>
-
-  <!-- ── TAB 4: FEATURES & TOGGLES ─────────────────────────────────────────── -->
-  <div id="tab-features" class="tab-pane" style="display:none">
-    <div class="bento-card">
-      <h2 class="heading-lg" style="margin-bottom:6px">Feature Toggles & Guardrails</h2>
-      <p class="text-sub" style="margin-bottom:24px">Enable or disable bot capabilities with instant effect.</p>
-
-      <div id="featureStatusRes">Loading features...</div>
-    </div>
-  </div>
-
-  <!-- ── TAB 5: API KEYS & AI ENGINE ───────────────────────────────────────── -->
-  <div id="tab-keys" class="tab-pane" style="display:none">
-    <div class="bento-card" style="margin-bottom:24px">
-      <h2 class="heading-lg" style="margin-bottom:6px">AI Engine & Provider Keys</h2>
-      <p class="text-sub" style="margin-bottom:24px">Manage OpenAI, Groq, OpenRouter, and Brave Search credentials.</p>
-
-      <div id="keyStatusRes" style="margin-bottom:24px;padding:18px;background:var(--canvas-bg);border-radius:20px"></div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-        <div>
-          <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">Groq API Key (Free)</label>
-          <input type="password" id="keyGroq" class="input-pill" placeholder="gsk_...">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">OpenAI API Key</label>
-          <input type="password" id="keyOpenAI" class="input-pill" placeholder="sk-...">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">OpenRouter API Key</label>
-          <input type="password" id="keyOpenRouter" class="input-pill" placeholder="sk-or-...">
-        </div>
-        <div>
-          <label style="display:block;font-size:0.82rem;font-weight:700;margin-bottom:6px">Brave Search API Key</label>
-          <input type="password" id="keyBrave" class="input-pill" placeholder="BSA...">
+  <!-- TAB 4: FEATURES VIEW -->
+  <div id="tab-features" style="display:none;">
+    <div class="content-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <h2>Security & Feature Matrix</h2>
+          <p>Enable or disable commands and system features in real-time.</p>
         </div>
       </div>
-
-      <div style="display:flex;gap:12px">
-        <button onclick="saveKeysAction()" class="action-btn-pill btn-emerald">Save API Keys</button>
-        <button onclick="testAiAction()" class="action-btn-pill btn-white">Test AI Diagnostics</button>
+      <div class="toggle-grid" id="fullFeatureGrid">
+        <!-- Injected dynamically -->
       </div>
     </div>
   </div>
 
-  <!-- ── TAB 6: TERMINAL LOGS ──────────────────────────────────────────────── -->
-  <div id="tab-logs" class="tab-pane" style="display:none">
-    <div class="bento-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h2 class="heading-lg">Live Terminal Console</h2>
-        <button onclick="copyLogsAction()" class="action-btn-pill btn-white">Copy Terminal Logs</button>
+  <!-- TAB 5: TERMINAL LOGS -->
+  <div id="tab-terminal" style="display:none;">
+    <div class="content-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <h2>Terminal Console</h2>
+          <p>Live Node.js and Baileys socket execution telemetry.</p>
+        </div>
+        <button class="btn-pill btn-pill-subtle" onclick="clearLogs()">Clear Console</button>
       </div>
-      <pre id="rawLogBox" style="background:#0f172a;color:#38bdf8;padding:24px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:0.84rem;line-height:1.6;max-height:550px;overflow-y:auto;white-space:pre-wrap">Loading server logs...</pre>
+      <div class="terminal-window" id="terminalOutput">
+        <div class="log-line success">[SYSTEM] Nerd Bot Pro Command Center initialized.</div>
+      </div>
     </div>
   </div>
 
 </main>
 
-<!-- ── MOBILE FLOATING DOCK PILL (Directly Matching Image 1) ──────────────── -->
-<nav class="mobile-floating-dock">
-  <button onclick="showTab('dashboard')" class="dock-btn active" title="Dashboard">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+<!-- ── Mobile Floating Pill Dock (Inspired by Image 2) ──────────────────────── -->
+<nav id="mobile-dock">
+  <button class="dock-btn active" id="dockBtnOverview" onclick="switchTab('overview')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <span>Home</span>
   </button>
-  <button onclick="showTab('connect')" class="dock-btn" title="Pair Device">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+  <button class="dock-btn" id="dockBtnMessages" onclick="switchTab('messages')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+    <span>Chats</span>
   </button>
-  <button onclick="showTab('users')" class="dock-btn" title="Users">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+  <button class="dock-btn" id="dockBtnPair" onclick="switchTab('pairing')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+    <span>Pair</span>
   </button>
-  <button onclick="showTab('features')" class="dock-btn" title="Features">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+  <button class="dock-btn" id="dockBtnFeatures" onclick="switchTab('features')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+    <span>Shield</span>
   </button>
-  <button onclick="showTab('logs')" class="dock-btn" title="Logs">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+  <button class="dock-btn" id="dockBtnTerminal" onclick="switchTab('terminal')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17l6-6-6-6m8 14h6"/></svg>
+    <span>Logs</span>
   </button>
 </nav>
 
-<!-- ── LOGIN MODAL ───────────────────────────────────────────────────────── -->
-<div id="loginModal" class="modal-overlay" style="display:none">
-  <div class="modal-box">
-    <div style="width:54px;height:54px;border-radius:18px;background:var(--emerald-100);color:var(--emerald-700);display:flex;align-items:center;justify-content:center;margin:0 auto 18px auto">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <h2 class="heading-lg" style="margin-bottom:8px">Admin Passcode</h2>
-    <p class="text-sub" style="margin-bottom:24px">Enter your dashboard passcode to access the control panel.</p>
-
-    <input type="password" id="pwdInput" class="input-pill" placeholder="Enter Passcode..." style="text-align:center;font-size:1.1rem;letter-spacing:2px;margin-bottom:14px">
-    <div id="loginErr" style="display:none;color:#ef4444;font-size:0.84rem;font-weight:700;margin-bottom:14px"></div>
-
-    <button onclick="attemptLogin()" class="action-btn-pill btn-emerald" style="width:100%;justify-content:center;padding:14px">
-      Unlock Panel
-    </button>
+<!-- ── Login Passcode Modal ─────────────────────────────────────────────────── -->
+<div id="loginModal" class="modal-overlay">
+  <div class="modal-card">
+    <div style="font-size:2rem; margin-bottom:10px;">🔐</div>
+    <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:6px;">Dashboard Authentication</h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Enter your Dashboard Password to access the control center.</p>
+    <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: admin)" style="width:100%; margin-bottom:14px; text-align:center;">
+    <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px;" onclick="submitPassword()">Unlock Dashboard</button>
+    <div id="modalErr" style="display:none; color:#ef4444; font-size:0.82rem; font-weight:700; margin-top:12px;"></div>
   </div>
 </div>
 
-<!-- ── TOAST NOTIFICATION ────────────────────────────────────────────────── -->
-<div id="toast" class="toast">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-  <span id="toastMsg">Operation successful</span>
-</div>
-
+<!-- ── Dashboard Client Logic ──────────────────────────────────────────────── -->
 <script>
-var urlParams = new URLSearchParams(window.location.search);
-var pwd = urlParams.get('pwd') || localStorage.getItem('dash_pwd') || '';
-var activeConnectMode = 'pair';
-var currentPairingCode = null;
+var pwd = new URLSearchParams(window.location.search).get('pwd') || localStorage.getItem('dash_pwd') || '';
+var activeTab = 'overview';
+var activePairMode = 'pair';
+var pollTimer = null;
 
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  document.getElementById('toastMsg').textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 3200);
-}
-
-function fetchAPI(url, opts) {
-  opts = opts || {};
-  opts.headers = opts.headers || {};
-  opts.headers['x-dashboard-password'] = pwd;
-  var sep = url.includes('?') ? '&' : '?';
-  return fetch('/api' + url + sep + 'pwd=' + encodeURIComponent(pwd), opts).then(function(r) {
-    if (r.status === 401) {
-      showLoginModal();
+function apiCall(endpoint, options) {
+  options = options || {};
+  var sep = endpoint.includes('?') ? '&' : '?';
+  var url = '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd);
+  return fetch(url, options).then(function(res) {
+    if (res.status === 401) {
+      showLogin();
       throw new Error('Unauthorized');
     }
-    return r.json();
+    return res.json();
   });
 }
 
-function showLoginModal() {
+function showLogin() {
   document.getElementById('loginModal').style.display = 'flex';
 }
 
-function attemptLogin() {
-  var val = document.getElementById('pwdInput').value.trim();
-  if (!val) return;
-  pwd = val;
-  fetch('/api/status?pwd=' + encodeURIComponent(pwd))
-    .then(function(r) {
-      if (r.ok) {
-        localStorage.setItem('dash_pwd', pwd);
-        document.getElementById('loginModal').style.display = 'none';
-        showToast('Authenticated successfully');
-        refreshAll();
-      } else {
-        document.getElementById('loginErr').style.display = 'block';
-        document.getElementById('loginErr').textContent = 'Invalid Passcode. Please verify DASHBOARD_PASSWORD';
-      }
+function submitPassword() {
+  var p = document.getElementById('modalPwdInput').value.trim();
+  if (!p) return;
+  pwd = p;
+  apiCall('/status')
+    .then(function(data) {
+      localStorage.setItem('dash_pwd', pwd);
+      document.getElementById('loginModal').style.display = 'none';
+      initDashboard();
+    })
+    .catch(function(err) {
+      document.getElementById('modalErr').style.display = 'block';
+      document.getElementById('modalErr').textContent = 'Invalid Password. Check DASHBOARD_PASSWORD';
     });
 }
 
-function logout() {
-  localStorage.removeItem('dash_pwd');
-  pwd = '';
-  showLoginModal();
-}
-
-function showTab(name) {
-  var allTabs = ['dashboard', 'connect', 'users', 'features', 'keys', 'logs'];
-  allTabs.forEach(function(t) {
+function switchTab(tabId) {
+  activeTab = tabId;
+  var tabs = ['overview', 'messages', 'pairing', 'features', 'terminal'];
+  tabs.forEach(function(t) {
     var el = document.getElementById('tab-' + t);
-    if (el) el.style.display = (t === name) ? 'block' : 'none';
+    if (el) el.style.display = (t === tabId) ? ((t === 'overview') ? 'grid' : 'block') : 'none';
   });
 
-  document.querySelectorAll('.nav-btn').forEach(function(btn) {
-    var attr = btn.getAttribute('onclick') || '';
-    btn.classList.toggle('active', attr.includes("'" + name + "'"));
+  // Update sidebar active states
+  document.querySelectorAll('#sidebar .nav-item').forEach(function(item) {
+    var fn = item.getAttribute('onclick') || '';
+    item.classList.toggle('active', fn.includes("'" + tabId + "'"));
   });
 
-  document.querySelectorAll('.dock-btn').forEach(function(btn) {
-    var attr = btn.getAttribute('onclick') || '';
-    btn.classList.toggle('active', attr.includes("'" + name + "'"));
-  });
+  // Update mobile dock active states
+  var dockMap = {
+    overview: 'dockBtnOverview',
+    messages: 'dockBtnMessages',
+    pairing: 'dockBtnPair',
+    features: 'dockBtnFeatures',
+    terminal: 'dockBtnTerminal'
+  };
+  for (var k in dockMap) {
+    var btn = document.getElementById(dockMap[k]);
+    if (btn) btn.classList.toggle('active', k === tabId);
+  }
 
-  if (name === 'keys') loadKeysStatus();
-  if (name === 'features') loadFeaturesStatus();
-  if (name === 'users') { loadUsersTable(); loadAccessControlList(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function toggleConnectMode(mode) {
-  activeConnectMode = mode;
-  document.getElementById('connectModePair').style.display = (mode === 'pair') ? 'block' : 'none';
-  document.getElementById('connectModeQr').style.display = (mode === 'qr') ? 'block' : 'none';
-  document.getElementById('tabBtnPair').classList.toggle('active', mode === 'pair');
-  document.getElementById('tabBtnQr').classList.toggle('active', mode === 'qr');
+function setPairMode(mode) {
+  activePairMode = mode;
+  document.getElementById('btnModePair').classList.toggle('active', mode === 'pair');
+  document.getElementById('btnModeQr').classList.toggle('active', mode === 'qr');
+  document.getElementById('pairModeContainer').style.display = (mode === 'pair') ? 'block' : 'none';
+  document.getElementById('qrModeContainer').style.display = (mode === 'qr') ? 'block' : 'none';
+  if (mode === 'qr') pollQR();
 }
 
-function refreshAll() {
-  if (!pwd) { showLoginModal(); return; }
-
-  // Status API
-  fetchAPI('/status').then(function(d) {
-    document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('topGreeting').textContent = 'Hello, ' + (d.botName || 'Administrator') + ' 👋';
-
-    var statusDot = document.querySelector('#statusTagTop .live-dot');
-    var statusText = document.getElementById('statusBadgeText');
-
-    if (d.connected) {
-      statusDot.style.background = 'var(--emerald-500)';
-      statusDot.style.boxShadow = '0 0 10px var(--emerald-500)';
-      statusText.textContent = 'Online (' + (d.user || 'Bot') + ')';
-      document.getElementById('mUptime').textContent = d.uptime || 'Active';
-      document.getElementById('mUptimeSub').textContent = 'WhatsApp 24/7 Zero-Downtime';
-    } else {
-      statusDot.style.background = '#f87171';
-      statusDot.style.boxShadow = '0 0 10px #f87171';
-      statusText.textContent = 'Reconnecting...';
-      document.getElementById('mUptime').textContent = 'Reconnecting';
-      document.getElementById('mUptimeSub').textContent = 'Auto-reconnect active';
-    }
-
-    document.getElementById('mUsers').textContent = d.users || 0;
-    document.getElementById('mFacts').textContent = (d.facts || 0) + ' facts remembered';
-    document.getElementById('mCommands').textContent = d.commands || 43;
-
-    if (d.pairingCode) {
-      currentPairingCode = d.pairingCode;
-      document.getElementById('mPairCode').textContent = d.pairingCode;
-      var outBox = document.getElementById('pairOutput');
-      var codeVal = document.getElementById('pairCodeVal');
-      if (outBox && codeVal) {
-        outBox.style.display = 'block';
-        codeVal.textContent = d.pairingCode;
-      }
-    }
-
-    if (d.persona) {
-      document.getElementById('personaName').textContent = d.persona + ' ' + (d.personaEmoji || '');
-    }
-
-    // Activity Stream
-    var cBox = document.getElementById('cmdStream');
-    if (d.commandLog && d.commandLog.length > 0) {
-      cBox.innerHTML = '';
-      d.commandLog.slice(0, 8).forEach(function(c) {
-        cBox.innerHTML += 
-          '<div class="activity-item">' +
-            '<div style="display:flex;align-items:center;gap:12px">' +
-              '<div class="activity-avatar" style="background:var(--pastel-lavender);color:var(--pastel-lavender-text)">!' + c.cmd.charAt(0) + '</div>' +
-              '<div>' +
-                '<div style="font-weight:700;color:var(--text-dark)">!' + c.cmd + '</div>' +
-                '<div style="font-size:0.78rem;color:var(--text-muted)">User: ' + (c.user || 'Unknown') + '</div>' +
-              '</div>' +
-            '</div>' +
-            '<span class="chip chip-emerald">' + (c.status || 'ok') + '</span>' +
-          '</div>';
-      });
-    }
-  }).catch(function(){});
-
-  // QR Code & Pairing Code API
-  fetchAPI('/qrdata').then(function(d) {
-    var qrImg = document.getElementById('dashQrImg');
-    if (d.dataUrl) {
-      qrImg.src = d.dataUrl;
-      document.getElementById('qrWrapper').style.display = 'block';
-    }
-    if (d.pairingCode) {
-      currentPairingCode = d.pairingCode;
-      document.getElementById('mPairCode').textContent = d.pairingCode;
-      var outBox = document.getElementById('pairOutput');
-      var codeVal = document.getElementById('pairCodeVal');
-      if (outBox && codeVal) {
-        outBox.style.display = 'block';
-        codeVal.textContent = d.pairingCode;
-      }
-    }
-  }).catch(function(){});
-}
-
-function requestPairCodeAction() {
-  var phone = document.getElementById('pairPhoneNum').value.trim();
-  if (!phone) return alert('Please enter phone number with country code (e.g. 2348012345678)');
-  
-  var btn = document.getElementById('btnPairSubmit');
-  btn.disabled = true;
-  btn.textContent = 'Generating...';
-
-  fetchAPI('/pair', {
+function requestPairCode() {
+  var phone = document.getElementById('phoneNumberInput').value.trim();
+  if (!phone) { alert('Please enter your phone number with country code (e.g. 2348012345678)'); return; }
+  apiCall('/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
-  }).then(function(d) {
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Get Code';
-    if (d.code) {
-      showToast('Pairing code generated successfully!');
-      currentPairingCode = d.code;
-      document.getElementById('pairOutput').style.display = 'block';
-      document.getElementById('pairCodeVal').textContent = d.code;
-      document.getElementById('mPairCode').textContent = d.code;
+  }).then(function(res) {
+    if (res.code) {
+      showPairCode(res.code);
     } else {
-      alert(d.error || 'Failed to generate code');
+      alert(res.error || 'Failed to request pairing code');
     }
-  }).catch(function(e) {
-    btn.disabled = false;
-    btn.textContent = 'Get Code';
-    alert('Request error: ' + e.message);
+  }).catch(function(err) {
+    alert('Pairing request failed: ' + err.message);
   });
 }
 
-function requestPairCodeActionDirect() {
-  var phone = document.getElementById('pairPhoneNumDirect').value.trim();
-  if (!phone) return alert('Please enter phone number');
-  document.getElementById('pairPhoneNum').value = phone;
-  showTab('dashboard');
-  toggleConnectMode('pair');
-  requestPairCodeAction();
+function requestPairCodeTab() {
+  var phone = document.getElementById('phoneNumberInputTab').value.trim();
+  if (!phone) { alert('Please enter your phone number with country code'); return; }
+  apiCall('/pair', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phone })
+  }).then(function(res) {
+    if (res.code) {
+      document.getElementById('pairingCodeBoxTab').style.display = 'block';
+      document.getElementById('pairingCodeTextTab').textContent = res.code;
+    } else {
+      alert(res.error || 'Failed to request code');
+    }
+  });
 }
 
-function copyPairCodeAction() {
-  if (!currentPairingCode) return;
-  var clean = currentPairingCode.replace(/-/g, '').trim();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(clean).then(function() {
-      showToast('Copied pairing code: ' + clean);
-    });
+function showPairCode(code) {
+  document.getElementById('pairingCodeBox').style.display = 'block';
+  document.getElementById('pairingCodeText').textContent = code;
+}
+
+function copyPairCode() {
+  var code = document.getElementById('pairingCodeText').textContent.replace(/[^a-zA-Z0-9]/g, '');
+  navigator.clipboard.writeText(code).then(function() {
+    var btn = document.getElementById('btnCopyPair');
+    btn.textContent = '✅ Copied to Clipboard!';
+    setTimeout(function() { btn.textContent = '📋 Tap to Copy Code'; }, 2500);
+  });
+}
+
+function copyPairCodeTab() {
+  var code = document.getElementById('pairingCodeTextTab').textContent.replace(/[^a-zA-Z0-9]/g, '');
+  navigator.clipboard.writeText(code);
+}
+
+function pollQR() {
+  apiCall('/qrdata').then(function(res) {
+    var wrap = document.getElementById('qrImageWrapper');
+    if (res.dataUrl) {
+      wrap.innerHTML = '<img src="' + res.dataUrl + '" style="width:260px; height:260px; border-radius:14px; box-shadow:0 8px 20px rgba(0,0,0,0.1);">';
+    } else if (res.qr) {
+      wrap.innerHTML = '<div style="padding:20px; font-weight:700;">QR Ready. Generating image...</div>';
+    }
+    if (res.pairingCode && activePairMode === 'pair') {
+      showPairCode(res.pairingCode);
+    }
+  });
+}
+
+function updateStatusUI(d) {
+  // Connection status & beacons
+  var beacon = document.getElementById('statusBeacon');
+  var label = document.getElementById('statusLabel');
+  if (d.connected) {
+    beacon.className = 'status-beacon active';
+    label.textContent = 'Connected & Online';
+    document.getElementById('phoneUserTag').textContent = 'Logged in as ' + (d.user || 'Companion');
   } else {
-    var ta = document.createElement('textarea');
-    ta.value = clean;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('Copied pairing code: ' + clean);
+    beacon.className = 'status-beacon pairing';
+    label.textContent = d.pairingCode ? 'Pairing Active' : 'Disconnected';
+    document.getElementById('phoneUserTag').textContent = 'Waiting for WhatsApp pairing...';
+  }
+
+  // Uptime
+  document.getElementById('uptimeDisplay').textContent = d.uptime || '00:00:00';
+
+  // Live messages count
+  if (d.recentMessages && d.recentMessages.length) {
+    document.getElementById('msgCountDisplay').textContent = d.recentMessages.length;
+    renderMessages(d.recentMessages);
+  }
+
+  // Pairing code auto-display if available
+  if (d.pairingCode && !document.getElementById('phoneNumberInput').value) {
+    showPairCode(d.pairingCode);
   }
 }
 
-function refreshQrAction() {
-  fetchAPI('/qrdata').then(function(d) {
-    if (d.dataUrl) {
-      document.getElementById('dashQrImg').src = d.dataUrl;
-      showToast('QR code refreshed');
-    }
-  });
+function renderMessages(messages) {
+  var container = document.getElementById('liveMessagesList');
+  var fullContainer = document.getElementById('fullMessagesList');
+  if (!messages || !messages.length) return;
+
+  var html = messages.map(function(m) {
+    var isBot = m.type === 'outgoing' || m.from.includes('Bot');
+    var isSelf = m.type === 'self' || m.from.includes('Admin');
+    var avatarClass = isBot ? 'bot' : (isSelf ? 'self' : '');
+    var avatarLetter = isBot ? '🤖' : (isSelf ? '👑' : (m.from.charAt(0).toUpperCase() || 'U'));
+    var badgeType = isBot ? 'msg-badge-bot' : (isSelf ? 'msg-badge-self' : 'msg-badge-dm');
+    var badgeLabel = isBot ? 'Bot Reply' : (isSelf ? 'Self Chat' : 'Incoming');
+    var timeStr = m.time ? new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+    return '<div class="msg-bubble">' +
+      '<div class="msg-avatar ' + avatarClass + '">' + avatarLetter + '</div>' +
+      '<div class="msg-body">' +
+        '<div class="msg-meta">' +
+          '<div style="display:flex; align-items:center;">' +
+            '<span class="msg-sender">' + escapeHtml(m.from) + '</span>' +
+            '<span class="msg-badge ' + badgeType + '">' + badgeLabel + '</span>' +
+          '</div>' +
+          '<span class="msg-time">' + timeStr + '</span>' +
+        '</div>' +
+        '<div class="msg-text">' + escapeHtml(m.text) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  container.innerHTML = html;
+  if (fullContainer) fullContainer.innerHTML = html;
 }
 
-function resetSessionAction() {
-  if (!confirm('Clear session credentials and reset WhatsApp connection?')) return;
-  fetchAPI('/reset-session', { method: 'POST' }).then(function(d) {
-    showToast(d.message || 'Session reset successfully!');
-    setTimeout(refreshAll, 1500);
-  });
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function sendTestMsgAction() {
-  var num = prompt('Enter WhatsApp phone number with country code (or leave empty to message Owner):');
-  if (num === null) return;
-  fetchAPI('/test', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: num.trim() })
-  }).then(function(d) {
-    if (d.success) showToast('Test ping dispatched to ' + d.to);
-    else alert(d.error || 'Failed to dispatch test message');
-  });
+function updateKeysUI(keys) {
+  document.getElementById('aiProviderDisplay').textContent = (keys.provider || 'GROQ').toUpperCase();
+  document.getElementById('aiModelDisplay').textContent = (keys.model || 'Llama-3.3-70B') + ' • Active';
+
+  updateDot('dotGroq', 'badgeGroq', keys.groqSet);
+  updateDot('dotOpenai', 'badgeOpenai', keys.openaiSet);
+  updateDot('dotOpenrouter', 'badgeOpenrouter', keys.openrouterSet);
 }
 
-function loadUsersTable() {
-  fetchAPI('/users').then(function(users) {
-    var tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '';
-    (users || []).forEach(function(u) {
-      tbody.innerHTML += 
-        '<tr>' +
-          '<td><strong>' + (u.name || u.id) + '</strong><br><small style="color:var(--text-muted)">' + u.id + '</small></td>' +
-          '<td>' + (u.facts || 0) + '</td>' +
-          '<td>' + (u.messages || 0) + '</td>' +
-          '<td>' + new Date(u.lastSeen).toLocaleDateString() + '</td>' +
-        '</tr>';
-    });
-  });
-}
-
-function filterUsersTable() {
-  var input = document.getElementById('userFilterInput').value.toLowerCase();
-  var rows = document.querySelectorAll('#usersTableBody tr');
-  rows.forEach(function(row) {
-    row.style.display = row.textContent.toLowerCase().includes(input) ? '' : 'none';
-  });
-}
-
-function loadFeaturesStatus() {
-  fetchAPI('/features').then(function(d) {
-    var box = document.getElementById('featureStatusRes');
-    var coreFeats = ['schedule', 'ai', 'status', 'viewonce', 'antibot', 'stealth'];
-    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">';
-    coreFeats.forEach(function(f) {
-      var isDis = (d.disabledFeatures || []).includes(f);
-      html += 
-        '<div style="background:var(--canvas-bg);padding:18px 20px;border-radius:20px;display:flex;justify-content:space-between;align-items:center">' +
-          '<div><strong style="text-transform:capitalize;color:var(--text-dark)">' + f + '</strong><br><small style="color:var(--text-muted)">' + (isDis ? 'Disabled' : 'Active') + '</small></div>' +
-          '<label class="switch"><input type="checkbox" ' + (!isDis ? 'checked' : '') + ' onchange="toggleFeatureAction(\'' + f + '\', \'' + (!isDis ? 'disable' : 'enable') + '\')"><span class="slider"></span></label>' +
-        '</div>';
-    });
-    html += '</div>';
-    box.innerHTML = html;
-  });
-}
-
-function toggleFeatureAction(name, action) {
-  fetchAPI('/features/toggle', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name, action: action })
-  }).then(function() {
-    showToast(name + ' updated');
-    loadFeaturesStatus();
-  });
-}
-
-function loadKeysStatus() {
-  fetchAPI('/keys').then(function(d) {
-    document.getElementById('keyStatusRes').innerHTML = 
-      '<strong>Active Engine Provider:</strong> ' + (d.provider || 'Groq') + ' (' + (d.model || 'Default') + ')<br><br>' +
-      '• Groq: ' + (d.groqSet ? '<span class="chip chip-emerald">Configured</span>' : '<span class="chip chip-peach">Not Set</span>') + ' &nbsp; ' +
-      '• OpenAI: ' + (d.openaiSet ? '<span class="chip chip-emerald">Configured</span>' : '<span class="chip chip-dark">Optional</span>') + ' &nbsp; ' +
-      '• Brave Search: ' + (d.braveSet ? '<span class="chip chip-emerald">Configured</span>' : '<span class="chip chip-dark">Optional</span>');
-  });
-}
-
-function saveKeysAction() {
-  var groq = document.getElementById('keyGroq').value.trim();
-  var openai = document.getElementById('keyOpenAI').value.trim();
-  var openrouter = document.getElementById('keyOpenRouter').value.trim();
-  var brave = document.getElementById('keyBrave').value.trim();
-
-  fetchAPI('/keys', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ groq: groq, openai: openai, openrouter: openrouter, brave: brave })
-  }).then(function(d) {
-    if (d.success) {
-      showToast('API keys saved successfully!');
-      loadKeysStatus();
-    }
-  });
-}
-
-function testAiAction() {
-  showToast('Testing AI provider...');
-  fetchAPI('/test-ai', { method: 'POST' }).then(function(d) {
-    if (d.success) showToast('AI Test Passed: ' + d.provider);
-    else alert('AI Test failed: ' + d.error);
-  });
-}
-
-function loadAccessControlList() {
-  fetchAPI('/access').then(function(d) {
-    var box = document.getElementById('accessUsersList');
-    if (!d.users || d.users.length === 0) {
-      box.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem;margin-top:10px">No restricted user rules configured.</p>';
-      return;
-    }
-    var html = '<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">';
-    d.users.forEach(function(u) {
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--canvas-bg);border-radius:14px"><span><b>' + (u.name || u.number) + '</b> (' + u.number + ')</span><button onclick="removeAccessUserAction(\'' + u.number + '\')" class="action-btn-pill btn-white" style="color:#ef4444;padding:6px 14px;font-size:0.8rem">Revoke</button></div>';
-    });
-    html += '</div>';
-    box.innerHTML = html;
-  });
-}
-
-function addUserAccessAction() {
-  var num = document.getElementById('acPhoneNum').value.trim();
-  var name = document.getElementById('acUserName').value.trim();
-  if (!num) return alert('Enter phone number');
-  fetchAPI('/access/add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: num, name: name })
-  }).then(function() {
-    showToast('User added to access list');
-    document.getElementById('acPhoneNum').value = '';
-    document.getElementById('acUserName').value = '';
-    loadAccessControlList();
-  });
-}
-
-function removeAccessUserAction(num) {
-  if (!confirm('Revoke access for ' + num + '?')) return;
-  fetchAPI('/access/remove', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ number: num })
-  }).then(function() {
-    showToast('Access revoked');
-    loadAccessControlList();
-  });
-}
-
-function runSpeedTest() {
-  var btn = document.getElementById('speedTestBtn');
-  btn.disabled = true;
-  btn.textContent = 'Measuring...';
-  document.getElementById('spDl').textContent = '...';
-  document.getElementById('spUl').textContent = '...';
-  document.getElementById('spPing').textContent = '...';
-
-  fetchAPI('/speedtest', { method: 'POST' }).then(function(d) {
-    btn.disabled = false;
-    btn.textContent = 'Run Speed Test';
-    if (d.success) {
-      document.getElementById('spDl').textContent = (parseFloat(d.download_mbps || 45)).toFixed(1) + 'M';
-      document.getElementById('spUl').textContent = (parseFloat(d.upload_mbps || 15)).toFixed(1) + 'M';
-      document.getElementById('spPing').textContent = Math.round(d.ping_ms || 35) + 'ms';
-      showToast('Speed test complete');
-    }
-  }).catch(function() {
-    btn.disabled = false;
-    btn.textContent = 'Run Speed Test';
-  });
-}
-
-function copyLogsAction() {
-  var text = document.getElementById('rawLogBox').textContent;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() { showToast('Logs copied to clipboard'); });
+function updateDot(dotId, badgeId, isSet) {
+  var d = document.getElementById(dotId);
+  var b = document.getElementById(badgeId);
+  if (d) d.className = 'key-status-dot ' + (isSet ? 'active' : '');
+  if (b) {
+    b.textContent = isSet ? 'Active' : 'Not Set';
+    b.style.color = isSet ? '#10b981' : 'var(--text-subtle)';
   }
 }
 
-// Global Keyboard Shortcut (Cmd+K / Ctrl+K)
-window.addEventListener('keydown', function(e) {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-    e.preventDefault();
-    var inp = document.getElementById('globalSearchInput');
-    if (inp) { inp.focus(); inp.select(); }
+function saveGroqKey() {
+  var val = document.getElementById('inputGroqKey').value.trim();
+  if (!val) return;
+  apiCall('/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ groq: val })
+  }).then(function(res) {
+    alert('✅ Groq Key Saved and Activated!');
+    document.getElementById('inputGroqKey').value = '';
+    loadKeys();
+  });
+}
+
+function testAIEngine() {
+  var btn = event.currentTarget;
+  btn.textContent = 'Testing...';
+  apiCall('/test-ai', { method: 'POST' }).then(function(res) {
+    btn.innerHTML = '<span>⚡</span> Test AI';
+    if (res.success) {
+      alert('✅ AI Response OK (' + res.provider + '):
+
+"' + res.response + '"');
+    } else {
+      alert('❌ AI Test Failed: ' + (res.response || 'Unknown error'));
+    }
+  }).catch(function(err) {
+    btn.innerHTML = '<span>⚡</span> Test AI';
+    alert('AI Error: ' + err.message);
+  });
+}
+
+function promptResetSession() {
+  if (confirm('Are you sure you want to reset session? This clears credentials and generates a fresh pairing code.')) {
+    apiCall('/reset-session', { method: 'POST' }).then(function(res) {
+      alert('Session reset! Generating fresh pairing credentials.');
+      apiCall('/status').then(updateStatusUI);
+    });
+  }
+}
+
+function loadKeys() {
+  apiCall('/keys').then(updateKeysUI);
+}
+
+function loadFeatures() {
+  apiCall('/features').then(function(data) {
+    var c = data.commands || {};
+    var f = data.features || {};
+    var ab = document.getElementById('toggleAntiBan');
+    var ad = document.getElementById('toggleAntiDelete');
+    var vo = document.getElementById('toggleViewOnce');
+    var as = document.getElementById('toggleAutoStatus');
+    if (ab) ab.checked = !f.antiban;
+    if (ad) ad.checked = !f.antidelete;
+    if (vo) vo.checked = !f.viewonce;
+    if (as) as.checked = !f.autostatus;
+  });
+}
+
+function toggleFeature(name, enabled) {
+  apiCall('/features/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, action: enabled ? 'enable' : 'disable' })
+  });
+}
+
+function loadLogs() {
+  apiCall('/logs').then(function(data) {
+    if (data.logs && data.logs.length) {
+      var html = data.logs.slice(-60).map(function(l) {
+        var cls = l.includes('ERR') ? 'error' : (l.includes('WARN') ? 'warn' : '');
+        return '<div class="log-line ' + cls + '">' + escapeHtml(l) + '</div>';
+      }).join('');
+      document.getElementById('terminalOutput').innerHTML = html;
+    }
+  });
+}
+
+function clearLogs() {
+  document.getElementById('terminalOutput').innerHTML = '<div class="log-line success">[CLEARED] Terminal buffer wiped.</div>';
+}
+
+function refreshAll() {
+  apiCall('/status').then(updateStatusUI).catch(function() {});
+  if (activeTab === 'terminal') loadLogs();
+  if (activePairMode === 'qr') pollQR();
+}
+
+function initDashboard() {
+  apiCall('/status')
+    .then(function(data) {
+      document.getElementById('loginModal').style.display = 'none';
+      updateStatusUI(data);
+      loadKeys();
+      loadFeatures();
+      loadLogs();
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(refreshAll, 2500);
+    })
+    .catch(function(err) {
+      showLogin();
+    });
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  if (pwd) {
+    initDashboard();
+  } else {
+    showLogin();
   }
 });
-
-// Startup Boot
-if (pwd) {
-  document.getElementById('loginModal').style.display = 'none';
-  refreshAll();
-  setInterval(refreshAll, 3500);
-} else {
-  showLoginModal();
-}
 </script>
 </body>
 </html>

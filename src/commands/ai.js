@@ -1,6 +1,7 @@
 const aiService = require('../services/aiService');
 const { getUserContext, addToConversation } = require('../services/memoryService');
 const { getSystemPrompt } = require('../services/personaService');
+const { formatForWhatsApp } = require('../utils/whatsappFormatter');
 const config = require('../../config');
 
 function getProfessionalSystemPrompt(botName, userContext) {
@@ -47,10 +48,11 @@ module.exports = {
     }
 
     var result = await aiService.chatComplete([...systemMessages, { role: 'user', content: args }]);
-    await sock.sendMessage(sender, { text: result.text });
+    var replyText = formatForWhatsApp(result.text);
+    await sock.sendMessage(sender, { text: replyText });
 
     if (config.memory.enabled && isPrivate) {
-      addToConversation(sender, 'assistant', result.text);
+      addToConversation(sender, 'assistant', replyText);
     }
   },
 };

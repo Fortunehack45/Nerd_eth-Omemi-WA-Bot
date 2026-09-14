@@ -363,11 +363,8 @@ async function getYouTubeVideo(url) {
     if (targetFp && fs.existsSync(targetFp)) {
       var st0 = fs.statSync(targetFp);
       if (st0.size > 10000) {
-        log('YT Video — yt-dlp raw download success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing for WhatsApp Status...');
-        var optFp = await optimizeVideoForWhatsApp(targetFp);
-        var finalStat = fs.existsSync(optFp) ? fs.statSync(optFp) : st0;
-        log('YT Video — WhatsApp-ready (' + (finalStat.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: optFp, title: title, size: finalStat.size, quality: 'Full HD' };
+        log('YT Video — yt-dlp download success (' + (st0.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: targetFp, title: title, size: st0.size, quality: 'Full HD' };
       }
     }
   } catch (e) { log('YT Video yt-dlp fail: ' + e.message); }
@@ -424,7 +421,7 @@ async function downloadTikTokVideo(url) {
     var r1 = await axios.get('https://www.tikwm.com/api/', {
       params: { url: url, hd: 1 },
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 25000,
+      timeout: 8000,
     });
     if (r1.data && r1.data.code === 0 && r1.data.data) {
       var d = r1.data.data;
@@ -469,10 +466,8 @@ async function downloadTikTokVideo(url) {
         if (!dlUrl.startsWith('http')) dlUrl = 'https://www.tikwm.com' + dlUrl;
         var st1 = await downloadStream(dlUrl, fp);
         if (st1.size > 10000) {
-          log('TikTok — tikwm success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing for WhatsApp Status...');
-          var optTt = await optimizeVideoForWhatsApp(fp);
-          var stTtOpt = fs.existsSync(optTt) ? fs.statSync(optTt) : st1;
-          return { success: true, filePath: optTt, title: d.title || 'TikTok Video', size: stTtOpt.size, author: d.author?.nickname || 'TikTok', quality: 'HD' };
+          log('TikTok — tikwm success (' + (st1.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fp, title: d.title || 'TikTok Video', size: st1.size, author: d.author?.nickname || 'TikTok', quality: 'HD' };
         }
       }
     }
@@ -509,10 +504,8 @@ async function downloadTikTokVideo(url) {
       if (ttRes.video && ttRes.video.length > 0) {
         var stBtchTt = await downloadStream(ttRes.video[0], fp);
         if (stBtchTt.size > 10000) {
-          log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB). Optimizing...');
-          var optBtchTt = await optimizeVideoForWhatsApp(fp);
-          var stBtchOpt = fs.existsSync(optBtchTt) ? fs.statSync(optBtchTt) : stBtchTt;
-          return { success: true, filePath: optBtchTt, title: ttRes.title || 'TikTok Video', size: stBtchOpt.size, author: 'TikTok', quality: 'HD' };
+          log('TikTok — btch-downloader success (' + (stBtchTt.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fp, title: ttRes.title || 'TikTok Video', size: stBtchTt.size, author: 'TikTok', quality: 'HD' };
         }
       }
     }
@@ -540,10 +533,8 @@ async function downloadTikTokVideo(url) {
     if (targetTtFp && fs.existsSync(targetTtFp)) {
       var stYtTt = fs.statSync(targetTtFp);
       if (stYtTt.size > 10000) {
-        log('TikTok — yt-dlp success. Optimizing for WhatsApp Status...');
-        var optYtTt = await optimizeVideoForWhatsApp(targetTtFp);
-        var stFinalTt = fs.existsSync(optYtTt) ? fs.statSync(optYtTt) : stYtTt;
-        return { success: true, filePath: optYtTt, title: 'TikTok Video', size: stFinalTt.size, author: 'TikTok', quality: 'HD' };
+        log('TikTok — yt-dlp success (' + (stYtTt.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: targetTtFp, title: 'TikTok Video', size: stYtTt.size, author: 'TikTok', quality: 'HD' };
       }
     }
   } catch (e) { log('TikTok yt-dlp fail: ' + e.message); }
@@ -555,10 +546,8 @@ async function downloadTikTokVideo(url) {
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 10000) {
-        log('TikTok — Cobalt success. Optimizing...');
-        var optC = await optimizeVideoForWhatsApp(fp);
-        var stCOpt = fs.existsSync(optC) ? fs.statSync(optC) : stC;
-        return { success: true, filePath: optC, title: 'TikTok Video', size: stCOpt.size, author: 'TikTok', quality: 'HD' };
+        log('TikTok — Cobalt success (' + (stC.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fp, title: 'TikTok Video', size: stC.size, author: 'TikTok', quality: 'HD' };
       }
     }
   } catch (e) { log('TikTok Cobalt fail: ' + e.message); }
@@ -579,7 +568,43 @@ async function downloadInstagramMedia(url) {
   var outPattern = path.join(tempDir, 'instagram_' + ts + '.%(ext)s');
   var expectedMp4 = path.join(tempDir, 'instagram_' + ts + '.mp4');
 
-  // Engine 1: Native yt-dlp Executable (100% Guaranteed Success, Unlimited, HD)
+  // Engine 1: wf-instagram-url-direct API Scraper (High Speed, 1-2s delivery)
+  try {
+    log('Instagram — trying wf-instagram-url-direct...');
+    var { instagramGetUrl } = require('wf-instagram-url-direct');
+    var igRes = await instagramGetUrl(url);
+    if (igRes && igRes.url_list && igRes.url_list.length > 0) {
+      var directIgUrl = igRes.url_list[0];
+      var isDirectVid = !directIgUrl.match(/\.(jpg|jpeg|png|webp)/i);
+      var fpIg = isDirectVid ? path.join(tempDir, 'instagram_direct_' + ts + '.mp4') : path.join(tempDir, 'instagram_direct_' + ts + '.jpg');
+      var stIg = await downloadStream(directIgUrl, fpIg);
+      if (stIg.size > 3000) {
+        log('Instagram — wf-instagram-url-direct success (' + (stIg.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fpIg, title: 'Instagram Media', size: stIg.size, author: 'Instagram' };
+      }
+    }
+  } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
+
+  // Engine 2: btch-downloader direct Instagram scraper (1-2s delivery)
+  try {
+    log('Instagram — trying btch-downloader...');
+    var { igdl: btchIg } = require('btch-downloader');
+    var btchRes = await btchIg(url);
+    if (btchRes && Array.isArray(btchRes) && btchRes.length > 0) {
+      var directBtchUrl = btchRes[0].url || btchRes[0];
+      if (typeof directBtchUrl === 'string') {
+        var isVidBtch = !directBtchUrl.match(/\.(jpg|jpeg|png|webp)/i);
+        var fpBtch = isVidBtch ? path.join(tempDir, 'instagram_btch_' + ts + '.mp4') : path.join(tempDir, 'instagram_btch_' + ts + '.jpg');
+        var stBtch = await downloadStream(directBtchUrl, fpBtch);
+        if (stBtch.size > 3000) {
+          log('Instagram — btch-downloader success (' + (stBtch.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fpBtch, title: 'Instagram Media', size: stBtch.size, author: 'Instagram' };
+        }
+      }
+    }
+  } catch (e) { log('Instagram btch-downloader fail: ' + e.message); }
+
+  // Engine 3: Native yt-dlp Executable (Fallback with tight timeout)
   try {
     log('Instagram — trying native yt-dlp...');
     var resYt = await runYtDlp([
@@ -589,7 +614,7 @@ async function downloadInstagramMedia(url) {
       '--no-warnings',
       '--no-check-certificate',
       url
-    ], 35000);
+    ], 12000);
 
     if (fs.existsSync(expectedMp4)) {
       var stYt = fs.statSync(expectedMp4);
@@ -609,42 +634,6 @@ async function downloadInstagramMedia(url) {
       }
     }
   } catch (e) { log('Instagram yt-dlp fail: ' + e.message); }
-
-  // Engine 2: wf-instagram-url-direct API Scraper (High Speed)
-  try {
-    log('Instagram — trying wf-instagram-url-direct...');
-    var { instagramGetUrl } = require('wf-instagram-url-direct');
-    var igRes = await instagramGetUrl(url);
-    if (igRes && igRes.url_list && igRes.url_list.length > 0) {
-      var directIgUrl = igRes.url_list[0];
-      var isDirectVid = !directIgUrl.match(/\.(jpg|jpeg|png|webp)/i);
-      var fpIg = isDirectVid ? path.join(tempDir, 'instagram_direct_' + ts + '.mp4') : path.join(tempDir, 'instagram_direct_' + ts + '.jpg');
-      var stIg = await downloadStream(directIgUrl, fpIg);
-      if (stIg.size > 3000) {
-        log('Instagram — wf-instagram-url-direct success (' + (stIg.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpIg, title: 'Instagram Media', size: stIg.size, author: 'Instagram' };
-      }
-    }
-  } catch (e) { log('Instagram wf-direct fail: ' + e.message); }
-
-  // Engine 2: btch-downloader direct Instagram scraper
-  try {
-    log('Instagram — trying btch-downloader...');
-    var { igdl: btchIg } = require('btch-downloader');
-    var btchRes = await btchIg(url);
-    if (btchRes && Array.isArray(btchRes) && btchRes.length > 0) {
-      var directBtchUrl = btchRes[0].url || btchRes[0];
-      if (typeof directBtchUrl === 'string') {
-        var isVidBtch = !directBtchUrl.match(/\.(jpg|jpeg|png|webp)/i);
-        var fpBtch = isVidBtch ? path.join(tempDir, 'instagram_btch_' + ts + '.mp4') : path.join(tempDir, 'instagram_btch_' + ts + '.jpg');
-        var stBtch = await downloadStream(directBtchUrl, fpBtch);
-        if (stBtch.size > 3000) {
-          log('Instagram — btch-downloader success (' + (stBtch.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fpBtch, title: 'Instagram Media', size: stBtch.size, author: 'Instagram' };
-        }
-      }
-    }
-  } catch (e) { log('Instagram btch-downloader fail: ' + e.message); }
 
   // Engine 2: SnapSave API Scraper
   try {
@@ -866,7 +855,44 @@ async function downloadTwitterVideo(url) {
   var ts = Date.now();
   var fp = path.join(tempDir, 'twitter_' + ts + '.mp4');
 
-  // Engine 1: Native yt-dlp Executable (100% Guaranteed Success, Unlimited, HD)
+  // Normalize x.com to twitter.com for maximum extractor compatibility
+  var normalizedUrl = (url || '').trim().replace(/https?:\/\/(www\.)?x\.com/i, 'https://twitter.com');
+
+  // Engine 1: btch-downloader Twitter API (High Speed, 1-2s delivery)
+  try {
+    log('Twitter/X — trying btch-downloader...');
+    var { twitter: btchTwit } = require('btch-downloader');
+    var twRes = await btchTwit(normalizedUrl);
+    if (twRes && (twRes.url || (Array.isArray(twRes) && twRes.length > 0))) {
+      var directTwUrl = Array.isArray(twRes) ? twRes[0].url || twRes[0] : (twRes.url.hd || twRes.url.sd || twRes.url);
+      if (typeof directTwUrl === 'string') {
+        var stTw = await downloadStream(directTwUrl, fp);
+        if (stTw.size > 3000) {
+          log('Twitter/X — btch-downloader success (' + (stTw.size / 1024 / 1024).toFixed(1) + 'MB)');
+          return { success: true, filePath: fp, title: twRes.title || 'Twitter/X Video', size: stTw.size, author: 'Twitter', quality: 'HD' };
+        }
+      }
+    }
+  } catch (e) { log('Twitter/X btch-downloader fail: ' + e.message); }
+
+  // Engine 2: twitsave.com (Fast direct scraper)
+  try {
+    log('Twitter — trying twitsave...');
+    var r2 = await axios.get('https://twitsave.com/info?url=' + encodeURIComponent(normalizedUrl), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }, timeout: 8000
+    });
+    var $ = require('cheerio').load(r2.data || '');
+    var dlLink = $('a[href*=".mp4"]').first().attr('href');
+    if (dlLink) {
+      var st2 = await downloadStream(dlLink, fp);
+      if (st2.size > 5000) {
+        log('Twitter/X — twitsave success (' + (st2.size / 1024 / 1024).toFixed(1) + 'MB)');
+        return { success: true, filePath: fp, title: 'Twitter/X Video', size: st2.size, author: 'Twitter', quality: 'HD' };
+      }
+    }
+  } catch (e) { log('Twitter twitsave fail: ' + e.message); }
+
+  // Engine 3: Native yt-dlp Executable (Reliable fallback with tight timeout)
   try {
     log('Twitter/X — trying native yt-dlp...');
     var outPatternTw = path.join(tempDir, 'twitter_' + ts + '.%(ext)s');
@@ -877,14 +903,14 @@ async function downloadTwitterVideo(url) {
       '--no-playlist',
       '--no-warnings',
       '--no-check-certificate',
-      url
-    ], 35000);
+      normalizedUrl
+    ], 12000);
 
     if (fs.existsSync(expectedMp4Tw)) {
       var stYtTw = fs.statSync(expectedMp4Tw);
       if (stYtTw.size > 3000) {
         log('Twitter/X — yt-dlp success (' + (stYtTw.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: expectedMp4Tw, title: 'Twitter/X Video', size: stYtTw.size, author: 'Twitter' };
+        return { success: true, filePath: expectedMp4Tw, title: 'Twitter/X Video', size: stYtTw.size, author: 'Twitter', quality: 'HD' };
       }
     }
 
@@ -894,64 +920,31 @@ async function downloadTwitterVideo(url) {
       var stTw1 = fs.statSync(fpTw0);
       if (stTw1.size > 3000) {
         log('Twitter/X — yt-dlp file success (' + (stTw1.size / 1024 / 1024).toFixed(1) + 'MB)');
-        return { success: true, filePath: fpTw0, title: 'Twitter/X Video', size: stTw1.size, author: 'Twitter' };
+        return { success: true, filePath: fpTw0, title: 'Twitter/X Video', size: stTw1.size, author: 'Twitter', quality: 'HD' };
       }
     }
   } catch (e) { log('Twitter/X yt-dlp fail: ' + e.message); }
 
-  // Engine 2: btch-downloader Twitter API
-  try {
-    log('Twitter/X — trying btch-downloader...');
-    var { twitter: btchTwit } = require('btch-downloader');
-    var twRes = await btchTwit(url);
-    if (twRes && (twRes.url || (Array.isArray(twRes) && twRes.length > 0))) {
-      var directTwUrl = Array.isArray(twRes) ? twRes[0].url || twRes[0] : (twRes.url.hd || twRes.url.sd || twRes.url);
-      if (typeof directTwUrl === 'string') {
-        var stTw = await downloadStream(directTwUrl, fp);
-        if (stTw.size > 3000) {
-          log('Twitter/X — btch-downloader success (' + (stTw.size / 1024 / 1024).toFixed(1) + 'MB)');
-          return { success: true, filePath: fp, title: twRes.title || 'Twitter/X Video', size: stTw.size, author: 'Twitter' };
-        }
-      }
-    }
-  } catch (e) { log('Twitter/X btch-downloader fail: ' + e.message); }
-
-  // Engine 2: Cobalt
+  // Engine 4: Cobalt
   try {
     log('Twitter — trying Cobalt...');
-    var cobalt = await cobaltRequest(url, false);
+    var cobalt = await cobaltRequest(normalizedUrl, false);
     if (cobalt.success && cobalt.url) {
       var stC = await downloadStream(cobalt.url, fp);
       if (stC.size > 5000) {
-        return { success: true, filePath: fp, title: 'Twitter Video', size: stC.size, author: 'Twitter' };
+        return { success: true, filePath: fp, title: 'Twitter/X Video', size: stC.size, author: 'Twitter', quality: 'HD' };
       }
     }
   } catch (e) { log('Twitter Cobalt fail: ' + e.message); }
 
-  // Engine 3: twitsave
-  try {
-    log('Twitter — trying twitsave...');
-    var r2 = await axios.get('https://twitsave.com/info?url=' + encodeURIComponent(url), {
-      headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 15000
-    });
-    var $ = require('cheerio').load(r2.data || '');
-    var dlLink = $('a[href*=".mp4"]').first().attr('href');
-    if (dlLink) {
-      var st2 = await downloadStream(dlLink, fp);
-      if (st2.size > 5000) {
-        return { success: true, filePath: fp, title: 'Twitter Video', size: st2.size, author: 'Twitter' };
-      }
-    }
-  } catch (e) { log('Twitter twitsave fail: ' + e.message); }
-
-  // Engine 4: Twitter Photos / Image fallback (if tweet has pictures instead of video)
+  // Engine 5: Twitter Photos / Image fallback (if tweet has pictures instead of video)
   try {
     log('Twitter/X — checking for tweet photos...');
     await runYtDlp([
       '--write-thumbnail',
       '--skip-download',
       '-o', path.join(tempDir, 'twitter_photo_' + ts + '.%(ext)s'),
-      url
+      normalizedUrl
     ], 20000);
     var photoFiles = fs.readdirSync(tempDir).filter(function(f) { return f.startsWith('twitter_photo_' + ts); });
     if (photoFiles.length > 0) {

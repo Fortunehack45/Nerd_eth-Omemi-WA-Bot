@@ -10,6 +10,94 @@ const { isStealthEnabled, getSessionFingerprint, simulateOrganicPresence } = req
 
 const SESSION_DIR = path.join(__dirname, '..', 'sessions');
 
+let NodeCache = null;
+try {
+  const nc = require('@cacheable/node-cache');
+  NodeCache = nc.NodeCache || nc.default || nc;
+} catch (e) {}
+
+const MSG_STORE_FILE = path.join(__dirname, '..', 'storage', 'msg_store.json');
+let persistentMsgStore = new Map();
+
+function reviveBuffers(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return Buffer.from(obj.data);
+  }
+  for (var k in obj) {
+    obj[k] = reviveBuffers(obj[k]);
+  }
+  return obj;
+}
+
+function initMsgStore() {
+  try {
+    if (fs.existsSync(MSG_STORE_FILE)) {
+      var data = JSON.parse(fs.readFileSync(MSG_STORE_FILE, 'utf8'));
+      if (typeof data === 'object' && data !== null) {
+        for (var k in data) {
+          persistentMsgStore.set(k, reviveBuffers(data[k]));
+        }
+      }
+    }
+  } catch (e) {}
+}
+initMsgStore();
+
+var saveMsgStoreTimer = null;
+function persistMsgStore() {
+  if (saveMsgStoreTimer) return;
+  saveMsgStoreTimer = setTimeout(function() {
+    saveMsgStoreTimer = null;
+    try {
+      var dir = path.dirname(MSG_STORE_FILE);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      var obj = {};
+      var entries = Array.from(persistentMsgStore.entries()).slice(-2000);
+      for (var i = 0; i < entries.length; i++) {
+        obj[entries[i][0]] = entries[i][1];
+      }
+      fs.writeFileSync(MSG_STORE_FILE, JSON.stringify(obj), 'utf8');
+    } catch (e) {}
+  }, 1000);
+}
+
+function storeMessage(id, message) {
+  if (!id || !message) return;
+  persistentMsgStore.set(id, message);
+  if (!global.msgStore) global.msgStore = new Map();
+  global.msgStore.set(id, message);
+  persistMsgStore();
+}
+
+async function getStoredMessage(key) {
+  if (!key) return undefined;
+  var id = typeof key === 'string' ? key : key.id;
+  if (!id) return undefined;
+
+  if (persistentMsgStore.has(id)) {
+    return persistentMsgStore.get(id);
+  }
+  if (global.msgStore && global.msgStore.has(id)) {
+    return global.msgStore.get(id);
+  }
+  if (key.remoteJid && persistentMsgStore.has(key.remoteJid + ':' + id)) {
+    return persistentMsgStore.get(key.remoteJid + ':' + id);
+  }
+  try {
+    var { messageCache } = require('./services/antiDeleteService');
+    if (messageCache && messageCache.has(id)) {
+      var cached = messageCache.get(id);
+      if (cached?.content) return cached.content;
+    }
+  } catch (e) {}
+
+  return undefined;
+}
+
+const msgRetryCounterCache = NodeCache ? new NodeCache({ stdTTL: 3600, useClones: false }) : undefined;
+const userDevicesCache = NodeCache ? new NodeCache({ stdTTL: 300, useClones: false }) : undefined;
+
 let sock = null;
 let startTime = null;
 let presenceInterval = null;
@@ -119,7 +207,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1043857760] }));
 
-  var browser = Browsers.ubuntu('Chrome');
+  // WhatsApp Desktop on macOS is the most stable companion device identity for Multi-Device
+  var browser = Browsers.macOS('Desktop');
 
   sock = makeWASocket({
     version,
@@ -137,12 +226,32 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     fireInitQueries: true,
     emitOwnEvents: true,
     retryRequestOnFail: true,
+    msgRetryCounterCache,
+    userDevicesCache,
     printQRInTerminal: false,
-    getMessage: async (key) => {
-      if (global.msgStore && global.msgStore.has(key.id)) {
-        return global.msgStore.get(key.id);
+    patchMessageBeforeSending: (message) => {
+      const requiresPatch = !!(
+        message.buttonsMessage ||
+        message.templateMessage ||
+        message.listMessage
+      );
+      if (requiresPatch) {
+        message = {
+          viewOnceMessage: {
+            message: {
+              messageContextInfo: {
+                deviceListMetadataVersion: 2,
+                deviceListMetadata: {},
+              },
+              ...message
+            }
+          }
+        };
       }
-      return undefined;
+      return message;
+    },
+    getMessage: async (key) => {
+      return await getStoredMessage(key);
     },
   });
 
@@ -162,9 +271,18 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         for (let i = 0; i < 500; i++) global.botSentMessageIds.delete(ids[i]);
       }
       if (sent?.message) {
-        if (!global.msgStore) global.msgStore = new Map();
-        global.msgStore.set(sent.key.id, sent.message);
+        storeMessage(sent.key.id, sent.message);
+        if (sent.key.remoteJid) {
+          storeMessage(sent.key.remoteJid + ':' + sent.key.id, sent.message);
+        }
       }
+      try {
+        var textPreview = content?.text || content?.caption || (content?.video ? '🎬 Video' : (content?.image ? '📸 Image' : (content?.audio ? '🎵 Audio' : 'Media')));
+        if (textPreview) {
+          var { logMessage } = require('../server');
+          logMessage('🤖 Nerd Bot', textPreview, 'outgoing');
+        }
+      } catch (e) {}
     }
     return sent;
   };
@@ -285,16 +403,16 @@ async function startClient(messageHandler, statusHandler, onConnected) {
         }
 
         if (m.key?.id) {
-          if (!global.msgStore) global.msgStore = new Map();
-          global.msgStore.set(m.key.id, m.message);
-          if (global.msgStore.size > 2000) {
-            const keys = Array.from(global.msgStore.keys());
-            for (let i = 0; i < 500; i++) global.msgStore.delete(keys[i]);
-          }
+          storeMessage(m.key.id, m.message);
         }
 
         // Cache all messages immediately for anti-delete recovery
         try { cacheMessage(m, sock); } catch (e) {}
+
+        // Acknowledge read receipt to keep multi-device session synchronized
+        if (m.key) {
+          try { sock.readMessages([m.key]); } catch (e) {}
+        }
 
         // Never allow bot-sent programmatic messages to trigger command handler / AI loop
         if (m.key?.id && global.botSentMessageIds && global.botSentMessageIds.has(m.key.id)) {

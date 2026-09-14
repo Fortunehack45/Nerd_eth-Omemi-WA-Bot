@@ -347,10 +347,9 @@ async function handleMessage(sock, msg) {
 
   if (!messageText) return;
 
-  // 4. Log message activity to dashboard log
-  if (isPrivate && !msg.key?.fromMe) {
-    logMessage(msg.pushName || sender, messageText, 'message');
-  }
+  // 4. Log message activity to dashboard live feed
+  var fromDisplay = msg.key?.fromMe ? 'You (Admin)' : (msg.pushName || (sender.includes('@') ? sender.split('@')[0] : sender));
+  logMessage(fromDisplay, messageText, isPrivate ? (msg.key?.fromMe ? 'self' : 'dm') : 'group');
 
   // 5. Track user history silently if memory is enabled
   if (config.memory.enabled && isPrivate && !msg.key?.fromMe) {
@@ -370,11 +369,14 @@ async function handleMessage(sock, msg) {
   var trimmed = messageText.trim();
   var isCmd = isCommand(trimmed);
 
-  // CRITICAL: If the message is from the bot's own account (fromMe: true),
-  // ONLY process if it starts with the command prefix (e.g. !ping, !help).
-  // NEVER allow prefixless commands or emoji shortcuts on fromMe: true!
+  // If the message is from the bot's own account (fromMe: true),
+  // ONLY process if it starts with the command prefix (e.g. !ping, !help),
+  // OR if it's a URL download request from the owner in self-chat.
   if (msg.key?.fromMe && !isCmd) {
-    return;
+    var checkUrl = /(https?:\/\/[^\s]+)/gi;
+    if (!trimmed.match(checkUrl) || isFeatureDisabled('download')) {
+      return;
+    }
   }
 
   if (isCmd) {
@@ -424,7 +426,7 @@ async function handleMessage(sock, msg) {
   // - The user says "download this", "save this", "dl this", "get this", etc.
   // - OR the message consists primarily of the media URL
   // - OR the user quoted/replied to a message containing a media URL with a download request
-  if (!msg.key?.fromMe && !isFeatureDisabled('download')) {
+  if (!isFeatureDisabled('download')) {
     var urlRegex = /(https?:\/\/[^\s]+)/gi;
     var matchedUrls = trimmed.match(urlRegex) || [];
     var contextInfo = msg.message?.extendedTextMessage?.contextInfo;
