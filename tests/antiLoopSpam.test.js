@@ -141,4 +141,68 @@ test('Anti-Loop & Multi-Bot Spam Prevention Suite', async (t) => {
     assert.equal(isQuotingBotMessage(quotingBotMsg), true);
   });
 
+  await t.test('7. Zero-Width Bot Watermark Protocol prevents multi-bot ping-pong', () => {
+    const { BOT_WATERMARK, hasBotWatermark, addBotWatermark } = require('../src/utils/antiLoop');
+
+    assert.ok(BOT_WATERMARK, 'BOT_WATERMARK must be defined');
+    assert.equal(typeof BOT_WATERMARK, 'string');
+
+    const plainUserMsg = '!ping';
+    assert.equal(hasBotWatermark(plainUserMsg), false, 'User message must not have watermark');
+
+    const botReply = addBotWatermark('🏓 Pong! (45ms)');
+    assert.equal(hasBotWatermark(botReply), true, 'Bot reply must have watermark');
+    assert.ok(botReply.includes(BOT_WATERMARK));
+
+    // Quoting a watermarked bot message is detected
+    const quotingWatermark = {
+      message: {
+        extendedTextMessage: {
+          text: 'what?',
+          contextInfo: {
+            quotedMessage: {
+              conversation: '🏓 Pong! (45ms)' + BOT_WATERMARK
+            }
+          }
+        }
+      }
+    };
+    assert.equal(isQuotingBotMessage(quotingWatermark), true);
+  });
+
+  await t.test('8. Bot session processes owner commands and does not drop fromMe', async () => {
+    let processedMessage = null;
+    const { handleMessage } = require('../src/handlers/messageHandler');
+    const { loadCommands } = require('../src/handlers/commandHandler');
+    loadCommands();
+
+    const fakeSock = {
+      user: { id: '2348012345678:1@s.whatsapp.net', name: 'Owner' },
+      sendMessage: async (jid, content) => {
+        processedMessage = content;
+        return { key: { id: 'SENT_' + Date.now() } };
+      }
+    };
+
+    const ownerMsg = {
+      key: {
+        remoteJid: '2348012345678@s.whatsapp.net',
+        fromMe: true,
+        id: 'OWNER_PING_' + Date.now(),
+      },
+      message: {
+        conversation: '!ping'
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000)
+    };
+
+    await handleMessage(fakeSock, ownerMsg, {
+      sessionId: 'owner_session',
+      botSentMessageIds: new Set()
+    });
+
+    assert.ok(processedMessage, 'Owner !ping command must be executed');
+    assert.ok(processedMessage.text.includes('Pong'), 'Response must be Pong');
+  });
+
 });

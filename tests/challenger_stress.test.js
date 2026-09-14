@@ -259,7 +259,7 @@ describe('Challenger M1-1 Empirical Stress Test Suite', () => {
       // Session B should send and receive messages without error
       const sentMsg = await sockB.sendMessage('2349161239200@s.whatsapp.net', { text: 'Bot B alive' });
       assert.ok(sentMsg);
-      assert.strictEqual(sentMsg.message.text, 'Bot B alive');
+      assert.strictEqual(sentMsg.message.text.replace(/[\u200B\u200C]/g, ''), 'Bot B alive');
 
       sockB.simulateIncomingMessage('2349161239200@s.whatsapp.net', 'Reply to Bot B');
       const sessB = manager.sessions.get(idB);

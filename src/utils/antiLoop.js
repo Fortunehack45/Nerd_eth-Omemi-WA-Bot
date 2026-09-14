@@ -11,6 +11,31 @@ const chatReplyTimestamps = new Map();
 // Circuit breaker tripped cooldowns: Map<remoteJid, cooldownUntilTimestamp>
 const chatCooldowns = new Map();
 
+// Zero-width invisible watermark appended to every bot-generated message
+// \u200B (Zero-width space) + \u200C (Zero-width non-joiner) + \u200B (Zero-width space)
+const BOT_WATERMARK = '\u200B\u200C\u200B';
+
+/**
+ * Checks if text contains the invisible bot watermark.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function hasBotWatermark(text) {
+  if (!text || typeof text !== 'string') return false;
+  return text.includes(BOT_WATERMARK);
+}
+
+/**
+ * Adds the invisible bot watermark to text if not already present.
+ * @param {string} text
+ * @returns {string}
+ */
+function addBotWatermark(text) {
+  if (!text || typeof text !== 'string') return text;
+  if (text.includes(BOT_WATERMARK)) return text;
+  return text + BOT_WATERMARK;
+}
+
 // Known bot headers and message signatures
 const BOT_SIGNATURE_PATTERNS = [
   /^🤖/u,
@@ -99,7 +124,7 @@ function isQuotingBotMessage(msg) {
     || qInner?.videoMessage?.caption
     || '';
 
-  if (qText && isBotSignature(qText)) {
+  if (qText && (hasBotWatermark(qText) || isBotSignature(qText))) {
     return true;
   }
 
@@ -157,6 +182,9 @@ function recordChatReply(chatJid) {
 }
 
 module.exports = {
+  BOT_WATERMARK,
+  hasBotWatermark,
+  addBotWatermark,
   isBotSignature,
   isQuotingBotMessage,
   checkChatCircuitBreaker,

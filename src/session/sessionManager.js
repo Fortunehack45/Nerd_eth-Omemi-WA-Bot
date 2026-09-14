@@ -522,10 +522,21 @@ class SessionManager extends EventEmitter {
     sock.getMessage = getMessage;
     session.sock = sock;
 
-    // Outgoing message caching and deduplication
+    // Outgoing message caching, watermark injection, and deduplication
     if (typeof sock.sendMessage === 'function') {
       const origSendMessage = sock.sendMessage.bind(sock);
       sock.sendMessage = async (jid, content, options) => {
+        try {
+          const { addBotWatermark } = require('../utils/antiLoop');
+          if (content && typeof content === 'object') {
+            if (typeof content.text === 'string') {
+              content.text = addBotWatermark(content.text);
+            }
+            if (typeof content.caption === 'string') {
+              content.caption = addBotWatermark(content.caption);
+            }
+          }
+        } catch (e) {}
         const sent = await origSendMessage(jid, content, options);
         if (sent?.key?.id) {
           session.botSentMessageIds.add(sent.key.id);
@@ -659,26 +670,23 @@ class SessionManager extends EventEmitter {
             continue;
           }
 
-          // 2. Never process messages sent by ANY registered bot on this cluster (halts 2 bot users chatting loops)
-          const senderJid = m.key?.participant || m.key?.remoteJid;
-          if (senderJid && this.isClusterBot(senderJid)) {
-            continue;
-          }
-
-          // 3. Drop messages containing bot signatures / status formats
+          // 2. Extract message text/body for watermark and bot signature inspection
           const innerMsg = m.message?.ephemeralMessage?.message || m.message?.viewOnceMessage?.message || m.message?.viewOnceMessageV2?.message || m.message?.documentWithCaptionMessage?.message || m.message;
           const msgBody = innerMsg?.conversation || innerMsg?.extendedTextMessage?.text || innerMsg?.imageMessage?.caption || innerMsg?.videoMessage?.caption || '';
+
+          // 3. Drop messages containing zero-width bot watermark (halts any bot-to-bot recursion) or bot signatures
           if (msgBody) {
             try {
-              const { isBotSignature } = require('../utils/antiLoop');
-              if (isBotSignature(msgBody)) {
+              const { hasBotWatermark, isBotSignature } = require('../utils/antiLoop');
+              if (hasBotWatermark(msgBody) || isBotSignature(msgBody)) {
                 continue;
               }
             } catch (e) {}
           }
 
-          // 4. In group chats: de-duplicate so only 1 bot on the server handles the message/command
-          if (m.key?.remoteJid?.endsWith('@g.us')) {
+          // 4. In group chats: de-duplicate so only 1 sibling bot on the server handles the message/command
+          // If the message is from this bot's owner (fromMe: true), this bot always processes its owner's command
+          if (m.key?.remoteJid?.endsWith('@g.us') && !m.key?.fromMe) {
             const groupLockKey = m.key?.id || (msgBody ? msgBody.trim().substring(0, 50) : '');
             if (groupLockKey && !this.acquireGroupLock(m.key.remoteJid, groupLockKey)) {
               continue; // Handled by sibling bot session
@@ -686,10 +694,11 @@ class SessionManager extends EventEmitter {
           }
 
           // Filter out history syncs / stale messages older than session start
-          const isLiveNotify = (msg.type === 'notify');
+          // Allow both 'notify' and 'append' (for commands typed on linked phone with fromMe: true)
+          const isLive = (msg.type === 'notify') || (msg.type === 'append' && m.key?.fromMe);
           const msgTs = Number(m.messageTimestamp) || 0;
           const startedSec = Math.floor((session.startedAt || Date.now()) / 1000);
-          if (!isLiveNotify || (msgTs && startedSec && msgTs < (startedSec - 30))) {
+          if (!isLive || (msgTs && startedSec && msgTs < (startedSec - 60))) {
             continue;
           }
 

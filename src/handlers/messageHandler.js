@@ -7,7 +7,7 @@ const { isAntiBotEnabled, isBotMessage, logAntiBotEvent } = require('../services
 const { isAdmin } = require('../services/accessControl');
 const { saveAndForwardStatus } = require('../services/statusService');
 const { logMessage } = require('../../server');
-const { isBotSignature, isQuotingBotMessage, checkChatCircuitBreaker, recordChatReply } = require('../utils/antiLoop');
+const { hasBotWatermark, isBotSignature, isQuotingBotMessage, checkChatCircuitBreaker, recordChatReply } = require('../utils/antiLoop');
 
 const VIEWONCE_EMOJIS_NORM = [
   '❤', '💖', '💕', '♥', '😍', '🥰', '💓', '💗', '💘', '❣️', '💞', '🔥',
@@ -174,10 +174,8 @@ async function handleMessage(sock, msg, session) {
     if (session?.botSentMessageIds && session.botSentMessageIds.has(msg.key.id)) return;
   }
 
-  // Never process messages sent by ANY registered bot on this cluster (halts 2 bot users chatting loops)
-  var callerParticipant = msg.key?.participant || sender;
-  var mgr = session?.manager || (require('../session/sessionManager').getActiveSessionManager && require('../session/sessionManager').getActiveSessionManager());
-  if (mgr && typeof mgr.isClusterBot === 'function' && mgr.isClusterBot(callerParticipant)) {
+  // Drop any message containing the zero-width bot watermark (halts any bot-to-bot recursion)
+  if (messageText && hasBotWatermark(messageText)) {
     return;
   }
 

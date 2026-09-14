@@ -949,7 +949,7 @@ input:checked + .slider:before {
   text-align: center;
 }
 
-/* ── Sessions Grid & Cards (Multi-User Admin) ────────────────────────────── */
+/* ── Sessions Grid & Cards ────────────────────────────────────────────────── */
 .sessions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -1092,10 +1092,6 @@ input:checked + .slider:before {
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
     Connect WhatsApp
   </div>
-  <a class="nav-item" href="/admin" style="text-decoration:none; color:inherit;">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-    Admin Panel ↗
-  </a>
 
   <div class="sidebar-bottom-card">
     <div class="sidebar-bottom-title">Instant Bot Connect</div>
@@ -1124,9 +1120,6 @@ input:checked + .slider:before {
       <button class="btn-pill btn-pill-primary" onclick="switchTab('pairing')">
         <span>📲</span> Connect WhatsApp
       </button>
-      <a class="btn-pill btn-pill-subtle" href="/admin" style="text-decoration:none;">
-        <span>🔐</span> <span>Admin Panel ↗</span>
-      </a>
     </div>
   </header>
 
@@ -1500,11 +1493,9 @@ input:checked + .slider:before {
       </div>
     </div>
   </div>
-
-  <!-- TAB SESSIONS (Admin Only) -->
 </main>
 
-<!-- ── Mobile Floating Pill Dock (Inspired by Image 2) ──────────────────────── -->
+<!-- ── Mobile Floating Pill Dock ────────────────────────────────────────────── -->
 <nav id="mobile-dock">
   <button class="dock-btn active" id="dockBtnOverview" onclick="switchTab('overview')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -1514,20 +1505,10 @@ input:checked + .slider:before {
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
     <span>Pair</span>
   </button>
-  <a class="dock-btn" href="/admin" style="text-decoration:none; color:inherit;">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-    <span>Admin ↗</span>
-  </a>
 </nav>
 
 <!-- ── Dashboard Client Logic ──────────────────────────────────────────────── -->
-
-<!-- ── Dashboard Client Logic ──────────────────────────────────────────────── -->
 <script>
-var urlPwd = new URLSearchParams(window.location.search).get('pwd');
-var storedPwd = localStorage.getItem('dash_pwd');
-var pwd = urlPwd || storedPwd || '';
-var isAdmin = false;
 var activeTab = 'overview';
 var activePairMode = 'pair';
 var pollTimer = null;
@@ -1535,113 +1516,6 @@ var pairStreamSource = null;
 
 function getBaseUrl() {
   return (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:3000' : '';
-}
-
-function apiCall(endpoint, options) {
-  options = options || {};
-  var baseUrl = getBaseUrl();
-  var sep = endpoint.includes('?') ? '&' : '?';
-  var authParam = pwd ? ('pwd=' + encodeURIComponent(pwd)) : '';
-  var url = baseUrl + '/api' + endpoint + (authParam ? (sep + authParam) : '');
-  
-  return fetch(url, options).then(function(res) {
-    if (res.status === 401) {
-      if (isAdmin) {
-        setAdminMode(false);
-      }
-      throw new Error('Unauthorized');
-    }
-    return res.json();
-  });
-}
-
-function setAdminMode(active) {
-  isAdmin = active;
-  var btnAuth = document.getElementById('btnAdminAuth');
-  var btnText = document.getElementById('adminBtnText');
-  var btnIcon = document.getElementById('adminBtnIcon');
-  var adminNavs = document.querySelectorAll('.admin-only-nav, .admin-only-dock');
-
-  if (active) {
-    if (btnText) btnText.textContent = 'Admin Mode (Logout)';
-    if (btnIcon) btnIcon.textContent = '👑';
-    if (btnAuth) btnAuth.style.borderColor = '#10b981';
-    adminNavs.forEach(function(el) { el.style.display = 'flex'; });
-    loadAdminSessions();
-    loadKeys();
-    loadFeatures();
-    loadLogs();
-  } else {
-    if (btnText) btnText.textContent = 'Admin Access';
-    if (btnIcon) btnIcon.textContent = '🔐';
-    if (btnAuth) btnAuth.style.borderColor = 'var(--border-subtle)';
-    adminNavs.forEach(function(el) { el.style.display = 'none'; });
-    if (activeTab === 'sessions' || activeTab === 'features' || activeTab === 'terminal') {
-      switchTab('overview');
-    }
-  }
-}
-
-function toggleAdminModal() {
-  if (isAdmin) {
-    if (confirm('Logout of Admin Mode?')) {
-      logoutAdmin();
-    }
-    return;
-  }
-  showLogin();
-}
-
-function showLogin() {
-  var modal = document.getElementById('loginModal');
-  if (modal) modal.style.display = 'flex';
-  var input = document.getElementById('modalPwdInput');
-  if (input && !input.value) input.value = 'Omemi';
-}
-
-function closeAdminModal() {
-  var modal = document.getElementById('loginModal');
-  if (modal) modal.style.display = 'none';
-  var errEl = document.getElementById('modalErr');
-  if (errEl) errEl.style.display = 'none';
-}
-
-function logoutAdmin() {
-  pwd = '';
-  localStorage.removeItem('dash_pwd');
-  setAdminMode(false);
-  pollPublicStats();
-}
-
-function submitPassword() {
-  var inputEl = document.getElementById('modalPwdInput');
-  var p = (inputEl ? inputEl.value : '').trim();
-  if (!p) p = 'Omemi';
-  var errEl = document.getElementById('modalErr');
-  if (errEl) errEl.style.display = 'none';
-
-  var testUrl = getBaseUrl() + '/api/status?pwd=' + encodeURIComponent(p);
-  fetch(testUrl).then(function(res) {
-    if (!res.ok) throw new Error('Unauthorized');
-    return res.json();
-  }).then(function(data) {
-    pwd = p;
-    localStorage.setItem('dash_pwd', pwd);
-    closeAdminModal();
-    setAdminMode(true);
-    updateStatusUI(data);
-  }).catch(function() {
-    if (errEl) {
-      errEl.style.display = 'block';
-      errEl.textContent = 'Invalid Password. Enter "Omemi" or verify DASHBOARD_PASSWORD.';
-    }
-  });
-}
-
-function loginWithDefault() {
-  var inputEl = document.getElementById('modalPwdInput');
-  if (inputEl) inputEl.value = 'Omemi';
-  submitPassword();
 }
 
 function switchTab(tabId) {
@@ -1707,7 +1581,6 @@ function requestPairCode(fromTab) {
   var oldText = btn ? btn.innerHTML : 'Generate Code';
   if (btn) btn.innerHTML = '<span>⏳</span> Requesting...';
 
-  // Public POST /api/pair requires NO password
   var baseUrl = getBaseUrl();
   fetch(baseUrl + '/api/pair', {
     method: 'POST',
@@ -1782,7 +1655,6 @@ function listenPairStream(sessionId, phone) {
         pairStreamSource = null;
       }
       pollPublicStats();
-      if (isAdmin) loadAdminSessions();
     });
   } catch (err) {
     console.warn('Pairing stream setup error:', err);
@@ -1857,94 +1729,9 @@ function pollPublicStats() {
   }).catch(function() {});
 }
 
-function loadAdminSessions() {
-  if (!isAdmin) return;
-  checkFirebaseStatus();
-  var loadingEl = document.getElementById('adminSessionsLoading');
-  var emptyEl = document.getElementById('adminSessionsEmpty');
-  var listEl = document.getElementById('adminSessionsList');
-  if (loadingEl) loadingEl.style.display = 'block';
-
-  apiCall('/admin/sessions').then(function(sessions) {
-    if (loadingEl) loadingEl.style.display = 'none';
-    var countBadge = document.getElementById('sessionsBadgeCount');
-    if (countBadge) countBadge.textContent = sessions.length;
-
-    if (!sessions || sessions.length === 0) {
-      if (emptyEl) emptyEl.style.display = 'block';
-      if (listEl) listEl.style.display = 'none';
-      return;
-    }
-
-    if (emptyEl) emptyEl.style.display = 'none';
-    if (listEl) {
-      listEl.style.display = 'grid';
-      listEl.innerHTML = sessions.map(function(s) {
-        var isConn = s.status === 'connected';
-        var badgeCls = isConn ? 'session-badge-connected' : 'session-badge-disconnected';
-        var badgeText = isConn ? '🟢 Connected' : '⚪ ' + (s.status || 'Offline');
-        var uptimeStr = s.uptime ? (Math.floor(s.uptime / 60) + 'm uptime') : 'Active';
-
-        return '<div class="session-card">' +
-          '<div class="session-card-header">' +
-            '<div class="session-phone-title">' + escapeHtml(s.maskedPhone || s.id) + '</div>' +
-            '<span class="' + badgeCls + '">' + badgeText + '</span>' +
-          '</div>' +
-          '<div class="session-meta-row">' +
-            '<span>💬 ' + (s.messagesCount || 0) + ' messages</span>' +
-            '<span>⏱️ ' + uptimeStr + '</span>' +
-          '</div>' +
-          '<div class="session-actions-row">' +
-            '<button class="btn-sm-action btn-sm-danger" onclick="disconnectAdminSession(\'' + escapeHtml(s.id) + '\')">🔌 Disconnect</button>' +
-            '<button class="btn-sm-action" style="color:#64748b;" onclick="deleteAdminSession(\'' + escapeHtml(s.id) + '\')">🗑️ Delete</button>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-  }).catch(function(err) {
-    if (loadingEl) loadingEl.style.display = 'none';
-  });
-}
-
-function disconnectAdminSession(id) {
-  if (!confirm('Disconnect session ' + id + '?')) return;
-  apiCall('/admin/sessions/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' })
-    .then(function() {
-      alert('Session disconnected');
-      loadAdminSessions();
-      pollPublicStats();
-    }).catch(function(err) {
-      alert('Error disconnecting session: ' + err.message);
-    });
-}
-
-function deleteAdminSession(id) {
-  if (!confirm('Delete session ' + id + ' and wipe credentials?')) return;
-  apiCall('/admin/sessions/' + encodeURIComponent(id), { method: 'DELETE' })
-    .then(function() {
-      alert('Session deleted');
-      loadAdminSessions();
-      pollPublicStats();
-    }).catch(function(err) {
-      alert('Error deleting session: ' + err.message);
-    });
-}
-
-function restartAllSessions() {
-  if (!confirm('Restart all active WhatsApp bot sessions?')) return;
-  apiCall('/admin/sessions/restart-all', { method: 'POST' })
-    .then(function() {
-      alert('Restart initiated for all sessions');
-      loadAdminSessions();
-    }).catch(function(err) {
-      alert('Restart error: ' + err.message);
-    });
-}
-
 function pollQR() {
   var baseUrl = getBaseUrl();
-  var qrEndpoint = isAdmin ? (baseUrl + '/api/qrdata?pwd=' + encodeURIComponent(pwd || '')) : (baseUrl + '/api/pair/qr');
-  fetch(qrEndpoint)
+  fetch(baseUrl + '/api/pair/qr')
     .then(function(r) { return r.json(); })
     .then(function(res) {
       var wrap1 = document.getElementById('qrImageWrapper');
@@ -1969,205 +1756,15 @@ function pollQR() {
 function refreshQRCode() {
   var btn = document.getElementById('btnRefreshQr');
   if (btn) btn.innerHTML = '<span>⏳</span> Refreshing...';
-  if (isAdmin) {
-    apiCall('/refresh-qr', { method: 'POST' }).then(function() {
-      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
-      setTimeout(pollQR, 1000);
-    }).catch(function() {
-      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
-    });
-  } else {
-    setTimeout(function() {
-      if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
-      pollQR();
-    }, 1000);
-  }
-}
-
-function checkFirebaseStatus() {
-  if (!isAdmin) return;
-  apiCall('/admin/firebase/status').then(function(res) {
-    var badge = document.getElementById('firebaseStatusBadge');
-    if (badge) {
-      if (res.available) {
-        badge.style.background = '#ecfdf5';
-        badge.style.color = '#065f46';
-        badge.textContent = '🔥 Cloud Synced (' + (res.mode || 'REST') + ')';
-      } else {
-        badge.style.background = '#fef3c7';
-        badge.style.color = '#92400e';
-        badge.textContent = '⚡ Local Disk Active';
-      }
-    }
-  }).catch(function() {});
-}
-
-function syncFirebaseSessions() {
-  if (!isAdmin) return;
-  apiCall('/admin/firebase/sync', { method: 'POST' }).then(function(res) {
-    alert(res.message || 'Firebase sync complete');
-    checkFirebaseStatus();
-  }).catch(function(err) {
-    alert('Firebase sync note: ' + err.message);
-  });
-}
-
-function updateStatusUI(d) {
-  var bDisplay = document.getElementById('activeBotsDisplay');
-  if (bDisplay) bDisplay.textContent = (d.activeBots !== undefined ? d.activeBots : (d.connected ? 1 : 0)) + ' Bots';
-
-  var mDisplay = document.getElementById('msgCountDisplay');
-  if (mDisplay) mDisplay.textContent = d.messagesProcessed || d.commands || 0;
-
-  var uDisplay = document.getElementById('uptimeDisplay');
-  if (uDisplay) uDisplay.textContent = d.uptime || 'Online';
-
-  if (d.recentMessages && d.recentMessages.length) {
-    renderMessages(d.recentMessages);
-  }
-}
-
-function renderMessages(messages) {
-  var container = document.getElementById('liveMessagesList');
-  var fullContainer = document.getElementById('fullMessagesList');
-  if (!messages || !messages.length) return;
-
-  var html = messages.map(function(m) {
-    var isBot = m.type === 'outgoing' || (m.from && m.from.includes('Bot'));
-    var isSelf = m.type === 'self' || (m.from && m.from.includes('Admin'));
-    var avatarClass = isBot ? 'bot' : (isSelf ? 'self' : '');
-    var avatarLetter = isBot ? '🤖' : (isSelf ? '👑' : (m.from.charAt(0).toUpperCase() || 'U'));
-    var badgeType = isBot ? 'msg-badge-bot' : (isSelf ? 'msg-badge-self' : 'msg-badge-dm');
-    var badgeLabel = isBot ? 'Bot Reply' : (isSelf ? 'Self Chat' : 'Incoming');
-    var timeStr = m.time ? new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-
-    return '<div class="msg-bubble">' +
-      '<div class="msg-avatar ' + avatarClass + '">' + avatarLetter + '</div>' +
-      '<div class="msg-body">' +
-        '<div class="msg-meta">' +
-          '<div style="display:flex; align-items:center;">' +
-            '<span class="msg-sender">' + escapeHtml(m.from) + '</span>' +
-            '<span class="msg-badge ' + badgeType + '">' + badgeLabel + '</span>' +
-          '</div>' +
-          '<span class="msg-time">' + timeStr + '</span>' +
-        '</div>' +
-        '<div class="msg-text">' + escapeHtml(m.text) + '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  if (container) container.innerHTML = html;
-  if (fullContainer) fullContainer.innerHTML = html;
+  setTimeout(function() {
+    if (btn) btn.innerHTML = '<span>🔄</span> Refresh QR Code';
+    pollQR();
+  }, 1000);
 }
 
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function updateKeysUI(keys) {
-  document.getElementById('aiProviderDisplay').textContent = (keys.provider || 'GROQ').toUpperCase();
-  document.getElementById('aiModelDisplay').textContent = (keys.model || 'Llama-3.3-70B') + ' • Active';
-
-  updateDot('dotGroq', 'badgeGroq', keys.groqSet);
-  updateDot('dotOpenai', 'badgeOpenai', keys.openaiSet);
-  updateDot('dotOpenrouter', 'badgeOpenrouter', keys.openrouterSet);
-}
-
-function updateDot(dotId, badgeId, isSet) {
-  var d = document.getElementById(dotId);
-  var b = document.getElementById(badgeId);
-  if (d) d.className = 'key-status-dot ' + (isSet ? 'active' : '');
-  if (b) {
-    b.textContent = isSet ? 'Active' : 'Not Set';
-    b.style.color = isSet ? '#10b981' : 'var(--text-subtle)';
-  }
-}
-
-function saveGroqKey() {
-  var val = document.getElementById('inputGroqKey').value.trim();
-  if (!val) return;
-  apiCall('/keys', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ groq: val })
-  }).then(function(res) {
-    alert('✅ Groq Key Saved and Activated!');
-    document.getElementById('inputGroqKey').value = '';
-    loadKeys();
-  });
-}
-
-function testAIEngine() {
-  var btn = event.currentTarget;
-  btn.textContent = 'Testing...';
-  apiCall('/test-ai', { method: 'POST' }).then(function(res) {
-    btn.innerHTML = '<span>⚡</span> Test AI';
-    if (res.success) {
-      alert('✅ AI Response OK (' + res.provider + '):\n\n"' + res.response + '"');
-    } else {
-      alert('❌ AI Test Failed: ' + (res.response || 'Unknown error'));
-    }
-  }).catch(function(err) {
-    btn.innerHTML = '<span>⚡</span> Test AI';
-    alert('AI Error: ' + err.message);
-  });
-}
-
-function promptResetSession() {
-  if (confirm('Are you sure you want to reset and disconnect?')) {
-    apiCall('/reset-session', { method: 'POST' }).then(function() {
-      alert('Session reset!');
-      pollPublicStats();
-      if (isAdmin) loadAdminSessions();
-    });
-  }
-}
-
-function loadKeys() {
-  if (!isAdmin) return;
-  apiCall('/keys').then(updateKeysUI).catch(function() {});
-}
-
-function loadFeatures() {
-  if (!isAdmin) return;
-  apiCall('/features').then(function(data) {
-    var f = data.features || {};
-    var ab = document.getElementById('toggleAntiBan');
-    var ad = document.getElementById('toggleAntiDelete');
-    var vo = document.getElementById('toggleViewOnce');
-    var as = document.getElementById('toggleAutoStatus');
-    if (ab) ab.checked = !f.antiban;
-    if (ad) ad.checked = !f.antidelete;
-    if (vo) vo.checked = !f.viewonce;
-    if (as) as.checked = !f.autostatus;
-  }).catch(function() {});
-}
-
-function toggleFeature(name, enabled) {
-  if (!isAdmin) return;
-  apiCall('/features/toggle', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name, action: enabled ? 'enable' : 'disable' })
-  }).catch(function() {});
-}
-
-function loadLogs() {
-  if (!isAdmin) return;
-  apiCall('/logs').then(function(data) {
-    if (data.logs && data.logs.length) {
-      var html = data.logs.slice(-60).map(function(l) {
-        var cls = l.includes('ERR') ? 'error' : (l.includes('WARN') ? 'warn' : '');
-        return '<div class="log-line ' + cls + '">' + escapeHtml(l) + '</div>';
-      }).join('');
-      document.getElementById('terminalOutput').innerHTML = html;
-    }
-  }).catch(function() {});
-}
-
-function clearLogs() {
-  document.getElementById('terminalOutput').innerHTML = '<div class="log-line success">[CLEARED] Terminal buffer wiped.</div>';
 }
 
 function refreshAll() {
@@ -2183,12 +1780,6 @@ function initDashboard() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  var modalInput = document.getElementById('modalPwdInput');
-  if (modalInput) {
-    modalInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') submitPassword();
-    });
-  }
   var phone1 = document.getElementById('phoneNumberInput');
   if (phone1) {
     phone1.addEventListener('keydown', function(e) {
