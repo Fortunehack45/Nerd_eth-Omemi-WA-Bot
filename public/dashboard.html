@@ -948,6 +948,124 @@ input:checked + .slider:before {
   border: 1px solid var(--border-subtle);
   text-align: center;
 }
+
+/* ── Sessions Grid & Cards (Multi-User Admin) ────────────────────────────── */
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.session-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+.session-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.session-phone-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-family: 'JetBrains Mono', monospace;
+}
+.session-badge-connected {
+  background: var(--pastel-mint-bg);
+  color: var(--pastel-mint-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+.session-badge-disconnected {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+.session-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.session-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.btn-sm-action {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card-subtle);
+  transition: all 0.14s ease;
+}
+.btn-sm-action:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+.btn-sm-danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.btn-sm-danger:hover {
+  background: #fef2f2;
+}
+
+/* ── Live Pairing Status Indicator ───────────────────────────────────────── */
+.pair-stream-banner {
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-top: 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+.pair-stream-connecting {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+.pair-stream-waiting {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.pair-stream-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.pair-stream-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
 </style>
 </head>
 <body>
@@ -968,30 +1086,34 @@ input:checked + .slider:before {
   <div class="nav-section-label">Main Menu</div>
   <div class="nav-item active" onclick="switchTab('overview')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
-    Dashboard
-  </div>
-  <div class="nav-item" onclick="switchTab('messages')">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
-    Live Messages
+    Dashboard Hub
   </div>
   <div class="nav-item" onclick="switchTab('pairing')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/></svg>
-    Pair WhatsApp
+    Connect WhatsApp
   </div>
-  <div class="nav-item" onclick="switchTab('features')">
+  <div class="nav-item admin-only-nav" id="navItemSessions" style="display:none;" onclick="switchTab('sessions')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+    Active Sessions <span class="brand-badge" id="sessionsBadgeCount" style="margin-left:auto;">0</span>
+  </div>
+  <div class="nav-item admin-only-nav" id="navItemMessages" style="display:none;" onclick="switchTab('messages')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+    Live Messages
+  </div>
+  <div class="nav-item admin-only-nav" id="navItemFeatures" style="display:none;" onclick="switchTab('features')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
     Security & Features
   </div>
-  <div class="nav-item" onclick="switchTab('terminal')">
+  <div class="nav-item admin-only-nav" id="navItemTerminal" style="display:none;" onclick="switchTab('terminal')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 3-3 3m4.5 0h4.5m-11.25 6h15a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25z"/></svg>
     Terminal Logs
   </div>
 
   <div class="sidebar-bottom-card">
-    <div class="sidebar-bottom-title">Link Companion Phone</div>
-    <div class="sidebar-bottom-sub">Stay connected 24/7 with zero multi-device drops.</div>
+    <div class="sidebar-bottom-title">Instant Bot Connect</div>
+    <div class="sidebar-bottom-sub">Connect any WhatsApp number via pairing code with zero hosting fees.</div>
     <button class="sidebar-action-btn" onclick="switchTab('pairing')">
-      <span>🔢</span> Pair with Phone
+      <span>🔢</span> Connect My Phone
     </button>
   </div>
 </aside>
@@ -1002,71 +1124,71 @@ input:checked + .slider:before {
   <!-- Top Header -->
   <header class="top-header">
     <div class="header-greeting-box">
-      <h1 id="welcomeTitle">Dashboard</h1>
-      <p id="welcomeSub">Plan, monitor, and automate your WhatsApp bot with ease.</p>
+      <h1 id="welcomeTitle">Nerd Bot Cloud Hub</h1>
+      <p id="welcomeSub">Multi-User WhatsApp Bot Hosting • Zero Deployment Required</p>
     </div>
 
     <div class="header-controls">
       <div class="status-pill">
         <span class="status-beacon" id="statusBeacon"></span>
-        <span id="statusLabel">Checking connection...</span>
+        <span id="statusLabel">Loading platform...</span>
       </div>
-      <button class="btn-pill btn-pill-primary" onclick="testAIEngine()">
-        <span>⚡</span> Test AI
+      <button class="btn-pill btn-pill-primary" onclick="switchTab('pairing')">
+        <span>📲</span> Connect WhatsApp
       </button>
-      <button class="btn-pill btn-pill-subtle" onclick="promptResetSession()">
-        <span>🔄</span> Reset
+      <button class="btn-pill btn-pill-subtle" id="btnAdminAuth" onclick="toggleAdminModal()">
+        <span id="adminBtnIcon">🔐</span> <span id="adminBtnText">Admin Access</span>
       </button>
     </div>
   </header>
 
   <!-- 4-Card Executive Metric Row (Donezo Palette) -->
   <section class="hero-grid">
-    <!-- Card 1: Hero Emerald (Active Status & Uptime) -->
+    <!-- Card 1: Active WhatsApp Bots -->
     <div class="stat-card stat-card-hero-green">
       <div class="stat-card-header">
-        <span class="stat-label">Connection & Uptime</span>
+        <span class="stat-label">Active WhatsApp Bots</span>
         <div class="stat-arrow-btn">↗</div>
       </div>
       <div>
-        <div class="stat-value" id="uptimeDisplay">00:00:00</div>
-        <div class="stat-subtext" id="phoneUserTag">Connecting to WhatsApp...</div>
+        <div class="stat-value" id="activeBotsDisplay">0 Bots</div>
+        <div class="stat-subtext" id="phoneUserTag">🟢 Connected to Cloud Hub</div>
       </div>
     </div>
 
     <!-- Card 2: Messages Processed -->
     <div class="stat-card">
       <div class="stat-card-header">
-        <span class="stat-label">Live Traffic</span>
+        <span class="stat-label">Platform Messages</span>
         <div class="stat-arrow-btn">↗</div>
       </div>
       <div>
         <div class="stat-value" id="msgCountDisplay">0</div>
-        <div class="stat-subtext">Messages stream recorded</div>
+        <div class="stat-subtext" id="msgCountSub">Multi-user traffic recorded</div>
       </div>
     </div>
 
     <!-- Card 3: Active AI Engine (Pastel Lavender) -->
     <div class="stat-card stat-card-lavender">
       <div class="stat-card-header">
-        <span class="stat-label">AI Engine</span>
+        <span class="stat-label">AI Intelligence</span>
         <div class="stat-arrow-btn">↗</div>
       </div>
       <div>
-        <div class="stat-value" id="aiProviderDisplay">GROQ</div>
-        <div class="stat-subtext" id="aiModelDisplay">Llama-3.3-70B • 720ms</div>
+        <div class="stat-value" id="aiProviderDisplay">GROQ / OPENAI</div>
+        <div class="stat-subtext" id="aiModelDisplay">Llama-3.3-70B • High Speed</div>
       </div>
     </div>
 
-    <!-- Card 4: Anti-Ban & Shield (Pastel Peach) -->
+    <!-- Card 4: Platform Status & Privacy (Pastel Peach) -->
     <div class="stat-card stat-card-peach">
       <div class="stat-card-header">
-        <span class="stat-label">Protection Shield</span>
+        <span class="stat-label">Privacy & Shield</span>
         <div class="stat-arrow-btn">↗</div>
       </div>
       <div>
-        <div class="stat-value">100%</div>
-        <div class="stat-subtext">macOS Desktop Fingerprint</div>
+        <div class="stat-value" id="uptimeDisplay">Online</div>
+        <div class="stat-subtext">Zero Phone Number Exposure</div>
       </div>
     </div>
   </section>
@@ -1391,6 +1513,37 @@ input:checked + .slider:before {
     </div>
   </div>
 
+  <!-- TAB SESSIONS (Admin Only) -->
+  <div id="tab-sessions" style="display:none;">
+    <div class="content-card">
+      <div class="card-header-row">
+        <div class="card-title-group">
+          <h2>Active Connected Bots</h2>
+          <p>Multi-user WhatsApp sockets running concurrently. All numbers are masked to guarantee complete privacy.</p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-pill btn-pill-subtle" onclick="loadAdminSessions()">
+            <span>🔄</span> Refresh
+          </button>
+          <button class="btn-pill btn-pill-subtle" style="color:#ef4444;" onclick="restartAllSessions()">
+            <span>⚡</span> Restart All
+          </button>
+        </div>
+      </div>
+
+      <div id="adminSessionsLoading" style="text-align:center; padding:30px; color:var(--text-muted);">
+        Loading active sessions...
+      </div>
+
+      <div id="adminSessionsEmpty" style="display:none; text-align:center; padding:30px; color:var(--text-muted);">
+        No active user bots connected yet. Users can connect from the home page.
+      </div>
+
+      <div id="adminSessionsList" class="sessions-grid" style="display:none;">
+      </div>
+    </div>
+  </div>
+
   <!-- TAB 4: FEATURES VIEW -->
   <div id="tab-features" style="display:none;">
     <div class="content-card">
@@ -1430,19 +1583,22 @@ input:checked + .slider:before {
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
     <span>Home</span>
   </button>
-  <button class="dock-btn" id="dockBtnMessages" onclick="switchTab('messages')">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-    <span>Chats</span>
-  </button>
   <button class="dock-btn" id="dockBtnPair" onclick="switchTab('pairing')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
     <span>Pair</span>
   </button>
-  <button class="dock-btn" id="dockBtnFeatures" onclick="switchTab('features')">
+  <button class="dock-btn admin-only-dock" id="dockBtnSessions" style="display:none;" onclick="switchTab('sessions')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    <span>Bots</span>
+  </button>
+  <button class="dock-btn admin-only-dock" id="dockBtnMessages" style="display:none;" onclick="switchTab('messages')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+    <span>Chats</span>
+  <button class="dock-btn admin-only-dock" id="dockBtnFeatures" style="display:none;" onclick="switchTab('features')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
     <span>Shield</span>
   </button>
-  <button class="dock-btn" id="dockBtnTerminal" onclick="switchTab('terminal')">
+  <button class="dock-btn admin-only-dock" id="dockBtnTerminal" style="display:none;" onclick="switchTab('terminal')">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17l6-6-6-6m8 14h6"/></svg>
     <span>Logs</span>
   </button>
@@ -1450,12 +1606,13 @@ input:checked + .slider:before {
 
 <!-- ── Login Passcode Modal ─────────────────────────────────────────────────── -->
 <div id="loginModal" class="modal-overlay">
-  <div class="modal-card">
+  <div class="modal-card" style="position:relative;">
+    <button onclick="closeAdminModal()" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);">✕</button>
     <div style="font-size:2rem; margin-bottom:10px;">🔐</div>
-    <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:6px;">Dashboard Authentication</h3>
-    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Enter your Dashboard Password to access the control center.</p>
+    <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:6px;">Admin Authentication</h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Enter Dashboard Password to manage active sessions and system keys.</p>
     <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: Omemi)" value="Omemi" style="width:100%; margin-bottom:14px; text-align:center;">
-    <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px; margin-bottom:10px;" onclick="submitPassword()">Unlock Dashboard</button>
+    <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px; margin-bottom:10px;" onclick="submitPassword()">Unlock Admin Mode</button>
     <button class="btn-pill btn-pill-outline" style="width:100%; justify-content:center; padding:10px; font-size:0.85rem;" onclick="loginWithDefault()">⚡ Continue as Admin (Omemi)</button>
     <div id="modalErr" style="display:none; color:#ef4444; font-size:0.82rem; font-weight:700; margin-top:12px;"></div>
   </div>
@@ -1465,27 +1622,70 @@ input:checked + .slider:before {
 <script>
 var urlPwd = new URLSearchParams(window.location.search).get('pwd');
 var storedPwd = localStorage.getItem('dash_pwd');
-var pwd = urlPwd || storedPwd || 'Omemi';
-if (!pwd || pwd === 'undefined' || pwd === 'null') {
-  pwd = 'Omemi';
-  localStorage.setItem('dash_pwd', 'Omemi');
-}
+var pwd = urlPwd || storedPwd || '';
+var isAdmin = false;
 var activeTab = 'overview';
-var activePairMode = 'qr';
+var activePairMode = 'pair';
 var pollTimer = null;
+var pairStreamSource = null;
+
+function getBaseUrl() {
+  return (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:3000' : '';
+}
 
 function apiCall(endpoint, options) {
   options = options || {};
-  var baseUrl = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:3000' : '';
+  var baseUrl = getBaseUrl();
   var sep = endpoint.includes('?') ? '&' : '?';
-  var url = baseUrl + '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd || 'Omemi');
+  var authParam = pwd ? ('pwd=' + encodeURIComponent(pwd)) : '';
+  var url = baseUrl + '/api' + endpoint + (authParam ? (sep + authParam) : '');
+  
   return fetch(url, options).then(function(res) {
     if (res.status === 401) {
-      showLogin();
+      if (isAdmin) {
+        setAdminMode(false);
+      }
       throw new Error('Unauthorized');
     }
     return res.json();
   });
+}
+
+function setAdminMode(active) {
+  isAdmin = active;
+  var btnAuth = document.getElementById('btnAdminAuth');
+  var btnText = document.getElementById('adminBtnText');
+  var btnIcon = document.getElementById('adminBtnIcon');
+  var adminNavs = document.querySelectorAll('.admin-only-nav, .admin-only-dock');
+
+  if (active) {
+    if (btnText) btnText.textContent = 'Admin Mode (Logout)';
+    if (btnIcon) btnIcon.textContent = '👑';
+    if (btnAuth) btnAuth.style.borderColor = '#10b981';
+    adminNavs.forEach(function(el) { el.style.display = 'flex'; });
+    loadAdminSessions();
+    loadKeys();
+    loadFeatures();
+    loadLogs();
+  } else {
+    if (btnText) btnText.textContent = 'Admin Access';
+    if (btnIcon) btnIcon.textContent = '🔐';
+    if (btnAuth) btnAuth.style.borderColor = 'var(--border-subtle)';
+    adminNavs.forEach(function(el) { el.style.display = 'none'; });
+    if (activeTab === 'sessions' || activeTab === 'features' || activeTab === 'terminal') {
+      switchTab('overview');
+    }
+  }
+}
+
+function toggleAdminModal() {
+  if (isAdmin) {
+    if (confirm('Logout of Admin Mode?')) {
+      logoutAdmin();
+    }
+    return;
+  }
+  showLogin();
 }
 
 function showLogin() {
@@ -1495,27 +1695,43 @@ function showLogin() {
   if (input && !input.value) input.value = 'Omemi';
 }
 
+function closeAdminModal() {
+  var modal = document.getElementById('loginModal');
+  if (modal) modal.style.display = 'none';
+  var errEl = document.getElementById('modalErr');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function logoutAdmin() {
+  pwd = '';
+  localStorage.removeItem('dash_pwd');
+  setAdminMode(false);
+  pollPublicStats();
+}
+
 function submitPassword() {
   var inputEl = document.getElementById('modalPwdInput');
   var p = (inputEl ? inputEl.value : '').trim();
   if (!p) p = 'Omemi';
-  pwd = p;
   var errEl = document.getElementById('modalErr');
   if (errEl) errEl.style.display = 'none';
 
-  apiCall('/status')
-    .then(function(data) {
-      localStorage.setItem('dash_pwd', pwd);
-      var modal = document.getElementById('loginModal');
-      if (modal) modal.style.display = 'none';
-      initDashboard();
-    })
-    .catch(function(err) {
-      if (errEl) {
-        errEl.style.display = 'block';
-        errEl.textContent = 'Invalid Password. Enter "Omemi" or check DASHBOARD_PASSWORD';
-      }
-    });
+  var testUrl = getBaseUrl() + '/api/status?pwd=' + encodeURIComponent(p);
+  fetch(testUrl).then(function(res) {
+    if (!res.ok) throw new Error('Unauthorized');
+    return res.json();
+  }).then(function(data) {
+    pwd = p;
+    localStorage.setItem('dash_pwd', pwd);
+    closeAdminModal();
+    setAdminMode(true);
+    updateStatusUI(data);
+  }).catch(function() {
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Invalid Password. Enter "Omemi" or verify DASHBOARD_PASSWORD.';
+    }
+  });
 }
 
 function loginWithDefault() {
@@ -1526,23 +1742,22 @@ function loginWithDefault() {
 
 function switchTab(tabId) {
   activeTab = tabId;
-  var tabs = ['overview', 'messages', 'pairing', 'features', 'terminal'];
+  var tabs = ['overview', 'messages', 'pairing', 'sessions', 'features', 'terminal'];
   tabs.forEach(function(t) {
     var el = document.getElementById('tab-' + t);
     if (el) el.style.display = (t === tabId) ? ((t === 'overview') ? 'grid' : 'block') : 'none';
   });
 
-  // Update sidebar active states
   document.querySelectorAll('#sidebar .nav-item').forEach(function(item) {
     var fn = item.getAttribute('onclick') || '';
     item.classList.toggle('active', fn.includes("'" + tabId + "'"));
   });
 
-  // Update mobile dock active states
   var dockMap = {
     overview: 'dockBtnOverview',
     messages: 'dockBtnMessages',
     pairing: 'dockBtnPair',
+    sessions: 'dockBtnSessions',
     features: 'dockBtnFeatures',
     terminal: 'dockBtnTerminal'
   };
@@ -1551,17 +1766,23 @@ function switchTab(tabId) {
     if (btn) btn.classList.toggle('active', k === tabId);
   }
 
+  if (tabId === 'sessions' && isAdmin) {
+    loadAdminSessions();
+  }
+  if (tabId === 'terminal' && isAdmin) {
+    loadLogs();
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function setPairMode(mode) {
   activePairMode = mode;
-  // Tab 1 overview buttons
   var bPair = document.getElementById('btnModePair');
   var bQr = document.getElementById('btnModeQr');
   if (bPair) bPair.classList.toggle('active', mode === 'pair');
   if (bQr) bQr.classList.toggle('active', mode === 'qr');
-  // Tab 3 pairing tab buttons
+
   var bPairTab = document.getElementById('btnModePairTab');
   var bQrTab = document.getElementById('btnModeQrTab');
   if (bPairTab) bPairTab.classList.toggle('active', mode === 'pair');
@@ -1580,52 +1801,38 @@ function setPairMode(mode) {
   if (mode === 'qr') pollQR();
 }
 
-function refreshQRCode() {
-  var btn = (event && event.currentTarget) ? event.currentTarget : document.getElementById('btnRefreshQr');
-  var oldText = btn ? btn.innerHTML : '<span>🔄</span> Refresh QR Code';
-  if (btn) btn.innerHTML = '<span>⏳</span> Refreshing QR...';
-  apiCall('/refresh-qr', { method: 'POST' }).then(function() {
-    var checkCount = 0;
-    var checkInterval = setInterval(function() {
-      checkCount++;
-      pollQR();
-      if (checkCount >= 8) {
-        clearInterval(checkInterval);
-        if (btn) btn.innerHTML = oldText;
-      }
-    }, 1500);
-  }).catch(function() {
-    if (btn) btn.innerHTML = oldText;
-    pollQR();
-  });
-}
-
 function requestPairCode(fromTab) {
   var inputId = fromTab ? 'phoneNumberInputTab' : 'phoneNumberInput';
   var input = document.getElementById(inputId) || document.getElementById('phoneNumberInput');
   var phone = input ? input.value.trim() : '';
   if (!phone) {
-    alert('Please enter your WhatsApp contact number (e.g. 2348012345678 or 08012345678)');
+    alert('Please enter your WhatsApp phone number (e.g. 2348012345678 or 08012345678)');
     return;
   }
+
   var btn = (event && event.currentTarget) ? event.currentTarget : (fromTab ? document.getElementById('btnGenPairTab') : document.getElementById('btnGenPairOverview'));
   var oldText = btn ? btn.innerHTML : 'Generate Code';
-  if (btn) btn.innerHTML = '<span>⏳</span> Requesting Code...';
+  if (btn) btn.innerHTML = '<span>⏳</span> Requesting...';
 
-  apiCall('/pair', {
+  // Public POST /api/pair requires NO password
+  var baseUrl = getBaseUrl();
+  fetch(baseUrl + '/api/pair', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone: phone })
   }).then(function(res) {
+    return res.json();
+  }).then(function(res) {
     if (btn) btn.innerHTML = oldText;
-    if (res.code) {
+    if (res.success && res.code) {
       showPairCode(res.code);
+      listenPairStream(res.sessionId, phone);
     } else {
-      alert(res.error || 'Failed to request pairing code. Please check the number and try again.');
+      alert(res.error || 'Pairing request failed. Please check the number.');
     }
   }).catch(function(err) {
     if (btn) btn.innerHTML = oldText;
-    alert('Pairing request error: ' + err.message);
+    alert('Network error requesting pairing code: ' + err.message);
   });
 }
 
@@ -1633,15 +1840,53 @@ function requestPairCodeTab() {
   requestPairCode(true);
 }
 
+function formatPairCode(code) {
+  var clean = String(code || '').replace(/[^a-zA-Z0-9]/g, '');
+  if (clean.length === 8) {
+    return clean.substring(0, 4) + ' - ' + clean.substring(4);
+  }
+  return code;
+}
+
 function showPairCode(code) {
+  var formatted = formatPairCode(code);
   var box1 = document.getElementById('pairingCodeBox');
   var txt1 = document.getElementById('pairingCodeText');
   var box2 = document.getElementById('pairingCodeBoxTab');
   var txt2 = document.getElementById('pairingCodeTextTab');
   if (box1) box1.style.display = 'block';
-  if (txt1) txt1.textContent = code;
+  if (txt1) txt1.textContent = formatted;
   if (box2) box2.style.display = 'block';
-  if (txt2) txt2.textContent = code;
+  if (txt2) txt2.textContent = formatted;
+}
+
+function listenPairStream(sessionId, phone) {
+  if (pairStreamSource) {
+    try { pairStreamSource.close(); } catch(e) {}
+    pairStreamSource = null;
+  }
+
+  var baseUrl = getBaseUrl();
+  var streamUrl = baseUrl + '/api/pair/stream?sessionId=' + encodeURIComponent(sessionId || '') + '&phone=' + encodeURIComponent(phone || '');
+  
+  try {
+    pairStreamSource = new EventSource(streamUrl);
+    pairStreamSource.addEventListener('pairing_code', function(e) {
+      var d = JSON.parse(e.data);
+      if (d && d.code) showPairCode(d.code);
+    });
+    pairStreamSource.addEventListener('connected', function(e) {
+      alert('🎉 WhatsApp Connected Successfully! Your bot instance is active.');
+      if (pairStreamSource) {
+        pairStreamSource.close();
+        pairStreamSource = null;
+      }
+      pollPublicStats();
+      if (isAdmin) loadAdminSessions();
+    });
+  } catch (err) {
+    console.warn('Pairing stream setup error:', err);
+  }
 }
 
 function resetPairingInput() {
@@ -1653,9 +1898,10 @@ function resetPairingInput() {
   var box2 = document.getElementById('pairingCodeBoxTab');
   if (box1) box1.style.display = 'none';
   if (box2) box2.style.display = 'none';
-  apiCall('/refresh-qr', { method: 'POST' }).then(function() {
-    setPairMode('qr');
-  });
+  if (pairStreamSource) {
+    try { pairStreamSource.close(); } catch(e) {}
+    pairStreamSource = null;
+  }
 }
 
 function copyPairCode() {
@@ -1686,102 +1932,155 @@ function copyPairCodeTab() {
   });
 }
 
+function pollPublicStats() {
+  var baseUrl = getBaseUrl();
+  fetch(baseUrl + '/api/public-stats').then(function(res) {
+    return res.json();
+  }).then(function(data) {
+    var activeBots = data.activeBots || 0;
+    var totalMsgs = data.totalMessagesProcessed || 0;
+    var uptime = data.platformUptime || 'Online';
+
+    var bDisplay = document.getElementById('activeBotsDisplay');
+    if (bDisplay) bDisplay.textContent = activeBots + (activeBots === 1 ? ' Bot' : ' Bots');
+
+    var mDisplay = document.getElementById('msgCountDisplay');
+    if (mDisplay) mDisplay.textContent = totalMsgs;
+
+    var uDisplay = document.getElementById('uptimeDisplay');
+    if (uDisplay) uDisplay.textContent = uptime;
+
+    var beacon = document.getElementById('statusBeacon');
+    var label = document.getElementById('statusLabel');
+    if (beacon) beacon.className = 'status-beacon active';
+    if (label) label.textContent = (activeBots > 0 ? (activeBots + ' Bots Online') : 'Hub Ready');
+  }).catch(function() {});
+}
+
+function loadAdminSessions() {
+  if (!isAdmin) return;
+  var loadingEl = document.getElementById('adminSessionsLoading');
+  var emptyEl = document.getElementById('adminSessionsEmpty');
+  var listEl = document.getElementById('adminSessionsList');
+  if (loadingEl) loadingEl.style.display = 'block';
+
+  apiCall('/admin/sessions').then(function(sessions) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    var countBadge = document.getElementById('sessionsBadgeCount');
+    if (countBadge) countBadge.textContent = sessions.length;
+
+    if (!sessions || sessions.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      if (listEl) listEl.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (listEl) {
+      listEl.style.display = 'grid';
+      listEl.innerHTML = sessions.map(function(s) {
+        var isConn = s.status === 'connected';
+        var badgeCls = isConn ? 'session-badge-connected' : 'session-badge-disconnected';
+        var badgeText = isConn ? '🟢 Connected' : '⚪ ' + (s.status || 'Offline');
+        var uptimeStr = s.uptime ? (Math.floor(s.uptime / 60) + 'm uptime') : 'Active';
+
+        return '<div class="session-card">' +
+          '<div class="session-card-header">' +
+            '<div class="session-phone-title">' + escapeHtml(s.maskedPhone || s.id) + '</div>' +
+            '<span class="' + badgeCls + '">' + badgeText + '</span>' +
+          '</div>' +
+          '<div class="session-meta-row">' +
+            '<span>💬 ' + (s.messagesCount || 0) + ' messages</span>' +
+            '<span>⏱️ ' + uptimeStr + '</span>' +
+          '</div>' +
+          '<div class="session-actions-row">' +
+            '<button class="btn-sm-action btn-sm-danger" onclick="disconnectAdminSession(\'' + escapeHtml(s.id) + '\')">🔌 Disconnect</button>' +
+            '<button class="btn-sm-action" style="color:#64748b;" onclick="deleteAdminSession(\'' + escapeHtml(s.id) + '\')">🗑️ Delete</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }).catch(function(err) {
+    if (loadingEl) loadingEl.style.display = 'none';
+  });
+}
+
+function disconnectAdminSession(id) {
+  if (!confirm('Disconnect session ' + id + '?')) return;
+  apiCall('/admin/sessions/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' })
+    .then(function() {
+      alert('Session disconnected');
+      loadAdminSessions();
+      pollPublicStats();
+    }).catch(function(err) {
+      alert('Error disconnecting session: ' + err.message);
+    });
+}
+
+function deleteAdminSession(id) {
+  if (!confirm('Delete session ' + id + ' and wipe credentials?')) return;
+  apiCall('/admin/sessions/' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(function() {
+      alert('Session deleted');
+      loadAdminSessions();
+      pollPublicStats();
+    }).catch(function(err) {
+      alert('Error deleting session: ' + err.message);
+    });
+}
+
+function restartAllSessions() {
+  if (!confirm('Restart all active WhatsApp bot sessions?')) return;
+  apiCall('/admin/sessions/restart-all', { method: 'POST' })
+    .then(function() {
+      alert('Restart initiated for all sessions');
+      loadAdminSessions();
+    }).catch(function(err) {
+      alert('Restart error: ' + err.message);
+    });
+}
+
 function pollQR() {
+  if (!isAdmin) return;
   apiCall('/qrdata').then(function(res) {
     var wrap1 = document.getElementById('qrImageWrapper');
     var wrap2 = document.getElementById('qrImageWrapperTab');
     var html = '';
     if (res.connected) {
-      setConnectedView(res.user);
       html = '<div class="qr-scan-card" style="padding:28px 20px; text-align:center;">' +
         '<div style="font-size:2.4rem; margin-bottom:8px;">✅</div>' +
-        '<div style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom:4px;">WhatsApp Connected & Online</div>' +
-        '<div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">Logged in as: <b>' + escapeHtml(res.user || 'Companion Device') + '</b></div>' +
-        '<button class="btn-action-subtle" onclick="promptResetSession()" style="color:#ef4444; border-color:rgba(239,68,68,0.3); margin:0 auto;">' +
-        '<span>🔌</span> Disconnect / Switch Device' +
-        '</button>' +
+        '<div style="font-size:1.1rem; font-weight:800; color:var(--text-main); margin-bottom:4px;">WhatsApp Connected</div>' +
+        '<div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">Status: Active</div>' +
         '</div>';
     } else if (res.dataUrl) {
-      setDisconnectedView();
       html = '<div class="qr-scan-card"><img src="' + res.dataUrl + '" alt="WhatsApp QR Code"></div>';
-    } else if (res.qr) {
-      setDisconnectedView();
-      html = '<div style="padding:30px 20px; font-weight:700; color:var(--text-main);"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Rendering QR Code...</div>';
     } else {
-      setDisconnectedView();
-      html = '<div style="color:var(--text-muted); font-size:0.9rem; padding:40px 20px;"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Connecting to WhatsApp gateway...</div>';
+      html = '<div style="color:var(--text-muted); font-size:0.9rem; padding:40px 20px;"><div style="font-size:2rem; margin-bottom:8px;">⏳</div>Loading QR Code...</div>';
     }
     if (wrap1 && html) wrap1.innerHTML = html;
     if (wrap2 && html) wrap2.innerHTML = html;
-
-    if (res.pairingCode && activePairMode === 'pair') {
-      showPairCode(res.pairingCode);
-    }
   }).catch(function() {});
 }
 
-function setConnectedView(user) {
-  var pConn = document.getElementById('pairConnectedBox');
-  var pDisc = document.getElementById('pairDisconnectedBox');
-  var pConnTab = document.getElementById('pairConnectedBoxTab');
-  var pDiscTab = document.getElementById('pairDisconnectedBoxTab');
-  var numEl = document.getElementById('pairConnectedNumber');
-  var numElTab = document.getElementById('pairConnectedNumberTab');
-  var userStr = 'Active Companion Device: ' + (user || 'Connected');
-  if (numEl) numEl.textContent = userStr;
-  if (numElTab) numElTab.textContent = userStr;
-  if (pConn) pConn.style.display = 'block';
-  if (pDisc) pDisc.style.display = 'none';
-  if (pConnTab) pConnTab.style.display = 'block';
-  if (pDiscTab) pDiscTab.style.display = 'none';
-}
-
-function setDisconnectedView() {
-  var pConn = document.getElementById('pairConnectedBox');
-  var pDisc = document.getElementById('pairDisconnectedBox');
-  var pConnTab = document.getElementById('pairConnectedBoxTab');
-  var pDiscTab = document.getElementById('pairDisconnectedBoxTab');
-  if (pConn) pConn.style.display = 'none';
-  if (pDisc) pDisc.style.display = 'block';
-  if (pConnTab) pConnTab.style.display = 'none';
-  if (pDiscTab) pDiscTab.style.display = 'block';
+function refreshQRCode() {
+  if (!isAdmin) return;
+  apiCall('/refresh-qr', { method: 'POST' }).then(function() {
+    pollQR();
+  }).catch(function() {});
 }
 
 function updateStatusUI(d) {
-  // Connection status & beacons
-  var beacon = document.getElementById('statusBeacon');
-  var label = document.getElementById('statusLabel');
-  if (d.connected) {
-    if (beacon) beacon.className = 'status-beacon active';
-    if (label) label.textContent = 'Connected & Online';
-    var phoneTag = document.getElementById('phoneUserTag');
-    if (phoneTag) phoneTag.textContent = 'Logged in as ' + (d.user || 'Companion');
-    setConnectedView(d.user);
-  } else {
-    if (beacon) beacon.className = 'status-beacon pairing';
-    if (label) label.textContent = d.pairingCode ? 'Pairing Code Active' : 'Disconnected (Ready to pair)';
-    var phoneTag = document.getElementById('phoneUserTag');
-    if (phoneTag) phoneTag.textContent = 'Waiting for WhatsApp pairing...';
-    setDisconnectedView();
-    if (activePairMode === 'qr') {
-      pollQR();
-    }
-  }
+  var bDisplay = document.getElementById('activeBotsDisplay');
+  if (bDisplay) bDisplay.textContent = (d.activeBots !== undefined ? d.activeBots : (d.connected ? 1 : 0)) + ' Bots';
 
-  // Uptime
-  var up = document.getElementById('uptimeDisplay');
-  if (up) up.textContent = d.uptime || '00:00:00';
+  var mDisplay = document.getElementById('msgCountDisplay');
+  if (mDisplay) mDisplay.textContent = d.messagesProcessed || d.commands || 0;
 
-  // Live messages count
+  var uDisplay = document.getElementById('uptimeDisplay');
+  if (uDisplay) uDisplay.textContent = d.uptime || 'Online';
+
   if (d.recentMessages && d.recentMessages.length) {
-    var mc = document.getElementById('msgCountDisplay');
-    if (mc) mc.textContent = d.recentMessages.length;
     renderMessages(d.recentMessages);
-  }
-
-  // Pairing code auto-display if available
-  if (d.pairingCode && activePairMode === 'pair') {
-    showPairCode(d.pairingCode);
   }
 }
 
@@ -1791,8 +2090,8 @@ function renderMessages(messages) {
   if (!messages || !messages.length) return;
 
   var html = messages.map(function(m) {
-    var isBot = m.type === 'outgoing' || m.from.includes('Bot');
-    var isSelf = m.type === 'self' || m.from.includes('Admin');
+    var isBot = m.type === 'outgoing' || (m.from && m.from.includes('Bot'));
+    var isSelf = m.type === 'self' || (m.from && m.from.includes('Admin'));
     var avatarClass = isBot ? 'bot' : (isSelf ? 'self' : '');
     var avatarLetter = isBot ? '🤖' : (isSelf ? '👑' : (m.from.charAt(0).toUpperCase() || 'U'));
     var badgeType = isBot ? 'msg-badge-bot' : (isSelf ? 'msg-badge-self' : 'msg-badge-dm');
@@ -1814,13 +2113,13 @@ function renderMessages(messages) {
     '</div>';
   }).join('');
 
-  container.innerHTML = html;
+  if (container) container.innerHTML = html;
   if (fullContainer) fullContainer.innerHTML = html;
 }
 
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function updateKeysUI(keys) {
@@ -1873,29 +2172,23 @@ function testAIEngine() {
 }
 
 function promptResetSession() {
-  if (confirm('Are you sure you want to disconnect? This will clear the WhatsApp session and generate a fresh connection QR code.')) {
-    apiCall('/reset-session', { method: 'POST' }).then(function(res) {
-      alert('Session reset! Generating fresh QR code...');
-      setPairMode('qr');
-      setDisconnectedView();
-      var checkCount = 0;
-      var interval = setInterval(function() {
-        checkCount++;
-        pollQR();
-        apiCall('/status').then(updateStatusUI).catch(function() {});
-        if (checkCount >= 10) clearInterval(interval);
-      }, 1500);
+  if (confirm('Are you sure you want to reset and disconnect?')) {
+    apiCall('/reset-session', { method: 'POST' }).then(function() {
+      alert('Session reset!');
+      pollPublicStats();
+      if (isAdmin) loadAdminSessions();
     });
   }
 }
 
 function loadKeys() {
-  apiCall('/keys').then(updateKeysUI);
+  if (!isAdmin) return;
+  apiCall('/keys').then(updateKeysUI).catch(function() {});
 }
 
 function loadFeatures() {
+  if (!isAdmin) return;
   apiCall('/features').then(function(data) {
-    var c = data.commands || {};
     var f = data.features || {};
     var ab = document.getElementById('toggleAntiBan');
     var ad = document.getElementById('toggleAntiDelete');
@@ -1905,18 +2198,20 @@ function loadFeatures() {
     if (ad) ad.checked = !f.antidelete;
     if (vo) vo.checked = !f.viewonce;
     if (as) as.checked = !f.autostatus;
-  });
+  }).catch(function() {});
 }
 
 function toggleFeature(name, enabled) {
+  if (!isAdmin) return;
   apiCall('/features/toggle', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: name, action: enabled ? 'enable' : 'disable' })
-  });
+  }).catch(function() {});
 }
 
 function loadLogs() {
+  if (!isAdmin) return;
   apiCall('/logs').then(function(data) {
     if (data.logs && data.logs.length) {
       var html = data.logs.slice(-60).map(function(l) {
@@ -1925,7 +2220,7 @@ function loadLogs() {
       }).join('');
       document.getElementById('terminalOutput').innerHTML = html;
     }
-  });
+  }).catch(function() {});
 }
 
 function clearLogs() {
@@ -1933,31 +2228,36 @@ function clearLogs() {
 }
 
 function refreshAll() {
-  apiCall('/status').then(updateStatusUI).catch(function() {});
-  if (activeTab === 'terminal') loadLogs();
-  if (activePairMode === 'qr') pollQR();
+  pollPublicStats();
+  if (isAdmin) {
+    apiCall('/status').then(updateStatusUI).catch(function() {});
+    if (activeTab === 'sessions') loadAdminSessions();
+    if (activeTab === 'terminal') loadLogs();
+  }
 }
 
 function initDashboard() {
-  apiCall('/status')
-    .then(function(data) {
-      var modal = document.getElementById('loginModal');
-      if (modal) modal.style.display = 'none';
+  pollPublicStats();
+  setPairMode('pair');
+
+  // If password was saved, verify admin authentication quietly in background
+  if (pwd) {
+    var testUrl = getBaseUrl() + '/api/status?pwd=' + encodeURIComponent(pwd);
+    fetch(testUrl).then(function(res) {
+      if (res.ok) return res.json();
+      throw new Error('Not admin');
+    }).then(function(data) {
+      setAdminMode(true);
       updateStatusUI(data);
-      loadKeys();
-      loadFeatures();
-      loadLogs();
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(refreshAll, 2500);
-    })
-    .catch(function(err) {
-      if (err && err.message === 'Unauthorized') {
-        showLogin();
-      } else {
-        console.warn('Waiting for bot server connection...', err);
-        setTimeout(initDashboard, 2000);
-      }
+    }).catch(function() {
+      setAdminMode(false);
     });
+  } else {
+    setAdminMode(false);
+  }
+
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshAll, 3000);
 }
 
 window.addEventListener('DOMContentLoaded', function() {

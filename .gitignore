@@ -5,3 +5,7 @@ storage/
 *.log
 *.exe
 scratch/
+.agents/
+ORIGINAL_REQUEST.md
+TEST_INFRA.md
+TEST_READY.md

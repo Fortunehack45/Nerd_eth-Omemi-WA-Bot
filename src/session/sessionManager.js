@@ -1,0 +1,1005 @@
+const { EventEmitter } = require('events');
+const path = require('path');
+const fs = require('fs');
+const pino = require('pino');
+const { Boom } = require('@hapi/boom');
+
+let NodeCache = null;
+try {
+  const nc = require('@cacheable/node-cache');
+  NodeCache = nc.NodeCache || nc.default || nc;
+} catch (e) {}
+
+let getBaileys, DefaultDisconnectReason;
+try {
+  const bh = require('../utils/baileysHelper');
+  getBaileys = bh.getBaileys;
+  DefaultDisconnectReason = bh.DisconnectReason;
+} catch (e) {}
+
+const { normalizeJid, sanitizePairingNumber } = require('../utils/helpers');
+
+let config = {};
+try {
+  config = require('../../config');
+} catch (e) {}
+
+// Windows reserved device names (case-insensitive)
+const WINDOWS_RESERVED = new Set([
+  'con', 'prn', 'aux', 'nul',
+  'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
+  'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'
+]);
+
+const { maskPhoneNumber } = require('../utils/masking');
+
+let firebaseService = null;
+try {
+  firebaseService = require('../services/firebaseService');
+} catch (e) {}
+
+class SessionManager extends EventEmitter {
+  /**
+   * @param {Object} [options]
+   * @param {string} [options.sessionsDir] Path to root sessions directory
+   * @param {Function} [options.baileysFactory] Factory function to create WASocket
+   * @param {Function} [options.authFactory] Factory function to create auth state
+   * @param {Function} [options.keyStoreFactory] Factory function for cacheable signal key store
+   */
+  constructor(options = {}) {
+    super();
+    this.sessionsRoot = path.resolve(options.sessionsDir || path.join(process.cwd(), 'sessions'));
+    this.sessions = new Map(); // Map<sessionId, SessionInstance>
+    this.startTime = Date.now();
+    this.totalMessagesProcessed = 0;
+    this.handlers = {
+      messageHandler: null,
+      statusHandler: null,
+      onConnected: null,
+    };
+
+    this.baileysFactory = options.baileysFactory || null;
+    this.authFactory = options.authFactory || null;
+    this.keyStoreFactory = options.keyStoreFactory || null;
+
+    if (!fs.existsSync(this.sessionsRoot)) {
+      fs.mkdirSync(this.sessionsRoot, { recursive: true });
+    }
+  }
+
+  /**
+   * 3-tier Path Traversal Guard:
+   * Tier 1: Length (1 to 64 chars) and no leading/trailing whitespace.
+   * Tier 2: Whitelist regex /^[a-zA-Z0-9_-]+$/ (rejects slashes, dots, path separators).
+   * Tier 3: Windows reserved system device names check (CON, PRN, AUX, NUL, COM1-9, LPT1-9).
+   * @param {string} sessionId
+   * @returns {string} validated sessionId
+   */
+  validateSessionId(sessionId) {
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new Error('Session ID must be a non-empty string');
+    }
+    const trimmed = sessionId.trim();
+    if (trimmed !== sessionId) {
+      throw new Error('Session ID cannot have leading or trailing whitespace');
+    }
+    if (sessionId.length < 1 || sessionId.length > 64) {
+      throw new Error(`Session ID length must be between 1 and 64 characters (received: ${sessionId.length})`);
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(sessionId)) {
+      throw new Error(`Invalid session ID "${sessionId}": only alphanumeric characters, underscores, and hyphens are allowed`);
+    }
+    if (WINDOWS_RESERVED.has(sessionId.toLowerCase())) {
+      throw new Error(`Invalid session ID "${sessionId}": reserved system device name`);
+    }
+    return sessionId;
+  }
+
+  /**
+   * Resolves safe session directory ensuring containment within sessionsRoot.
+   * @param {string} sessionId
+   * @returns {string} absolute path to session directory
+   */
+  getSafeSessionDir(sessionId) {
+    const validId = this.validateSessionId(sessionId);
+    const resolvedPath = path.resolve(this.sessionsRoot, validId);
+    const relative = path.relative(this.sessionsRoot, resolvedPath);
+    if (relative.startsWith('..') || path.isAbsolute(relative) || relative === '') {
+      throw new Error(`Path traversal attempt detected for session ID: ${validId}`);
+    }
+    return resolvedPath;
+  }
+
+  /**
+   * Check if a session exists in memory.
+   * @param {string} sessionId
+   * @returns {boolean}
+   */
+  hasSession(sessionId) {
+    try {
+      this.validateSessionId(sessionId);
+      return this.sessions.has(sessionId);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Get session instance by ID.
+   * @param {string} sessionId
+   * @returns {Object|null}
+   */
+  getSession(sessionId) {
+    try {
+      this.validateSessionId(sessionId);
+      return this.sessions.get(sessionId) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Returns all in-memory sessions.
+   * @returns {Array<Object>}
+   */
+  getAllSessions() {
+    return Array.from(this.sessions.values());
+  }
+
+  /**
+   * Returns all actively connected sessions.
+   * @returns {Array<Object>}
+   */
+  getActiveSessions() {
+    return Array.from(this.sessions.values()).filter(s => s.status === 'connected' && s.sock);
+  }
+
+  /**
+   * Calculate exponential backoff delay in ms:
+   * delay = min(round(2500 * 1.5^n), 30000)
+   * @param {number} attempts
+   * @returns {number}
+   */
+  calculateBackoffDelay(attempts) {
+    const n = Math.max(0, attempts || 0);
+    return Math.min(Math.round(2500 * Math.pow(1.5, n)), 30000);
+  }
+
+  /**
+   * Normalizes JID delegating to helper.
+   * @param {string} jid
+   * @returns {string}
+   */
+  normalizeJid(jid) {
+    return normalizeJid(jid);
+  }
+
+  /**
+   * Provision a session record and directory.
+   * @param {string} sessionId
+   * @param {Object} [options]
+   * @returns {Promise<Object>|Object}
+   */
+  async createSession(sessionId, options = {}) {
+    const validId = this.validateSessionId(sessionId);
+    if (this.sessions.has(validId)) {
+      return this.sessions.get(validId);
+    }
+
+    const sessionDir = this.getSafeSessionDir(validId);
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
+
+    const msgStore = new Map();
+    const retryCache = new Map();
+
+    const session = {
+      id: validId,
+      dir: sessionDir,
+      folder: sessionDir,
+      sock: null,
+      status: 'idle', // 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'loggedOut' | 'destroyed'
+      user: null,
+      phoneNumber: options.phoneNumber || null,
+      lastQR: null,
+      lastPairingCode: null,
+      pairingCodeRequested: false,
+      consecutiveErrors: 0,
+      reconnectAttempts: 0,
+      reconnectTimer: null,
+      presenceInterval: null,
+      startedAt: null,
+      createdAt: Date.now(),
+      messagesCount: 0,
+      options,
+
+      // Isolated per-session NodeCaches
+      msgRetryCounterCache: NodeCache ? new NodeCache({ stdTTL: 3600, useClones: false }) : null,
+      userDevicesCache: NodeCache ? new NodeCache({ stdTTL: 300, useClones: false }) : null,
+      signalKeyStoreCache: NodeCache ? new NodeCache({ stdTTL: 300, useClones: false, deleteOnExpire: true }) : null,
+
+      // Bounded in-memory message store (per-session)
+      msgStore,
+      messageCache: msgStore, // Alias for testing contract
+      retryCache,            // Map cache for testing contract
+      processedMsgIds: new Set(),
+      botSentMessageIds: new Set(),
+      authState: null,
+    };
+
+    this.sessions.set(validId, session);
+    this.emit('session.created', { sessionId: validId, session });
+    return session;
+  }
+
+  /**
+   * Connect Baileys socket for a given session.
+   * @param {string} sessionId
+   * @param {Object} [handlers]
+   * @returns {Promise<Object>} socket
+   */
+  async startSession(sessionId, handlers = {}) {
+    const validId = this.validateSessionId(sessionId);
+    let session = this.sessions.get(validId);
+    if (!session) {
+      session = await this.createSession(validId);
+    }
+
+    // Cancel active reconnect timer if any
+    if (session.reconnectTimer) {
+      clearTimeout(session.reconnectTimer);
+      session.reconnectTimer = null;
+    }
+    this.stopPresenceKeepAlive(session);
+
+    // Clean up previous socket if existing
+    if (session.sock) {
+      try {
+        session.sock.ev.removeAllListeners();
+        session.sock.ws?.close();
+        session.sock.end(undefined);
+      } catch (e) {}
+      session.sock = null;
+    }
+
+    session.status = 'connecting';
+    this.emit('session.connecting', { sessionId: validId });
+
+    let makeWASocketFn = this.baileysFactory;
+    let authStateFn = this.authFactory;
+    let keyStoreFn = this.keyStoreFactory;
+    let proto = null;
+    let Browsers = null;
+    let fetchLatestBaileysVersion = null;
+
+    if (!makeWASocketFn || !authStateFn) {
+      const b = typeof getBaileys === 'function' ? await getBaileys() : {};
+      makeWASocketFn = makeWASocketFn || b.makeWASocket;
+      authStateFn = authStateFn || b.useMultiFileAuthState;
+      keyStoreFn = keyStoreFn || b.makeCacheableSignalKeyStore;
+      proto = b.proto;
+      Browsers = b.Browsers;
+      fetchLatestBaileysVersion = b.fetchLatestBaileysVersion;
+    }
+
+    // Load isolated multi-file auth state in session directory
+    const { state, saveCreds } = await authStateFn(session.dir);
+    session.authState = { state, saveCreds };
+
+    // Synchronous creds.json helper for immediate persistence and test validation
+    const wrappedSaveCreds = async (...args) => {
+      try {
+        if (session && session.dir && state?.creds) {
+          const credsPath = path.join(session.dir, 'creds.json');
+          try {
+            fs.writeFileSync(credsPath, JSON.stringify(state.creds, null, 2), 'utf8');
+          } catch (e) {}
+        }
+        if (typeof saveCreds === 'function') {
+          await saveCreds(...args);
+        }
+      } catch (err) {}
+    };
+
+    // Cacheable Signal Key Store per session
+    let cacheableKeys = state.keys;
+    if (typeof keyStoreFn === 'function') {
+      cacheableKeys = keyStoreFn(state.keys, pino({ level: 'silent' }), session.signalKeyStoreCache || session.retryCache);
+    }
+
+    let version = [2, 3000, 1043857760];
+    if (typeof fetchLatestBaileysVersion === 'function') {
+      try {
+        const v = await fetchLatestBaileysVersion();
+        if (v && v.version) version = v.version;
+      } catch (e) {}
+    }
+
+    const browser = Browsers?.ubuntu ? Browsers.ubuntu('Chrome') : ['Ubuntu', 'Chrome', '20.0.04'];
+
+    const getMessage = async (key) => {
+      try {
+        if (!key || typeof key !== 'object' || !key.id) return undefined;
+        let msg = session.msgStore.get(key.id);
+        if (!msg && key.remoteJid) {
+          msg = session.msgStore.get(`${key.remoteJid}:${key.id}`);
+        }
+        if (msg) {
+          return msg;
+        }
+      } catch (e) {}
+      return undefined;
+    };
+
+    const sock = makeWASocketFn({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: cacheableKeys,
+        state: {
+          creds: state.creds,
+          keys: cacheableKeys,
+        },
+        saveCreds: wrappedSaveCreds,
+      },
+      logger: pino({ level: 'silent' }),
+      browser,
+      syncFullHistory: false,
+      markOnlineOnConnect: true,
+      generateHighQualityLink: true,
+      defaultQueryTimeoutMs: 60000,
+      keepAliveIntervalMs: 25000,
+      connectTimeoutMs: 60000,
+      qrTimeout: 180000,
+      shouldSyncHistoryMessage: () => true,
+      fireInitQueries: true,
+      emitOwnEvents: false,
+      retryRequestOnFail: true,
+      msgRetryCounterCache: session.msgRetryCounterCache,
+      placeholderResendCache: session.msgRetryCounterCache,
+      userDevicesCache: session.userDevicesCache,
+      printQRInTerminal: false,
+      patchMessageBeforeSending: (message) => {
+        const requiresPatch = !!(
+          message.buttonsMessage ||
+          message.templateMessage ||
+          message.listMessage
+        );
+        if (requiresPatch) {
+          message = {
+            viewOnceMessage: {
+              message: {
+                messageContextInfo: {
+                  deviceListMetadataVersion: 2,
+                  deviceListMetadata: {},
+                },
+                ...message,
+              }
+            }
+          };
+        }
+        return message;
+      },
+      getMessage,
+    });
+
+    // Explicitly attach getMessage to socket instance
+    sock.getMessage = getMessage;
+    session.sock = sock;
+
+    // Outgoing message caching and deduplication
+    if (typeof sock.sendMessage === 'function') {
+      const origSendMessage = sock.sendMessage.bind(sock);
+      sock.sendMessage = async (jid, content, options) => {
+        const sent = await origSendMessage(jid, content, options);
+        if (sent?.key?.id) {
+          session.botSentMessageIds.add(sent.key.id);
+          if (session.botSentMessageIds.size > 2000) {
+            const ids = Array.from(session.botSentMessageIds);
+            for (let i = 0; i < 500; i++) session.botSentMessageIds.delete(ids[i]);
+          }
+          if (sent.message) {
+            this.storeSessionMessage(session, sent.key.id, sent.message);
+            if (sent.key.remoteJid) {
+              this.storeSessionMessage(session, `${sent.key.remoteJid}:${sent.key.id}`, sent.message);
+            }
+          }
+        }
+        return sent;
+      };
+    }
+
+    sock.ev.on('creds.update', wrappedSaveCreds);
+
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        session.lastQR = qr;
+        if (!session.pairingCodeRequested) {
+          session.lastPairingCode = null;
+        }
+        this.emit('session.qr', { sessionId: validId, qr });
+      }
+
+      if (connection === 'close') {
+        this.handleConnectionClose(validId, lastDisconnect);
+      }
+
+      if (connection === 'open') {
+        session.status = 'connected';
+        session.user = sock.user;
+        session.lastPairingCode = null;
+        session.lastQR = null;
+        session.pairingCodeRequested = false;
+        session.consecutiveErrors = 0;
+        session.reconnectAttempts = 0;
+        session.startedAt = Date.now();
+
+        if (session.reconnectTimer) {
+          clearTimeout(session.reconnectTimer);
+          session.reconnectTimer = null;
+        }
+
+        console.log(`[SESSION-MGR] ✅ Session "${validId}" connected successfully! User: ${sock.user?.name || sock.user?.id || 'Connected'}`);
+        this.emit('session.connected', { sessionId: validId, user: sock.user, sock });
+        this.emit('session:connected', { sessionId: validId, user: sock.user, sock });
+
+        if (firebaseService && typeof firebaseService.isAvailable === 'function' && firebaseService.isAvailable()) {
+          firebaseService.saveSession(validId, {
+            status: 'connected',
+            phoneNumber: session.phoneNumber || null,
+            maskedPhone: maskPhoneNumber(session.phoneNumber || sock.user?.id || validId),
+            startedAt: session.startedAt,
+            messagesCount: session.messagesCount
+          }).catch(() => {});
+        }
+
+        if (config.antiBan?.alwaysOnline && typeof sock.sendPresenceUpdate === 'function') {
+          sock.sendPresenceUpdate('available').catch(() => {});
+          this.startPresenceKeepAlive(session);
+        }
+
+        const onConnected = handlers.onConnected || this.handlers.onConnected;
+        if (typeof onConnected === 'function') {
+          try { onConnected(sock, session); } catch (e) {}
+        }
+      }
+    });
+
+    sock.ev.on('messages.upsert', async (msg) => {
+      try {
+        if (!msg.messages || msg.messages.length === 0) return;
+        session.messagesCount += msg.messages.length;
+        this.totalMessagesProcessed += msg.messages.length;
+
+        for (const m of msg.messages) {
+          if (!m.message) continue;
+
+          if (m.key?.id) {
+            if (session.processedMsgIds.has(m.key.id)) continue;
+            session.processedMsgIds.add(m.key.id);
+            if (session.processedMsgIds.size > 3000) {
+              const ids = Array.from(session.processedMsgIds);
+              for (let i = 0; i < 500; i++) session.processedMsgIds.delete(ids[i]);
+            }
+            this.storeSessionMessage(session, m.key.id, m.message);
+            if (m.key.remoteJid) {
+              this.storeSessionMessage(session, `${m.key.remoteJid}:${m.key.id}`, m.message);
+            }
+          }
+
+          if (m.key?.remoteJid) {
+            m.key.remoteJid = normalizeJid(m.key.remoteJid);
+          }
+
+          if (m.key && typeof sock.readMessages === 'function') {
+            try { sock.readMessages([m.key]); } catch (e) {}
+          }
+
+          if (m.key?.id && session.botSentMessageIds.has(m.key.id)) {
+            continue;
+          }
+
+          this.emit('messages.upsert', { sessionId: validId, sock, msg: m });
+
+          const messageHandler = handlers.messageHandler || this.handlers.messageHandler;
+          if (typeof messageHandler === 'function') {
+            try {
+              await messageHandler(sock, m, session);
+            } catch (err) {
+              console.error(`[SESSION-MGR] MessageHandler error in session "${validId}":`, err.message);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[SESSION-MGR] messages.upsert error in session "${validId}":`, err.message);
+      }
+    });
+
+    return sock;
+  }
+
+  /**
+   * Stores message in session bounded message store (evicts oldest when exceeding 2000).
+   * @param {Object} session
+   * @param {string} id
+   * @param {Object} message
+   */
+  storeSessionMessage(session, id, message) {
+    if (!id || !message) return;
+    session.msgStore.set(id, message);
+    if (session.msgStore.size > 2000) {
+      const keys = Array.from(session.msgStore.keys());
+      for (let i = 0; i < 500; i++) {
+        session.msgStore.delete(keys[i]);
+      }
+    }
+  }
+
+  /**
+   * Handles socket close with status code discrimination.
+   * - 401 loggedOut: purges credentials, halts auto-reconnect.
+   * - 515 restartRequired: fast reconnect with preserved credentials.
+   * - 440 connectionReplaced: halts auto-reconnect.
+   * - Network drops: exponential backoff with preserved credentials.
+   * @param {string} sessionId
+   * @param {Object} lastDisconnect
+   */
+  handleConnectionClose(sessionId, lastDisconnect) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    this.stopPresenceKeepAlive(session);
+
+    const error = lastDisconnect?.error;
+    const statusCode = (error instanceof Boom)
+      ? error.output?.statusCode
+      : (error?.output?.statusCode || error?.statusCode || error?.code || null);
+
+    console.log(`[SESSION-MGR] [${sessionId}] Socket closed. Code: ${statusCode}. Reason: ${error?.message || 'none'}`);
+
+    // 1. Logged Out (401) or Multidevice Mismatch (411) -> Purge credentials, do not auto-reconnect
+    if (statusCode === 401 || statusCode === 411) {
+      console.log(`[SESSION-MGR] [${sessionId}] Logged out (401). Purging credential store.`);
+      session.status = 'loggedOut';
+      session.sock = null;
+      this.clearSessionCredentials(sessionId);
+      this.emit('session.loggedOut', { sessionId, statusCode });
+      this.emit('session:loggedOut', { sessionId, statusCode });
+      return;
+    }
+
+    // 2. Stream Restart Required (515) -> NEVER purge credentials; fast restart
+    if (statusCode === 515) {
+      console.log(`[SESSION-MGR] [${sessionId}] Stream restart required (515). Reconnecting with preserved credentials...`);
+      if (session.reconnectAttempts > 0) session.reconnectAttempts--;
+      session.status = 'connecting';
+      this.scheduleReconnect(sessionId, 'Restart Required (515)', 1000);
+      return;
+    }
+
+    // 3. Connection Replaced (440) -> Another instance opened this session
+    if (statusCode === 440) {
+      console.log(`[SESSION-MGR] [${sessionId}] Connection replaced (440). Halting auto-reconnect to prevent conflicts.`);
+      session.status = 'replaced';
+      session.sock = null;
+      this.emit('session.replaced', { sessionId });
+      this.emit('session:replaced', { sessionId });
+      return;
+    }
+
+    // 4. Transient network drop (408, 428, 503, ECONNRESET, etc.) -> Exponential backoff
+    session.status = 'disconnected';
+    session.sock = null;
+    this.emit('session.disconnected', { sessionId, statusCode, willReconnect: true, lastDisconnect });
+    this.emit('session:disconnected', { sessionId, statusCode, willReconnect: true, lastDisconnect });
+    this.scheduleReconnect(sessionId, `Connection closed (${statusCode || 'transient'})`);
+  }
+
+  /**
+   * Schedule automatic reconnect with exponential backoff.
+   * @param {string} sessionId
+   * @param {string} reason
+   * @param {number|null} [overrideDelayMs=null]
+   */
+  scheduleReconnect(sessionId, reason, overrideDelayMs = null) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    if (session.status === 'loggedOut' || session.status === 'destroyed') return;
+
+    if (session.reconnectTimer) {
+      clearTimeout(session.reconnectTimer);
+      session.reconnectTimer = null;
+    }
+    this.stopPresenceKeepAlive(session);
+
+    const delay = (typeof overrideDelayMs === 'number')
+      ? overrideDelayMs
+      : this.calculateBackoffDelay(session.reconnectAttempts);
+
+    session.reconnectAttempts++;
+    session.status = 'reconnecting';
+    console.log(`[SESSION-MGR] [${sessionId}] 🔄 Reconnecting in ${Math.round(delay / 1000)}s (attempt #${session.reconnectAttempts}, reason: ${reason})...`);
+
+    session.reconnectTimer = setTimeout(async () => {
+      session.reconnectTimer = null;
+      try {
+        await this.startSession(sessionId);
+      } catch (err) {
+        console.error(`[SESSION-MGR] [${sessionId}] Reconnection failed:`, err?.message || err);
+        this.scheduleReconnect(sessionId, 'Retry after startup failure');
+      }
+    }, delay);
+  }
+
+  /**
+   * Purges credentials directory for a session safely.
+   * @param {string} sessionId
+   */
+  async clearSessionCredentials(sessionId) {
+    const validId = this.validateSessionId(sessionId);
+    const sessionDir = this.getSafeSessionDir(validId);
+    if (fs.existsSync(sessionDir)) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+          break;
+        } catch (e) {
+          if (attempt === 2) {
+            console.error(`[SESSION-MGR] Failed to clear credentials for "${validId}":`, e.message);
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    }
+  }
+
+  /**
+   * Start presence keep-alive.
+   * @param {Object} session
+   */
+  startPresenceKeepAlive(session) {
+    this.stopPresenceKeepAlive(session);
+    if (session.sock?.user?.id && session.status === 'connected') {
+      session.sock.sendPresenceUpdate?.('available').catch(() => {});
+    }
+    session.presenceInterval = setInterval(async () => {
+      if (!session.sock?.user?.id || session.status !== 'connected') return;
+      try {
+        await session.sock.sendPresenceUpdate?.('available');
+      } catch (e) {}
+    }, 150000);
+  }
+
+  /**
+   * Stop presence keep-alive.
+   * @param {Object} session
+   */
+  stopPresenceKeepAlive(session) {
+    if (session && session.presenceInterval) {
+      clearInterval(session.presenceInterval);
+      session.presenceInterval = null;
+    }
+  }
+
+  /**
+   * Request pairing code for an existing or new session.
+   * @param {string} sessionId
+   * @param {string} phoneNumber
+   * @returns {Promise<string>} 8-digit pairing code (XXXX-XXXX)
+   */
+  async requestPairing(sessionId, phoneNumber) {
+    const validId = this.validateSessionId(sessionId);
+    const cleanPhone = sanitizePairingNumber(phoneNumber);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      throw new Error('Invalid phone number. Please enter a valid number with country code (e.g. 2348012345678)');
+    }
+
+    let session = this.sessions.get(validId);
+    if (!session) {
+      session = await this.createSession(validId, { phoneNumber: cleanPhone });
+    }
+    session.phoneNumber = cleanPhone;
+    session.pairingCodeRequested = true;
+
+    if (session.status === 'connected' && session.sock?.authState?.creds?.registered) {
+      throw new Error(`Session "${validId}" is already paired and connected to WhatsApp.`);
+    }
+
+    if (!session.sock || session.status === 'disconnected' || session.status === 'idle') {
+      await this.startSession(validId);
+    }
+
+    const sock = session.sock;
+    const isSocketOpen = () => !!(sock && sock.ws && (sock.ws.isOpen || sock.ws?.readyState === 1 || sock.ws?.socket?.readyState === 1));
+
+    let attempts = 0;
+    while (!isSocketOpen() && attempts < 60) {
+      await new Promise(r => setTimeout(r, 400));
+      attempts++;
+    }
+
+    if (!isSocketOpen()) {
+      throw new Error('WhatsApp gateway connection timed out. Please verify server connectivity and try again.');
+    }
+
+    await new Promise(r => setTimeout(r, 800));
+
+    try {
+      const rawCode = await sock.requestPairingCode(cleanPhone);
+      const formatted = (rawCode && rawCode.length === 8)
+        ? (rawCode.slice(0, 4) + '-' + rawCode.slice(4))
+        : rawCode;
+      session.lastPairingCode = formatted;
+      this.emit('session.pairingCode', { sessionId: validId, code: formatted, phoneNumber: cleanPhone });
+      return formatted;
+    } catch (err) {
+      console.error(`[SESSION-MGR] Pairing code request failed for session "${validId}":`, err.message);
+      throw new Error('Pairing code failed: ' + (err.message || 'Unknown error'));
+    }
+  }
+
+  /**
+   * Stop session socket and timers without deleting directory.
+   * @param {string} sessionId
+   */
+  async stopSession(sessionId) {
+    const validId = this.validateSessionId(sessionId);
+    const session = this.sessions.get(validId);
+    if (!session) return;
+
+    if (session.reconnectTimer) {
+      clearTimeout(session.reconnectTimer);
+      session.reconnectTimer = null;
+    }
+    this.stopPresenceKeepAlive(session);
+
+    if (session.sock) {
+      try {
+        session.sock.ev.removeAllListeners();
+        session.sock.ws?.close();
+        session.sock.end(undefined);
+      } catch (e) {}
+      session.sock = null;
+    }
+
+    session.status = 'disconnected';
+  }
+
+  /**
+   * Teardown and delete session. Sibling session folders are completely untouched.
+   * Cleans up sockets, listeners, caches, and filesystem directory.
+   * @param {string} sessionId
+   * @param {boolean} [deleteStorage=false]
+   * @returns {Promise<boolean>}
+   */
+  async destroySession(sessionId, deleteStorage = false) {
+    let validId;
+    try {
+      validId = this.validateSessionId(sessionId);
+    } catch (e) {
+      return false;
+    }
+
+    const session = this.sessions.get(validId);
+    if (!session) {
+      return false;
+    }
+
+    const sessionDir = this.getSafeSessionDir(validId);
+
+    // Safeguard: Never delete the sessions root
+    if (path.resolve(sessionDir) === path.resolve(this.sessionsRoot)) {
+      throw new Error('Refusing to delete root sessions directory');
+    }
+
+    if (session.reconnectTimer) {
+      clearTimeout(session.reconnectTimer);
+      session.reconnectTimer = null;
+    }
+    this.stopPresenceKeepAlive(session);
+
+    if (session.sock) {
+      try {
+        if (session.sock.ev && typeof session.sock.ev.removeAllListeners === 'function') {
+          session.sock.ev.removeAllListeners();
+        }
+        if (session.sock.ws && typeof session.sock.ws.close === 'function') {
+          session.sock.ws.close();
+        }
+        if (typeof session.sock.end === 'function') {
+          session.sock.end();
+        }
+        session.sock.isClosed = true;
+      } catch (e) {}
+      session.sock = null;
+    }
+
+    // Flush and close all NodeCache instances
+    session.msgRetryCounterCache?.flushAll?.();
+    session.msgRetryCounterCache?.close?.();
+    session.userDevicesCache?.flushAll?.();
+    session.userDevicesCache?.close?.();
+    session.signalKeyStoreCache?.flushAll?.();
+    session.signalKeyStoreCache?.close?.();
+
+    // Clear in-memory message store and tracking maps
+    if (session.msgStore && typeof session.msgStore.clear === 'function') {
+      session.msgStore.clear();
+    }
+    if (session.retryCache && typeof session.retryCache.clear === 'function') {
+      session.retryCache.clear();
+    }
+    session.processedMsgIds?.clear();
+    session.botSentMessageIds?.clear();
+    session.status = 'destroyed';
+
+    this.sessions.delete(validId);
+
+    if (deleteStorage && fs.existsSync(sessionDir)) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+          break;
+        } catch (e) {
+          if (attempt === 2) {
+            console.error(`[SESSION-MGR] Failed to remove session directory "${sessionDir}":`, e.message);
+            throw e;
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+      }
+    }
+
+    if (deleteStorage && firebaseService && typeof firebaseService.isAvailable === 'function' && firebaseService.isAvailable()) {
+      firebaseService.deleteSession(validId).catch(() => {});
+    }
+
+    this.emit('session.destroyed', { sessionId: validId, deletedStorage: !!deleteStorage });
+    return true;
+  }
+
+  /**
+   * Restart all active or provisioned sessions.
+   */
+  async restartAllSessions() {
+    const sessionIds = Array.from(this.sessions.keys());
+    for (const id of sessionIds) {
+      try {
+        await this.startSession(id);
+      } catch (err) {
+        console.error(`[SESSION-MGR] Error restarting session "${id}":`, err.message);
+      }
+    }
+  }
+
+  /**
+   * Cold startup scan of sessions/ directory rehydrating valid credentials.
+   * @param {Object} [handlers]
+   */
+  async init(handlers = {}) {
+    if (handlers) {
+      this.handlers = { ...this.handlers, ...handlers };
+    }
+
+    if (!fs.existsSync(this.sessionsRoot)) {
+      fs.mkdirSync(this.sessionsRoot, { recursive: true });
+    }
+
+    // Check for legacy migration: if creds.json is directly in root sessions/
+    const legacyCreds = path.join(this.sessionsRoot, 'creds.json');
+    if (fs.existsSync(legacyCreds)) {
+      const defaultDir = path.join(this.sessionsRoot, 'default');
+      if (!fs.existsSync(defaultDir)) {
+        fs.mkdirSync(defaultDir, { recursive: true });
+        console.log('[SESSION-MGR] 📦 Migrating legacy single-session files to sessions/default/...');
+        const files = fs.readdirSync(this.sessionsRoot);
+        for (const file of files) {
+          const src = path.join(this.sessionsRoot, file);
+          const stat = fs.statSync(src);
+          if (stat.isFile()) {
+            const dest = path.join(defaultDir, file);
+            fs.renameSync(src, dest);
+          }
+        }
+      }
+    }
+
+    const entries = fs.readdirSync(this.sessionsRoot, { withFileTypes: true });
+    const sessionDirs = entries.filter(e => e.isDirectory());
+    console.log(`[SESSION-MGR] 🔍 Found ${sessionDirs.length} session folder(s) in ${this.sessionsRoot}`);
+
+    for (const dirent of sessionDirs) {
+      const sessionId = dirent.name;
+      try {
+        this.validateSessionId(sessionId);
+      } catch (e) {
+        console.warn(`[SESSION-MGR] ⚠️ Skipping invalid session folder name: "${sessionId}"`);
+        continue;
+      }
+
+      const credsFile = path.join(this.sessionsRoot, sessionId, 'creds.json');
+      if (fs.existsSync(credsFile)) {
+        try {
+          const credsData = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+          const isValid = credsData && (credsData.registered === true || credsData.me?.id);
+          if (isValid) {
+            console.log(`[SESSION-MGR] 🔄 Rehydrating authenticated session: "${sessionId}" (${credsData.me?.id || 'Registered'})`);
+            await this.startSession(sessionId).catch(err => {
+              console.error(`[SESSION-MGR] Failed to rehydrate session "${sessionId}":`, err.message);
+            });
+            await new Promise(r => setTimeout(r, 400));
+          } else {
+            console.log(`[SESSION-MGR] ℹ️ Found unlinked session folder "${sessionId}". Initializing as idle.`);
+            await this.createSession(sessionId);
+          }
+        } catch (parseErr) {
+          console.error(`[SESSION-MGR] Corrupt creds.json in "${sessionId}":`, parseErr.message);
+        }
+      } else {
+        await this.createSession(sessionId);
+      }
+    }
+  }
+
+  /**
+   * Return public aggregate platform stats without sensitive data.
+   * @returns {Object}
+   */
+  getPublicStats() {
+    let activeBots = 0;
+    let totalMessages = 0;
+    for (const session of this.sessions.values()) {
+      if (session.status === 'connected') {
+        activeBots++;
+      }
+      totalMessages += (session.messagesCount || 0);
+    }
+
+    const uptimeSec = Math.floor((Date.now() - this.startTime) / 1000);
+    const h = Math.floor(uptimeSec / 3600);
+    const m = Math.floor((uptimeSec % 3600) / 60);
+    const s = uptimeSec % 60;
+    const platformUptime = `${h}h ${m}m ${s}s`;
+
+    return {
+      activeBots,
+      totalSessions: this.sessions.size,
+      platformUptime,
+      uptimeSeconds: uptimeSec,
+      totalMessagesProcessed: totalMessages || this.totalMessagesProcessed,
+    };
+  }
+
+  /**
+   * Return session list for Admin Dashboard with masked phone numbers.
+   * @returns {Array<Object>}
+   */
+  getAdminSessionList() {
+    const list = [];
+    for (const session of this.sessions.values()) {
+      const phoneOrJid = session.phoneNumber || session.user?.id || session.authState?.state?.creds?.me?.id || session.sock?.user?.id || null;
+      list.push({
+        id: session.id,
+        maskedPhone: maskPhoneNumber(phoneOrJid),
+        status: session.status,
+        uptime: session.startedAt ? Math.floor((Date.now() - session.startedAt) / 1000) : (session.createdAt ? Math.floor((Date.now() - session.createdAt) / 1000) : 0),
+        messagesCount: session.messagesCount || 0,
+        createdAt: session.createdAt,
+      });
+    }
+    return list;
+  }
+}
+
+const defaultSessionManager = new SessionManager();
+
+module.exports = {
+  SessionManager,
+  sessionManager: defaultSessionManager,
+  default: SessionManager,
+  sanitizePairingNumber,
+  maskPhoneNumber,
+};

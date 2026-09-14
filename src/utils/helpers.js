@@ -17,12 +17,56 @@ function parseJid(jid) {
 
 function normalizeJid(jid) {
   if (!jid || typeof jid !== 'string') return '';
-  if (!jid.includes(':')) return jid;
-  var atIdx = jid.indexOf('@');
-  if (atIdx === -1) return jid.split(':')[0];
-  var user = jid.slice(0, atIdx).split(':')[0];
-  var server = jid.slice(atIdx + 1);
-  return user + '@' + server;
+  const trimmed = jid.trim();
+  if (!trimmed) return '';
+
+  const atIdx = trimmed.indexOf('@');
+  if (atIdx === -1) {
+    const digits = trimmed.replace(/[^0-9]/g, '');
+    return digits ? `${digits}@s.whatsapp.net` : '';
+  }
+
+  const rawUser = trimmed.slice(0, atIdx);
+  const rawServer = trimmed.slice(atIdx + 1).toLowerCase();
+
+  const user = rawUser.split(':')[0].split('_')[0];
+  const server = rawServer === 'c.us' ? 's.whatsapp.net' : rawServer;
+
+  return `${user}@${server}`;
+}
+
+function sanitizePairingNumber(number) {
+  if (!number) return '';
+  var cleaned = String(number).replace(/[^0-9]/g, '');
+  if (!cleaned) return '';
+  // Nigeria trunk zero removal: 234080... -> 23480...
+  if (cleaned.startsWith('2340') && cleaned.length >= 13) {
+    cleaned = '234' + cleaned.slice(4);
+  }
+  // Local 11-digit starting with 0: 080..., 090..., 070..., 081..., 091... -> 23480...
+  else if (cleaned.startsWith('0') && cleaned.length === 11) {
+    cleaned = '234' + cleaned.slice(1);
+  }
+  // 10-digit Nigerian mobile without 0 or 234: 80..., 90..., 70... -> 23480...
+  else if (cleaned.length === 10 && ['7', '8', '9'].includes(cleaned[0])) {
+    cleaned = '234' + cleaned;
+  }
+  return cleaned;
+}
+
+function areJidsSame(jid1, jid2) {
+  if (!jid1 || !jid2) return false;
+  const n1 = normalizeJid(jid1);
+  const n2 = normalizeJid(jid2);
+  if (n1 === n2) return true;
+  const u1 = n1.split('@')[0];
+  const u2 = n2.split('@')[0];
+  const d1 = n1.split('@')[1];
+  const d2 = n2.split('@')[1];
+  if ((d1 === 's.whatsapp.net' || d1 === 'lid') && (d2 === 's.whatsapp.net' || d2 === 'lid')) {
+    return u1 === u2;
+  }
+  return false;
 }
 
 function isOwner(jid, ownerNumbers) {
@@ -384,4 +428,6 @@ module.exports = {
   paginate,
   sendAudioMessage,
   optimizeVideoForWhatsApp,
+  sanitizePairingNumber,
+  areJidsSame,
 };

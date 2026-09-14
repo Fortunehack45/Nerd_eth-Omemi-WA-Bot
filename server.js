@@ -3,6 +3,9 @@ var path = require('path');
 var fs = require('fs');
 var { loadJson } = require('./src/utils/helpers');
 var config = require('./config');
+var { adminAuth, isValidPassword } = require('./src/middleware/auth');
+var { maskPhoneNumber } = require('./src/utils/masking');
+var { SessionManager, sessionManager: defaultSessionManager, sanitizePairingNumber } = require('./src/session/sessionManager');
 
 var app = express();
 var PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
@@ -11,6 +14,19 @@ var DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'Omemi';
 var botStatus = { connected: false, user: null, uptime: 0, startTime: Date.now() };
 var recentMessages = [];
 var commandLog = [];
+
+function getActiveSessionManager() {
+  if (global.sessionManager) return global.sessionManager;
+  if (app.locals && app.locals.sessionManager) return app.locals.sessionManager;
+  return defaultSessionManager;
+}
+
+function setSessionManager(mgr) {
+  if (mgr) {
+    app.locals.sessionManager = mgr;
+    global.sessionManager = mgr;
+  }
+}
 
 function setConnected(sock) {
   botStatus.connected = true;
@@ -52,7 +68,7 @@ app.get('/health', function(req, res) {
   res.status(200).json({
     status: 'online',
     connected: botStatus.connected,
-    user: botStatus.user,
+    user: maskPhoneNumber(botStatus.user),
     uptime: Math.floor((Date.now() - botStatus.startTime) / 1000)
   });
 });
@@ -61,49 +77,58 @@ app.get('/', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'd
 app.get('/dashboard', function(req, res) { res.sendFile(path.join(__dirname, 'public', 'dashboard.html')); });
 app.use(express.static(path.join(__dirname, 'public')));
 
-var validPasscodes = new Set();
-
-app.post('/api/generate-access-key', auth, function(req, res) {
-  var key = Math.floor(100000 + Math.random() * 900000).toString();
-  validPasscodes.add(key);
-  res.json({ success: true, key: key });
+// Public aggregate stats endpoint (Strictly zero phone numbers, LIDs, remote JIDs, or private chats)
+app.get('/api/public-stats', function(req, res) {
+  var mgr = getActiveSessionManager();
+  if (mgr && typeof mgr.getPublicStats === 'function') {
+    return res.status(200).json(mgr.getPublicStats());
+  }
+  var uptime = Math.floor((Date.now() - botStatus.startTime) / 1000);
+  var h = Math.floor(uptime / 3600);
+  var m = Math.floor((uptime % 3600) / 60);
+  var s = uptime % 60;
+  return res.status(200).json({
+    status: 'online',
+    activeBots: botStatus.connected ? 1 : 0,
+    totalSessions: botStatus.connected ? 1 : 0,
+    platformUptime: h + 'h ' + m + 'm ' + s + 's',
+    uptimeSeconds: uptime,
+    totalMessagesProcessed: 0
+  });
 });
 
-function isValidPassword(inputPwd) {
-  // If no password sent or empty, allow access by default
-  if (!inputPwd || String(inputPwd).trim() === '') return true;
-  var trimmed = String(inputPwd).trim();
-
-  // 1. Configured Dashboard Password
-  var expected = process.env.DASHBOARD_PASSWORD || config.dashboardPassword || 'Omemi';
-  if (trimmed === expected || trimmed.toLowerCase() === expected.toLowerCase()) return true;
-
-  // 2. Default admin passwords
-  var lower = trimmed.toLowerCase();
-  if (lower === 'omemi' || lower === 'admin' || lower === 'nerd') return true;
-
-  // 3. Dynamic generated passcodes (issued by authenticated admin)
-  if (validPasscodes.has(trimmed)) return true;
-
-  // 4. Custom per-user passwords from storage/user_passwords.json
-  try {
-    var userPassFile = path.join(__dirname, 'storage', 'user_passwords.json');
-    if (fs.existsSync(userPassFile)) {
-      var userPasses = JSON.parse(fs.readFileSync(userPassFile, 'utf8'));
-      if (Object.values(userPasses).includes(trimmed)) return true;
-    }
-  } catch(e) {}
-
-  return false;
-}
-
-function auth(req, res, next) {
+// Status endpoint: unauthenticated returns aggregate metrics only; authenticated returns dashboard stats
+app.get('/api/status', function(req, res) {
   var pwd = req.query.pwd || req.headers['x-dashboard-password'] || (req.body && req.body.pwd);
-  if (isValidPassword(pwd)) return next();
-  return res.status(401).json({ error: 'Unauthorized. Use password "Omemi" or check DASHBOARD_PASSWORD.' });
-}
+  if (req.headers && req.headers.authorization && typeof req.headers.authorization === 'string' && req.headers.authorization.toLowerCase().startsWith('bearer ')) {
+    pwd = req.headers.authorization.slice(7).trim();
+  }
 
-app.get('/api/status', auth, function(req, res) {
+  var isAdmin = isValidPassword(pwd);
+  var mgr = getActiveSessionManager();
+  var publicStats = (mgr && typeof mgr.getPublicStats === 'function')
+    ? mgr.getPublicStats()
+    : {
+        activeBots: botStatus.connected ? 1 : 0,
+        totalSessions: botStatus.connected ? 1 : 0,
+        platformUptime: Math.floor((Date.now() - botStatus.startTime) / 1000) + 's',
+        uptimeSeconds: Math.floor((Date.now() - botStatus.startTime) / 1000),
+        totalMessagesProcessed: recentMessages.length
+      };
+
+  if (!isAdmin) {
+    // Unauthenticated caller gets strictly aggregate metrics only
+    return res.status(200).json({
+      status: 'online',
+      activeBots: publicStats.activeBots,
+      totalSessions: publicStats.totalSessions,
+      platformUptime: publicStats.platformUptime,
+      uptimeSeconds: publicStats.uptimeSeconds,
+      totalMessagesProcessed: publicStats.totalMessagesProcessed
+    });
+  }
+
+  // Authenticated Super-Admin gets full dashboard metrics
   var p = require('./src/services/personaService');
   var persona = p.getPersona();
   var mem = require('./src/services/memoryService');
@@ -111,30 +136,300 @@ app.get('/api/status', auth, function(req, res) {
   var totalFacts = 0;
   allUsers.forEach(function(u) { totalFacts += (u.facts ? u.facts.length : 0); });
 
-  var uptime = Math.floor((Date.now() - botStatus.startTime) / 1000);
+  var uptime = publicStats.uptimeSeconds;
   var h = Math.floor(uptime / 3600);
   var m = Math.floor((uptime % 3600) / 60);
   var s = uptime % 60;
 
-  res.json({
+  return res.json({
+    status: 'online',
     connected: botStatus.connected,
     botName: config.botName,
     persona: persona.name,
     personaEmoji: persona.emoji,
-    user: botStatus.user,
+    user: maskPhoneNumber(botStatus.user),
     uptime: h + 'h ' + m + 'm ' + s + 's',
     uptimeSeconds: uptime,
+    activeBots: publicStats.activeBots,
+    totalSessions: publicStats.totalSessions,
     users: allUsers.length,
     facts: totalFacts,
     commands: require('./src/handlers/commandHandler').getCommandsList().length,
     prefix: config.prefix,
-    pairingCode: (typeof require('./src/client').getLastPairingCode === 'function') ? require('./src/client').getLastPairingCode() : null,
-    recentMessages: recentMessages.slice(0, 10),
+    pairingCode: null,
+    recentMessages: [],
     commandLog: commandLog.slice(0, 10),
   });
 });
 
-app.get('/api/users', auth, function(req, res) {
+// Public Pairing Endpoint: requests pairing code from WhatsApp Noise protocol via SessionManager
+app.post('/api/pair', async function(req, res) {
+  var phone = req.body.phone || req.body.number;
+  if (!phone || typeof phone !== 'string' || !phone.trim()) {
+    return res.status(400).json({ success: false, error: 'Phone number required' });
+  }
+
+  var rawPhone = phone.trim();
+  var cleanPhone = '';
+  try {
+    cleanPhone = sanitizePairingNumber(rawPhone);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message || 'Invalid phone number' });
+  }
+
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return res.status(400).json({ success: false, error: 'Invalid phone number. Please include country code.' });
+  }
+
+  var sessionId = req.body.sessionId ? String(req.body.sessionId).trim() : `session_${cleanPhone}`;
+  var mgr = getActiveSessionManager();
+
+  if (!mgr) {
+    return res.status(500).json({ success: false, error: 'SessionManager not available' });
+  }
+
+  try {
+    var code = await mgr.requestPairing(sessionId, cleanPhone);
+    return res.status(200).json({
+      success: true,
+      sessionId: sessionId,
+      code: code
+    });
+  } catch (err) {
+    console.error(`[SERVER] Pairing request failed for ${cleanPhone}:`, err.message);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Pairing request failed'
+    });
+  }
+});
+
+// Public session status endpoint
+app.get('/api/sessions/:id/status', function(req, res) {
+  var id = req.params.id;
+  var mgr = getActiveSessionManager();
+  var session = (mgr && mgr.sessions) ? mgr.sessions.get(id) : null;
+
+  if (!session) {
+    return res.status(200).json({
+      sessionId: id,
+      status: 'disconnected',
+      connected: false
+    });
+  }
+
+  return res.status(200).json({
+    sessionId: id,
+    status: session.status || 'idle',
+    connected: session.status === 'connected',
+    pairingCode: session.lastPairingCode || null
+  });
+});
+
+// Public SSE pairing stream endpoint
+app.get('/api/pair/stream', function(req, res) {
+  var sessionId = req.query.sessionId || req.query.id;
+  var phone = req.query.phone;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
+
+  var sendEvent = function(event, data) {
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch (e) {}
+  };
+
+  sendEvent('connected_stream', { message: 'Pairing stream connected', sessionId: sessionId || null });
+
+  var mgr = getActiveSessionManager();
+  if (!mgr) {
+    sendEvent('error', { message: 'SessionManager not available' });
+    return res.end();
+  }
+
+  if (sessionId && mgr.sessions && mgr.sessions.has(sessionId)) {
+    var existing = mgr.sessions.get(sessionId);
+    sendEvent('status', { sessionId: sessionId, status: existing.status });
+    if (existing.lastPairingCode) {
+      sendEvent('pairing_code', { sessionId: sessionId, code: existing.lastPairingCode });
+    }
+    if (existing.status === 'connected') {
+      sendEvent('connected', { sessionId: sessionId, status: 'connected' });
+      return res.end();
+    }
+  }
+
+  var onPairingCode = function(data) {
+    if (!data) return;
+    var matchesSession = Boolean(sessionId && data.sessionId === sessionId);
+    var matchesPhone = Boolean(phone && data.phoneNumber === phone);
+    if (matchesSession || matchesPhone) {
+      sendEvent('pairing_code', {
+        sessionId: data.sessionId,
+        code: data.code || data.pairingCode
+      });
+    }
+  };
+
+  var onSessionConnected = function(data) {
+    if (!data) return;
+    if (sessionId && data.sessionId === sessionId) {
+      sendEvent('connected', { sessionId: data.sessionId, status: 'connected' });
+      cleanup();
+      res.end();
+    }
+  };
+
+  var onSessionDisconnected = function(data) {
+    if (!data) return;
+    if (sessionId && data.sessionId === sessionId) {
+      sendEvent('disconnected', { sessionId: data.sessionId, status: 'disconnected' });
+    }
+  };
+
+  var onSessionStatus = function(data) {
+    if (!data) return;
+    if (sessionId && data.sessionId === sessionId) {
+      sendEvent('status', { sessionId: data.sessionId, status: data.status });
+      if (data.status === 'connected') {
+        cleanup();
+        res.end();
+      }
+    }
+  };
+
+  mgr.on('session.pairingCode', onPairingCode);
+  mgr.on('session.connected', onSessionConnected);
+  mgr.on('session.disconnected', onSessionDisconnected);
+  mgr.on('session.status', onSessionStatus);
+
+  var heartbeatInterval = setInterval(function() {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch (e) {}
+  }, 15000);
+
+  var timeout = setTimeout(function() {
+    sendEvent('timeout', { message: 'Pairing stream timed out after 3 minutes' });
+    cleanup();
+    res.end();
+  }, 180000);
+
+  var cleanedUp = false;
+  function cleanup() {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    clearInterval(heartbeatInterval);
+    clearTimeout(timeout);
+    if (mgr) {
+      mgr.removeListener('session.pairingCode', onPairingCode);
+      mgr.removeListener('session.connected', onSessionConnected);
+      mgr.removeListener('session.disconnected', onSessionDisconnected);
+      mgr.removeListener('session.status', onSessionStatus);
+    }
+  }
+
+  req.on('close', cleanup);
+});
+
+// Alias auth to adminAuth for backwards compatibility across all admin endpoints
+var auth = adminAuth;
+
+var validPasscodes = new Set();
+
+app.post('/api/generate-access-key', adminAuth, function(req, res) {
+  var key = Math.floor(100000 + Math.random() * 900000).toString();
+  validPasscodes.add(key);
+  res.json({ success: true, key: key });
+});
+
+// Admin session management endpoints
+app.get('/api/admin/sessions', adminAuth, function(req, res) {
+  var mgr = getActiveSessionManager();
+  if (mgr && typeof mgr.getAdminSessionList === 'function') {
+    var list = mgr.getAdminSessionList();
+    var maskedList = list.map(function(item) {
+      return {
+        id: item.id,
+        maskedPhone: maskPhoneNumber(item.maskedPhone || item.phoneNumber || item.id),
+        status: item.status,
+        uptime: item.uptime,
+        messagesCount: item.messagesCount,
+        createdAt: item.createdAt
+      };
+    });
+    return res.status(200).json(maskedList);
+  }
+  return res.status(200).json([]);
+});
+
+app.get('/api/admin/firebase/status', adminAuth, function(req, res) {
+  var fb = null;
+  try {
+    fb = require('./src/services/firebaseService');
+  } catch (e) {}
+  if (fb && typeof fb.getStatus === 'function') {
+    return res.status(200).json({ success: true, ...fb.getStatus() });
+  }
+  return res.status(200).json({ success: true, available: false, mode: 'none' });
+});
+
+app.post(['/api/sessions/:id/disconnect', '/api/admin/sessions/:id/disconnect'], adminAuth, async function(req, res) {
+  var id = req.params.id;
+  var mgr = getActiveSessionManager();
+  if (!mgr) return res.status(500).json({ success: false, error: 'SessionManager not available' });
+
+  try {
+    if (typeof mgr.stopSession === 'function') {
+      await mgr.stopSession(id);
+    } else if (typeof mgr.destroySession === 'function') {
+      await mgr.destroySession(id, false);
+    }
+    return res.json({ success: true, message: `Session ${id} disconnected` });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete(['/api/sessions/:id', '/api/admin/sessions/:id'], adminAuth, async function(req, res) {
+  var id = req.params.id;
+  var mgr = getActiveSessionManager();
+  if (!mgr) return res.status(500).json({ success: false, error: 'SessionManager not available' });
+
+  try {
+    if (typeof mgr.destroySession === 'function') {
+      var deleted = await mgr.destroySession(id, true);
+      return res.json({ success: true, deleted: deleted, message: `Session ${id} and storage deleted` });
+    }
+    return res.status(404).json({ success: false, error: 'Session destroy method not available' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post(['/api/sessions/restart-all', '/api/admin/sessions/restart-all'], adminAuth, async function(req, res) {
+  var mgr = getActiveSessionManager();
+  if (!mgr) return res.status(500).json({ success: false, error: 'SessionManager not available' });
+
+  try {
+    if (typeof mgr.restartAllSessions === 'function') {
+      await mgr.restartAllSessions();
+    }
+    return res.json({ success: true, message: 'All sessions restart initiated' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/users', adminAuth, function(req, res) {
   var mem = require('./src/services/memoryService');
   var users = mem.getAllUsers();
   res.json(users.map(function(u) {
@@ -150,14 +445,14 @@ app.get('/api/users', auth, function(req, res) {
   }));
 });
 
-app.get('/api/user/:id', auth, function(req, res) {
+app.get('/api/user/:id', adminAuth, function(req, res) {
   var mem = require('./src/services/memoryService');
   var jid = req.params.id.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
   var user = mem.getUser(jid);
   res.json(user);
 });
 
-app.get('/api/logs', auth, function(req, res) {
+app.get('/api/logs', adminAuth, function(req, res) {
   var logFile = path.join(__dirname, 'storage', 'bot.log');
   var logs = [];
   if (fs.existsSync(logFile)) {
@@ -167,27 +462,27 @@ app.get('/api/logs', auth, function(req, res) {
   res.json({ logs: logs, recentMessages: recentMessages.slice(0, 20), commands: commandLog.slice(0, 20) });
 });
 
-app.post('/api/speedtest', auth, async function(req, res) {
+app.post('/api/speedtest', adminAuth, async function(req, res) {
   var speedSvc = require('./src/services/speedTestService');
   var result = await speedSvc.runSpeedTest();
   res.json(result);
 });
 
-app.get('/api/qrdata', auth, async function(req, res) {
+app.get('/api/qrdata', adminAuth, async function(req, res) {
   var client = require('./src/client');
   var qr = client.getLastQR();
   var pairingCode = (typeof client.getLastPairingCode === 'function') ? client.getLastPairingCode() : null;
-  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user });
+  if (!qr) return res.json({ qr: null, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user) });
   try {
     var QRCode = require('qrcode');
     var dataUrl = await QRCode.toDataURL(qr, { margin: 2, width: 320, errorCorrectionLevel: 'H' });
-    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user });
+    res.json({ qr: qr, dataUrl: dataUrl, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user) });
   } catch (e) {
-    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: botStatus.user, error: e.message });
+    res.json({ qr: qr, dataUrl: null, pairingCode: pairingCode, connected: botStatus.connected, user: maskPhoneNumber(botStatus.user), error: e.message });
   }
 });
 
-app.post('/api/refresh-qr', auth, function(req, res) {
+app.post('/api/refresh-qr', adminAuth, function(req, res) {
   try {
     var client = require('./src/client');
     client.resetSession();
@@ -197,7 +492,7 @@ app.post('/api/refresh-qr', auth, function(req, res) {
   }
 });
 
-app.post('/api/reset-session', auth, function(req, res) {
+app.post('/api/reset-session', adminAuth, function(req, res) {
   try {
     var client = require('./src/client');
     client.resetSession();
@@ -207,7 +502,7 @@ app.post('/api/reset-session', auth, function(req, res) {
   }
 });
 
-app.get('/api/keys', auth, function(req, res) {
+app.get('/api/keys', adminAuth, function(req, res) {
   var aiSvc = require('./src/services/aiService');
   res.json({
     provider: aiSvc.getProvider(),
@@ -219,12 +514,12 @@ app.get('/api/keys', auth, function(req, res) {
   });
 });
 
-app.get('/api/features', auth, function(req, res) {
+app.get('/api/features', adminAuth, function(req, res) {
   var featSvc = require('./src/services/featureService');
   res.json(featSvc.getFeatureConfig());
 });
 
-app.post('/api/features/toggle', auth, function(req, res) {
+app.post('/api/features/toggle', adminAuth, function(req, res) {
   var featSvc = require('./src/services/featureService');
   var name = req.body.name;
   var action = req.body.action;
@@ -236,12 +531,12 @@ app.post('/api/features/toggle', auth, function(req, res) {
 });
 
 // Access Control Management Endpoints
-app.get('/api/access', auth, function(req, res) {
+app.get('/api/access', adminAuth, function(req, res) {
   var acSvc = require('./src/services/accessControl');
   res.json({ enabled: config.access ? config.access.enabled : false, users: acSvc.listUsers() });
 });
 
-app.post('/api/access/add', auth, function(req, res) {
+app.post('/api/access/add', adminAuth, function(req, res) {
   var acSvc = require('./src/services/accessControl');
   var number = req.body.number;
   var name = req.body.name;
@@ -252,7 +547,7 @@ app.post('/api/access/add', auth, function(req, res) {
   res.json(result);
 });
 
-app.post('/api/access/remove', auth, function(req, res) {
+app.post('/api/access/remove', adminAuth, function(req, res) {
   var acSvc = require('./src/services/accessControl');
   var number = req.body.number;
   if (!number) return res.status(400).json({ error: 'Phone number is required' });
@@ -261,7 +556,7 @@ app.post('/api/access/remove', auth, function(req, res) {
   res.json(result);
 });
 
-app.post('/api/access/toggle-feature', auth, function(req, res) {
+app.post('/api/access/toggle-feature', adminAuth, function(req, res) {
   var acSvc = require('./src/services/accessControl');
   var number = req.body.number;
   var feature = req.body.feature;
@@ -271,7 +566,7 @@ app.post('/api/access/toggle-feature', auth, function(req, res) {
   res.json(result);
 });
 
-app.post('/api/keys', auth, function(req, res) {
+app.post('/api/keys', adminAuth, function(req, res) {
   var aiSvc = require('./src/services/aiService');
   var groq = req.body.groq;
   var openai = req.body.openai;
@@ -304,7 +599,7 @@ app.post('/api/keys', auth, function(req, res) {
   res.json({ success: true, updated: updated, provider: aiSvc.getProvider(), model: aiSvc.getModel() });
 });
 
-app.post('/api/test-ai', auth, async function(req, res) {
+app.post('/api/test-ai', adminAuth, async function(req, res) {
   try {
     var aiSvc = require('./src/services/aiService');
     var result = await aiSvc.testConnection();
@@ -314,19 +609,7 @@ app.post('/api/test-ai', auth, async function(req, res) {
   }
 });
 
-app.post('/api/pair', auth, async function(req, res) {
-  var phone = req.body.phone;
-  if (!phone) return res.status(400).json({ error: 'Phone number required' });
-  var client = require('./src/client');
-  try {
-    var code = await client.requestPairingCode(phone);
-    res.json({ success: true, code: code, phone: phone });
-  } catch (err) {
-    res.status(500).json({ error: err.message || 'Pairing request failed' });
-  }
-});
-
-app.post('/api/test', auth, function(req, res) {
+app.post('/api/test', adminAuth, function(req, res) {
   var target = req.body.to || (config.admins && config.admins[0]);
   if (!target) return res.status(400).json({ error: 'No target number. Set "to" in body or OWNER_NUMBER in env' });
   var client = require('./src/client');
@@ -340,7 +623,7 @@ app.post('/api/test', auth, function(req, res) {
   });
 });
 
-app.get('/api/reset-onboarding', auth, function(req, res) {
+app.get('/api/reset-onboarding', adminAuth, function(req, res) {
   var onboarding = require('./src/services/onboardingService');
   onboarding.resetOnboarding();
   var client = require('./src/client');
@@ -354,7 +637,7 @@ app.get('/api/reset-onboarding', auth, function(req, res) {
   }
 });
 
-app.get('/api/owner-check', auth, function(req, res) {
+app.get('/api/owner-check', adminAuth, function(req, res) {
   var client = require('./src/client');
   var sock = client.getClient();
   res.json({
@@ -427,4 +710,16 @@ function startServer(customPort) {
   });
 }
 
-module.exports = { app, startServer, setConnected, setDisconnected, logMessage, logCommand, getDashboardUrl, botStatus };
+module.exports = {
+  app,
+  startServer,
+  setConnected,
+  setDisconnected,
+  logMessage,
+  logCommand,
+  getDashboardUrl,
+  botStatus,
+  setSessionManager,
+  getActiveSessionManager,
+  defaultSessionManager
+};
