@@ -49,7 +49,7 @@ module.exports = {
 
     var result = await aiService.chatComplete([...systemMessages, { role: 'user', content: args }]);
     var replyText = formatForWhatsApp(result.text);
-    await sock.sendMessage(sender, { text: replyText });
+    await sock.sendMessage(sender, { text: replyText }, { quoted: msg });
 
     if (config.memory.enabled && isPrivate) {
       addToConversation(sender, 'assistant', replyText);

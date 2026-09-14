@@ -30,16 +30,26 @@ async function sendFile(sock, sender, filePath, opts) {
     }
 
     if (opts.type === 'video' || ['mp4', 'webm', 'mkv', 'mov', 'avi'].includes(ext)) {
-      // Fast path: If already mp4, send directly without re-encoding to avoid 2-minute delays!
-      // Only run ffmpeg if the file is not mp4 or if explicitly requested.
+      var stat = fs.statSync(filePath);
+      var sizeMB = stat.size / (1024 * 1024);
       var sendFp = filePath;
-      if (ext !== 'mp4') {
+
+      // WhatsApp limits inline videos to ~64MB. If video is > 50MB (like a 75MB TikTok),
+      // or if it is not MP4, compress with ffmpeg ultrafast so it stays under 50MB and plays inline!
+      if (sizeMB > 50 || ext !== 'mp4') {
+        console.log('[DOWNLOAD] Compressing/optimizing video (' + sizeMB.toFixed(1) + 'MB) for WhatsApp inline playback...');
         var optFp = await optimizeVideoForWhatsApp(filePath);
-        if (fs.existsSync(optFp)) sendFp = optFp;
+        if (fs.existsSync(optFp)) {
+          sendFp = optFp;
+          ext = 'mp4';
+        }
       }
+
       var vidBuf = fs.readFileSync(sendFp);
       var caption = opts.title ? '🎬 *' + opts.title.substring(0, 100) + '*' : '🎬 Video';
       if (opts.quality) caption += '\n📺 Quality: ' + opts.quality;
+
+      // 1. Try sending as native inline playable WhatsApp video
       try {
         await sock.sendMessage(sender, {
           video: vidBuf,
@@ -49,16 +59,30 @@ async function sendFile(sock, sender, filePath, opts) {
         try { if (sendFp !== filePath && fs.existsSync(sendFp)) fs.unlinkSync(sendFp); } catch (e) {}
         return;
       } catch (e1) {
-        console.warn('[DOWNLOAD] Primary video send failed, falling back to document mode:', e1.message);
+        console.warn('[DOWNLOAD] Primary video send failed, falling back to video document mode:', e1.message);
       }
+
+      // 2. Fallback: Send as MP4 Video Document (NEVER application/octet-stream / BIN!)
+      var safeName = (opts.title || 'video').replace(/[<>:"/\\|?*]/g, '_').substring(0, 60).trim() || 'video';
+      if (!safeName.toLowerCase().endsWith('.mp4')) safeName += '.mp4';
+      await sock.sendMessage(sender, {
+        document: vidBuf,
+        mimetype: 'video/mp4',
+        fileName: safeName,
+        caption: caption
+      });
+      try { if (sendFp !== filePath && fs.existsSync(sendFp)) fs.unlinkSync(sendFp); } catch (e) {}
+      return;
     }
 
-    // Fallback: Send as document
+    // Fallback for non-video files
     var docBuf = fs.readFileSync(filePath);
-    var docName = (opts.title || 'media').replace(/[<>:"/\\|?*]/g, '_').substring(0, 60) + '.' + ext;
+    var docExt = ext || 'bin';
+    var docName = (opts.title || 'media').replace(/[<>:"/\\|?*]/g, '_').substring(0, 60).trim() + '.' + docExt;
+    var docMime = (docExt === 'pdf') ? 'application/pdf' : ((docExt === 'apk') ? 'application/vnd.android.package-archive' : 'application/octet-stream');
     await sock.sendMessage(sender, {
       document: docBuf,
-      mimetype: 'application/octet-stream',
+      mimetype: docMime,
       fileName: docName,
       caption: '📄 ' + (opts.title || 'Downloaded Media')
     });

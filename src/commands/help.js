@@ -45,9 +45,9 @@ module.exports = {
           text += '*▸ Permission Level:* 🌐 Public (All Users)\n';
         }
 
-        return sock.sendMessage(sender, { text: text.substring(0, 4000) });
+        return sock.sendMessage(sender, { text: text.substring(0, 4000) }, { quoted: msg });
       }
-      return sock.sendMessage(sender, { text: '❌ Command `' + args + '` not found.\nUse `!help` to list all ' + getCommandsList().length + ' available commands.' });
+      return sock.sendMessage(sender, { text: '❌ Command `' + args + '` not found.\nUse `!help` to list all ' + getCommandsList().length + ' available commands.' }, { quoted: msg });
     }
 
     var commands = getCommandsList();
@@ -88,6 +88,6 @@ module.exports = {
     text += '====================================\n';
     text += '_Type `!help <command>` for detailed examples and usage guide._';
 
-    await sock.sendMessage(sender, { text: text.substring(0, 4000) });
+    await sock.sendMessage(sender, { text: text.substring(0, 4000) }, { quoted: msg });
   },
 };

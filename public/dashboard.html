@@ -107,16 +107,29 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex-shrink: 0;
-  z-index: 50;
-  transition: transform 0.3s ease;
+  z-index: 100;
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.06);
+}
+#sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+#sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 #main-content {
-  flex: 1;
+  margin-left: 270px;
+  width: calc(100% - 270px);
   min-width: 0;
+  min-height: 100vh;
   padding: 32px 40px 120px 40px;
   display: flex;
   flex-direction: column;
@@ -803,7 +816,7 @@ input:checked + .slider:before {
 @media (max-width: 1024px) {
   #sidebar { display: none; }
   #mobile-dock { display: flex; }
-  #main-content { padding: 20px 16px 120px 16px; }
+  #main-content { margin-left: 0; width: 100%; padding: 20px 16px 120px 16px; }
   .hero-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .bento-layout { grid-template-columns: 1fr; }
   .toggle-grid { grid-template-columns: 1fr; }
@@ -1241,15 +1254,22 @@ input:checked + .slider:before {
     <div style="font-size:2rem; margin-bottom:10px;">🔐</div>
     <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:6px;">Dashboard Authentication</h3>
     <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Enter your Dashboard Password to access the control center.</p>
-    <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: Omemi)" style="width:100%; margin-bottom:14px; text-align:center;">
-    <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px;" onclick="submitPassword()">Unlock Dashboard</button>
+    <input type="password" id="modalPwdInput" class="phone-input" placeholder="Password (default: Omemi)" value="Omemi" style="width:100%; margin-bottom:14px; text-align:center;">
+    <button class="btn-pill btn-pill-primary" style="width:100%; justify-content:center; padding:12px; margin-bottom:10px;" onclick="submitPassword()">Unlock Dashboard</button>
+    <button class="btn-pill btn-pill-outline" style="width:100%; justify-content:center; padding:10px; font-size:0.85rem;" onclick="loginWithDefault()">⚡ Continue as Admin (Omemi)</button>
     <div id="modalErr" style="display:none; color:#ef4444; font-size:0.82rem; font-weight:700; margin-top:12px;"></div>
   </div>
 </div>
 
 <!-- ── Dashboard Client Logic ──────────────────────────────────────────────── -->
 <script>
-var pwd = new URLSearchParams(window.location.search).get('pwd') || localStorage.getItem('dash_pwd') || 'Omemi';
+var urlPwd = new URLSearchParams(window.location.search).get('pwd');
+var storedPwd = localStorage.getItem('dash_pwd');
+var pwd = urlPwd || storedPwd || 'Omemi';
+if (!pwd || pwd === 'undefined' || pwd === 'null') {
+  pwd = 'Omemi';
+  localStorage.setItem('dash_pwd', 'Omemi');
+}
 var activeTab = 'overview';
 var activePairMode = 'pair';
 var pollTimer = null;
@@ -1258,7 +1278,7 @@ function apiCall(endpoint, options) {
   options = options || {};
   var baseUrl = (window.location.protocol === 'file:' || !window.location.host) ? 'http://localhost:3000' : '';
   var sep = endpoint.includes('?') ? '&' : '?';
-  var url = baseUrl + '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd);
+  var url = baseUrl + '/api' + endpoint + sep + 'pwd=' + encodeURIComponent(pwd || 'Omemi');
   return fetch(url, options).then(function(res) {
     if (res.status === 401) {
       showLogin();
@@ -1269,23 +1289,39 @@ function apiCall(endpoint, options) {
 }
 
 function showLogin() {
-  document.getElementById('loginModal').style.display = 'flex';
+  var modal = document.getElementById('loginModal');
+  if (modal) modal.style.display = 'flex';
+  var input = document.getElementById('modalPwdInput');
+  if (input && !input.value) input.value = 'Omemi';
 }
 
 function submitPassword() {
-  var p = document.getElementById('modalPwdInput').value.trim();
-  if (!p) return;
+  var inputEl = document.getElementById('modalPwdInput');
+  var p = (inputEl ? inputEl.value : '').trim();
+  if (!p) p = 'Omemi';
   pwd = p;
+  var errEl = document.getElementById('modalErr');
+  if (errEl) errEl.style.display = 'none';
+
   apiCall('/status')
     .then(function(data) {
       localStorage.setItem('dash_pwd', pwd);
-      document.getElementById('loginModal').style.display = 'none';
+      var modal = document.getElementById('loginModal');
+      if (modal) modal.style.display = 'none';
       initDashboard();
     })
     .catch(function(err) {
-      document.getElementById('modalErr').style.display = 'block';
-      document.getElementById('modalErr').textContent = 'Invalid Password. Check DASHBOARD_PASSWORD';
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Invalid Password. Enter "Omemi" or check DASHBOARD_PASSWORD';
+      }
     });
+}
+
+function loginWithDefault() {
+  var inputEl = document.getElementById('modalPwdInput');
+  if (inputEl) inputEl.value = 'Omemi';
+  submitPassword();
 }
 
 function switchTab(tabId) {
@@ -1586,7 +1622,8 @@ function refreshAll() {
 function initDashboard() {
   apiCall('/status')
     .then(function(data) {
-      document.getElementById('loginModal').style.display = 'none';
+      var modal = document.getElementById('loginModal');
+      if (modal) modal.style.display = 'none';
       updateStatusUI(data);
       loadKeys();
       loadFeatures();
@@ -1595,16 +1632,23 @@ function initDashboard() {
       pollTimer = setInterval(refreshAll, 2500);
     })
     .catch(function(err) {
-      showLogin();
+      if (err && err.message === 'Unauthorized') {
+        showLogin();
+      } else {
+        console.warn('Waiting for bot server connection...', err);
+        setTimeout(initDashboard, 2000);
+      }
     });
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  if (pwd) {
-    initDashboard();
-  } else {
-    showLogin();
+  var modalInput = document.getElementById('modalPwdInput');
+  if (modalInput) {
+    modalInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') submitPassword();
+    });
   }
+  initDashboard();
 });
 </script>
 </body>

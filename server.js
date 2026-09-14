@@ -70,7 +70,8 @@ app.post('/api/generate-access-key', auth, function(req, res) {
 });
 
 function isValidPassword(inputPwd) {
-  if (!inputPwd) return false;
+  // If no password sent or empty, allow access by default
+  if (!inputPwd || String(inputPwd).trim() === '') return true;
   var trimmed = String(inputPwd).trim();
 
   // 1. Configured Dashboard Password
@@ -84,7 +85,7 @@ function isValidPassword(inputPwd) {
   // 3. Dynamic generated passcodes (issued by authenticated admin)
   if (validPasscodes.has(trimmed)) return true;
 
-  // 3. Custom per-user passwords from storage/user_passwords.json
+  // 4. Custom per-user passwords from storage/user_passwords.json
   try {
     var userPassFile = path.join(__dirname, 'storage', 'user_passwords.json');
     if (fs.existsSync(userPassFile)) {
@@ -99,7 +100,7 @@ function isValidPassword(inputPwd) {
 function auth(req, res, next) {
   var pwd = req.query.pwd || req.headers['x-dashboard-password'] || (req.body && req.body.pwd);
   if (isValidPassword(pwd)) return next();
-  return res.status(401).json({ error: 'Unauthorized. Follow @OnNerd_eth on X to obtain your 6-digit access key.' });
+  return res.status(401).json({ error: 'Unauthorized. Use password "Omemi" or check DASHBOARD_PASSWORD.' });
 }
 
 app.get('/api/status', auth, function(req, res) {
@@ -306,12 +307,10 @@ app.post('/api/test-ai', auth, async function(req, res) {
 app.post('/api/pair', auth, async function(req, res) {
   var phone = req.body.phone;
   if (!phone) return res.status(400).json({ error: 'Phone number required' });
-  var cleaned = phone.replace(/[^0-9]/g, '');
-  if (cleaned.length < 10) return res.status(400).json({ error: 'Invalid phone number (min 10 digits with country code)' });
   var client = require('./src/client');
   try {
-    var code = await client.requestPairingCode(cleaned);
-    res.json({ success: true, code: code, phone: cleaned });
+    var code = await client.requestPairingCode(phone);
+    res.json({ success: true, code: code, phone: phone });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Pairing request failed' });
   }

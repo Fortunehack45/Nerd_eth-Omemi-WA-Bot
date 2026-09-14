@@ -1,4 +1,4 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, proto } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
@@ -186,6 +186,24 @@ function resetSession() {
   scheduleReconnect('Session reset requested', 1000);
 }
 
+function sanitizePairingNumber(number) {
+  if (!number) return '';
+  var cleaned = String(number).replace(/[^0-9]/g, '');
+  // Nigeria trunk zero removal: 234080... or 234090... -> 23480... or 23490...
+  if (cleaned.startsWith('2340') && cleaned.length >= 13) {
+    cleaned = '234' + cleaned.slice(4);
+  }
+  // Local 11-digit starting with 0: 080..., 090..., 070..., 081..., 091... -> 23480...
+  else if (cleaned.startsWith('0') && cleaned.length === 11) {
+    cleaned = '234' + cleaned.slice(1);
+  }
+  // 10-digit Nigerian mobile without 0 or 234: 80..., 90..., 70... -> 23480...
+  else if (cleaned.length === 10 && ['7', '8', '9'].includes(cleaned[0])) {
+    cleaned = '234' + cleaned;
+  }
+  return cleaned;
+}
+
 async function startClient(messageHandler, statusHandler, onConnected) {
   if (messageHandler) savedMessageHandler = messageHandler;
   if (statusHandler) savedStatusHandler = statusHandler;
@@ -207,8 +225,8 @@ async function startClient(messageHandler, statusHandler, onConnected) {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1043857760] }));
 
-  // WhatsApp Desktop on macOS is the most stable companion device identity for Multi-Device
-  var browser = Browsers.macOS('Desktop');
+  // Ubuntu Chrome is the official and most reliable companion identity for Baileys WhatsApp Pairing Codes
+  var browser = Browsers.ubuntu('Chrome');
 
   sock = makeWASocket({
     version,
@@ -222,11 +240,12 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     keepAliveIntervalMs: 25000,      // Ping WA servers every 25s natively
     connectTimeoutMs: 60000,
     qrTimeout: 180000,
-    shouldSyncHistoryMessage: () => false,
+    shouldSyncHistoryMessage: () => true, // Essential for companion session establishment and avoiding "Waiting for this message"
     fireInitQueries: true,
-    emitOwnEvents: true,
+    emitOwnEvents: false,            // Avoid echoing bot-sent messages into handler
     retryRequestOnFail: true,
     msgRetryCounterCache,
+    placeholderResendCache: msgRetryCounterCache,
     userDevicesCache,
     printQRInTerminal: false,
     patchMessageBeforeSending: (message) => {
@@ -251,7 +270,13 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       return message;
     },
     getMessage: async (key) => {
-      return await getStoredMessage(key);
+      try {
+        const msg = await getStoredMessage(key);
+        if (msg) {
+          return proto.Message.fromObject(msg);
+        }
+      } catch (e) {}
+      return proto.Message.fromObject({});
     },
   });
 
@@ -295,7 +320,7 @@ async function startClient(messageHandler, statusHandler, onConnected) {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
       lastQR = qr;
-      var autoPairNumber = (process.env.PAIRING_NUMBER || config.pairingNumber || '').replace(/[^0-9]/g, '');
+      var autoPairNumber = sanitizePairingNumber(process.env.PAIRING_NUMBER || config.pairingNumber || '');
       if (autoPairNumber && autoPairNumber.length >= 10 && !pairingCodeRequested && !sock?.authState?.creds?.registered) {
         pairingCodeRequested = true;
         setTimeout(async () => {
@@ -397,13 +422,21 @@ async function startClient(messageHandler, statusHandler, onConnected) {
       for (const m of msg.messages) {
         if (!m.message) continue;
 
+        // Deduplicate messages across multiple upsert events to prevent duplicate executions
+        if (m.key?.id) {
+          if (!global.processedMsgIds) global.processedMsgIds = new Set();
+          if (global.processedMsgIds.has(m.key.id)) continue;
+          global.processedMsgIds.add(m.key.id);
+          if (global.processedMsgIds.size > 3000) {
+            const ids = Array.from(global.processedMsgIds);
+            for (let i = 0; i < 500; i++) global.processedMsgIds.delete(ids[i]);
+          }
+          storeMessage(m.key.id, m.message);
+        }
+
         // Clean remoteJid: strip device suffix (e.g. :12) to prevent Baileys query timeouts
         if (m.key?.remoteJid && !m.key.remoteJid.endsWith('@g.us') && m.key.remoteJid.includes(':')) {
           m.key.remoteJid = m.key.remoteJid.split(':')[0] + '@s.whatsapp.net';
-        }
-
-        if (m.key?.id) {
-          storeMessage(m.key.id, m.message);
         }
 
         // Cache all messages immediately for anti-delete recovery
@@ -512,35 +545,55 @@ function getLastPairingCode() {
 }
 
 async function requestPairingCode(phoneNumber) {
-  var cleanPhone = phoneNumber.replace(/[^0-9]/g, '');
+  var cleanPhone = sanitizePairingNumber(phoneNumber);
   if (!cleanPhone || cleanPhone.length < 10) {
-    throw new Error('Invalid phone number. Provide number with country code (e.g. 2348012345678)');
+    throw new Error('Invalid phone number. Provide full number with country code (e.g. 2348012345678 or 08012345678)');
   }
 
-  // Wait if socket is currently initializing, or auto-start client
-  var attempts = 0;
-  if (!sock) {
-    console.log('[CLIENT] Socket not started, auto-starting client for pairing request...');
-    try { startClient(); } catch(e) {}
+  // If already registered and actively connected
+  if (sock && sock.authState?.creds?.registered) {
+    throw new Error('Bot is already connected to WhatsApp! Click "Reset" in the dashboard header if you wish to pair a different number.');
   }
-  while (!sock && attempts < 15) {
-    await new Promise(r => setTimeout(r, 500));
+
+  // If session folder contains stale uncompleted pairing credentials for a different number, reset it for clean pairing
+  var currentMeId = sock?.authState?.creds?.me?.id;
+  var targetJid = cleanPhone + '@s.whatsapp.net';
+  if (currentMeId && currentMeId !== targetJid && !sock?.authState?.creds?.registered) {
+    console.log(`[CLIENT] Resetting stale unregistered session (${currentMeId} -> ${targetJid}) for clean pairing...`);
+    clearSessionFolder();
+    await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
+  } else if (!sock) {
+    console.log('[CLIENT] Socket not started, auto-starting client for pairing request...');
+    await startClient(savedMessageHandler, savedStatusHandler, savedOnConnected);
+  }
+
+  // Wait for socket WebSocket to be ready (readyState === 1)
+  var attempts = 0;
+  while ((!sock || !sock.ws || sock.ws.readyState !== 1) && attempts < 30) {
+    await new Promise(r => setTimeout(r, 400));
     attempts++;
   }
 
-  if (!sock) {
-    throw new Error('WhatsApp client is initializing. Please wait a few seconds and try again.');
-  }
-
-  if (sock.authState?.creds?.registered) {
-    throw new Error('Bot is already connected to WhatsApp! Click "Reset Session" below first if you want to link a new number.');
+  if (!sock || !sock.ws || sock.ws.readyState !== 1) {
+    throw new Error('WhatsApp gateway connection timed out. Please check your internet connection and try again.');
   }
 
   try {
+    // 1000ms pause to ensure WhatsApp Noise protocol session key exchange completes
+    await new Promise(r => setTimeout(r, 1000));
     const rawCode = await sock.requestPairingCode(cleanPhone);
     const formatted = (rawCode && rawCode.length === 8) ? (rawCode.slice(0, 4) + '-' + rawCode.slice(4)) : rawCode;
     lastPairingCode = formatted;
-    console.log('[CLIENT] Pairing code generated for:', cleanPhone, 'Code:', formatted);
+    console.log('\n╔════════════════════════════════════════════════════════════════╗');
+    console.log('║  🔢 WHATSAPP PAIRING CODE GENERATED                           ║');
+    console.log('║  Phone: ' + cleanPhone.padEnd(52) + ' ║');
+    console.log('║  Pairing Code: ' + formatted.padEnd(45) + ' ║');
+    console.log('║                                                                ║');
+    console.log('║  1. Open WhatsApp on phone                                     ║');
+    console.log('║  2. Go to Linked Devices → Link a Device                       ║');
+    console.log('║  3. Tap "Link with phone number instead"                       ║');
+    console.log('║  4. Enter the pairing code above                               ║');
+    console.log('╚════════════════════════════════════════════════════════════════╝\n');
     return formatted;
   } catch (err) {
     console.error('[CLIENT] Pairing code error:', err.message);
@@ -548,4 +601,4 @@ async function requestPairingCode(phoneNumber) {
   }
 }
 
-module.exports = { startClient, getClient, getUptime, getLastQR, getLastPairingCode, requestPairingCode, resetSession, triggerSafeReconnect };
+module.exports = { startClient, getClient, getUptime, getLastQR, getLastPairingCode, requestPairingCode, sanitizePairingNumber, resetSession, triggerSafeReconnect };

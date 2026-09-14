@@ -188,16 +188,23 @@ async function optimizeVideoForWhatsApp(inputPath) {
   var outputPath = path.join(parsed.dir, parsed.name + '_status_opt.mp4');
 
   return new Promise(function(resolve) {
+    var stat = fs.existsSync(inputPath) ? fs.statSync(inputPath) : null;
+    var isBig = stat && stat.size > 50 * 1024 * 1024;
+    var crf = isBig ? '28' : '24';
+    var vf = isBig 
+      ? 'scale=trunc(min(1280,iw)/2)*2:trunc(min(1280,ih)/2)*2'
+      : 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+
     var args = [
       '-y',
       '-i', inputPath,
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
-      '-crf', '24',
+      '-crf', crf,
       '-profile:v', 'main',
       '-level', '4.0',
       '-pix_fmt', 'yuv420p',
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+      '-vf', vf,
       '-c:a', 'aac',
       '-b:a', '128k',
       '-ar', '44100',
@@ -212,13 +219,13 @@ async function optimizeVideoForWhatsApp(inputPath) {
         resolve(outputPath);
       } else {
         console.warn('[optimizeVideoForWhatsApp] Direct encode note:', err ? err.message : 'output empty');
-        // Fallback without video scale filter
+        // Fallback without scale filter
         var fallbackArgs = [
           '-y',
           '-i', inputPath,
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
-          '-crf', '25',
+          '-crf', '28',
           '-pix_fmt', 'yuv420p',
           '-c:a', 'aac',
           '-b:a', '128k',
